@@ -1,0 +1,272 @@
+﻿@model List<Capa_Entidad.OrdenCompra>
+
+@{
+    ViewData["Title"] = "Órdenes de Compra";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    DateTime fechaHoy = DateTime.Today;
+    DateTime fechaLimite = fechaHoy.AddMonths(-3);
+}
+
+<style>
+    #tablaOrdenes th,
+    #tablaOrdenes td {
+        white-space: nowrap;
+        vertical-align: middle;
+    }
+
+    /* Estilo para badge de pendiente */
+    .badge-pendiente {
+        display: inline-block;
+        padding: 0.25em 0.6em;
+        font-size: 0.875em;
+        font-weight: bold;
+        color: #000000; /* letras negras */
+        background-color: #F0F005; /* amarillo */
+        border-radius: 0.25rem;
+        text-align: center;
+    }
+</style>
+
+<ol class="breadcrumb mb-4 mt-4">
+    <li class="breadcrumb-item">
+        <a asp-controller="Home" asp-action="Index">Inicio</a>
+    </li>
+    <li class="breadcrumb-item active">Órdenes de Compra</li>
+</ol>
+
+<div class="card shadow border-0">
+
+    <!-- HEADER -->
+    <div class="card-header text-white d-flex justify-content-between align-items-center"
+         style="background-color:#274DF5;">
+        <div>
+            <i class="fas fa-file-invoice-dollar me-2"></i> Lista de Órdenes
+        </div>
+
+        <div class="d-flex align-items-center">
+            <input type="date" id="fechaInicio"
+                   class="form-control form-control-sm me-2"
+                   style="height:32px;"
+                   value="@ViewBag.FechaInicio"
+                   min="@fechaLimite.ToString("yyyy-MM-dd")"
+                   max="@fechaHoy.ToString("yyyy-MM-dd")" />
+
+            <input type="date" id="fechaFin"
+                   class="form-control form-control-sm me-2"
+                   style="height:32px;"
+                   value="@ViewBag.FechaFin"
+                   min="@fechaLimite.ToString("yyyy-MM-dd")"
+                   max="@fechaHoy.ToString("yyyy-MM-dd")" />
+
+            <button class="btn btn-light btn-sm me-2 px-3 d-flex align-items-center"
+                    style="height:32px;"
+                    onclick="filtrarFechas()">
+                <i class="fas fa-search"></i>
+            </button>
+
+            <button class="btn btn-light btn-sm px-3 d-flex align-items-center"
+                    style="height:32px;"
+                    onclick="abrirConfirmacion()">
+                <i class="fas fa-sync-alt me-1"></i> Importar
+            </button>
+        </div>
+    </div>
+
+    <div id="mensajeFecha" class="text-danger px-3 mt-1" style="display:none;font-size:13px;"></div>
+
+    <div class="card-body">
+
+        <!-- FILTRO POR COLUMNA -->
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <select id="filtroCampo" class="form-control">
+                    <option value="">-- Filtrar por --</option>
+                    <option value="2">Proveedor</option>
+                    <option value="3">Número Orden</option>
+                    <option value="4">Status</option>
+                    <option value="5">Factura</option>
+                    <option value="6">Fecha Creación</option>
+                </select>
+            </div>
+
+            <div class="col-md-4">
+                <input id="filtroValor"
+                       class="form-control"
+                       placeholder="Buscar..."
+                       onkeyup="filtrarColumna()" />
+            </div>
+        </div>
+
+        <!-- TABLA -->
+        <table class="table table-striped align-middle" id="tablaOrdenes">
+            <thead class="text-white" style="background-color:#274DF5;">
+                <tr>
+                    <th>ID</th>
+                    <th>HQID</th>
+                    <th>Proveedor</th>
+                    <th>Número Orden</th>
+                    <th>Status</th>
+                    <th>Factura</th>
+                    <th>Fecha Creación</th>
+                    <th>Total</th>
+                    <th>Comentario</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var o in Model.Where(x => x.IdEstado == 5).OrderByDescending(x => x.IdOrden))
+                {
+                    <tr>
+                        <td>@o.IdOrden</td>
+                        <td>@o.HQID</td>
+                        <td>@o.Proveedor</td>
+                        <td>@o.NumeroOrden</td>
+                        <td>@o.StatusOrden</td>
+                        <td>@o.Factura</td>
+                        <td>@o.FechaCreacion.ToString("dd/MM/yyyy")</td>
+                        <td>@o.Total.ToString("C")</td>
+                        <td>@o.Comentario</td>
+                        <td>
+                            @if (o.NombreEstado.Equals("PENDIENTE ", StringComparison.OrdinalIgnoreCase))
+                            {
+                                <span class="badge-pendiente">@o.NombreEstado</span>
+                            }
+                            else
+                            {
+                                @o.NombreEstado
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- MODAL CONFIRMACION -->
+<div class="modal fade" id="modalConfirmSync" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark py-2">
+                <h6 class="modal-title w-100 text-center">
+                    <i class="fas fa-question-circle"></i> Confirmación
+                </h6>
+            </div>
+            <div class="modal-body text-center">
+                <p class="mb-3">¿Desea importar nuevas órdenes de compra?</p>
+                <button class="btn btn-secondary btn-sm me-2" data-bs-dismiss="modal">Cancelar</button>
+                <button class="btn btn-primary btn-sm" onclick="confirmarSincronizacion()">Sí, importar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL RESULTADO -->
+<div class="modal fade" id="modalSync" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white py-2">
+                <h6 class="modal-title w-100 text-center">
+                    <i class="fas fa-check-circle"></i> Importación
+                </h6>
+            </div>
+            <div class="modal-body text-center">
+                <p id="mensajeSync" class="mb-0"></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts {
+    <script>
+        let tablaOrdenes;
+
+        $(document).ready(function () {
+            tablaOrdenes = $('#tablaOrdenes').DataTable({
+                pageLength: 15,
+                lengthChange: false,
+                searching: true,
+                ordering: true,
+                order: [[0, "desc"]], // ID descendente
+                responsive: true,
+                columnDefs: [
+                    { targets: [0,1], visible: false }, // ID y HQID ocultos
+                    { targets: 9, width: "130px" }
+                ],
+                language: {
+                    paginate: { previous: "Anterior", next: "Siguiente" },
+                    info: "Mostrando _START_ a _END_ de _TOTAL_ registros",
+                    emptyTable: "No hay datos para mostrar"
+                }
+            });
+
+            $('#tablaOrdenes_filter').hide();
+        });
+
+        function filtrarColumna() {
+            let col = $("#filtroCampo").val();
+            let val = $("#filtroValor").val();
+
+            tablaOrdenes.columns().search('');
+
+            if (col !== "") {
+                tablaOrdenes.column(col).search(val).draw();
+            } else {
+                tablaOrdenes.search(val).draw();
+            }
+        }
+
+        function filtrarFechas() {
+            const inicio = new Date($('#fechaInicio').val());
+            const fin = new Date($('#fechaFin').val());
+            const hoy = new Date();
+            const limite = new Date();
+            limite.setMonth(limite.getMonth() - 3);
+
+            const msg = $('#mensajeFecha');
+            msg.hide();
+
+            if (!inicio || !fin) {
+                msg.text("Seleccione un rango de fechas válido.").show();
+                return;
+            }
+
+            if (inicio < limite || fin > hoy) {
+                msg.text("Solo se permiten fechas de los últimos 3 meses.").show();
+                return;
+            }
+
+            if (inicio > fin) {
+                msg.text("La fecha inicio no puede ser mayor que la fecha fin.").show();
+                return;
+            }
+
+            window.location.href =
+                `@Url.Action("Index", "OrdenCompra")?fechaInicio=${inicio.toISOString().slice(0,10)}&fechaFin=${fin.toISOString().slice(0,10)}`;
+        }
+
+        function abrirConfirmacion() {
+            new bootstrap.Modal(document.getElementById('modalConfirmSync')).show();
+        }
+
+        function confirmarSincronizacion() {
+            bootstrap.Modal.getInstance(document.getElementById('modalConfirmSync')).hide();
+
+            $.ajax({
+                url: '@Url.Action("Sincronizar", "OrdenCompra")',
+                type: 'POST',
+                success: function (data) {
+                    $("#mensajeSync").html(`<strong>Nuevas órdenes insertadas:</strong> ${data.insertadas}`);
+                    let modal = new bootstrap.Modal(document.getElementById('modalSync'));
+                    modal.show();
+                    setTimeout(() => { modal.hide(); location.reload(); }, 2000);
+                },
+                error: function () {
+                    $("#mensajeSync").text("Error al importar órdenes");
+                    new bootstrap.Modal(document.getElementById('modalSync')).show();
+                }
+            });
+        }
+    </script>
+}

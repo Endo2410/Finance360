@@ -1,0 +1,143 @@
+﻿@model List<Capa_Entidad.EstadoCuentaPublicidad>
+
+@{
+    ViewData["Title"] = "Estado de Cuenta Publicidad";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<ol class="breadcrumb mb-4 mt-4">
+    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Inicio</a></li>
+    <li class="breadcrumb-item active">Estado de Cuenta Publicidad</li>
+</ol>
+
+<div class="card shadow border-0">
+    <div class="card-header text-white d-flex justify-content-between align-items-center" style="background-color:#274DF5;">
+        <span><i class="fas fa-file-invoice-dollar me-2"></i> Estado de Cuenta – Publicidad (Pendientes)</span>
+    </div>
+
+    <div class="card-body">
+        <!-- FILTRO POR COLUMNA -->
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <select id="filtroCampo" class="form-control">
+                    <option value="">-- Filtrar por --</option>
+                    <option value="0">Nº Documento </option>
+                    <option value="1">Campaña</option>
+                    <option value="2">Proveedor</option>
+                    <option value="4">Fecha Programada</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <input id="filtroValor" class="form-control" placeholder="Buscar..." onkeyup="filtrarColumna()" autocomplete="off" />
+            </div>
+        </div>
+
+        <table class="table table-striped align-middle table-nowrap" id="tablaEstadoCuenta">
+            <thead class="text-white" style="background-color:#274DF5;">
+                <tr>
+                    <th>Nº Documento</th>
+                    <th>Campaña</th>
+                    <th>Proveedor</th>
+                    <th>Cuota</th>
+                    <th>Fecha Programada</th>
+                    <th>Monto</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var grupo in Model
+                                .OrderBy(x => x.FechaPagoProgramada)
+                                .GroupBy(x => x.NumeroCampania))
+                {
+                    var cuotaPrincipal = grupo.OrderBy(x => x.NumeroCuota).First();
+                    var cuotasOcultas = grupo.OrderBy(x => x.NumeroCuota).Skip(1);
+
+                    <!-- FILA PRINCIPAL (cuota menor) -->
+                    <tr class="fila-principal" data-campania="@cuotaPrincipal.NumeroCampania" style="cursor:pointer;">
+                        <td>
+                            <i class="fas fa-chevron-right me-1 toggle-icon"></i>
+                            @cuotaPrincipal.NumeroCampania
+                        </td>
+                        <td>@cuotaPrincipal.NombreCampania</td>
+                        <td>@cuotaPrincipal.NombreProveedor</td>
+                        <td>@cuotaPrincipal.NumeroCuota</td>
+                        <td>@cuotaPrincipal.FechaPagoProgramada.ToString("dd/MM/yyyy")</td>
+                        <td>@cuotaPrincipal.MontoCuota.ToString("C")</td>
+                        <td><span class="badge-pendiente">@cuotaPrincipal.Estado</span></td>
+                    </tr>
+
+                    <!-- CUOTAS OCULTAS -->
+                    @foreach (var c in cuotasOcultas)
+                    {
+                        <tr class="fila-detalle d-none" data-campania="@cuotaPrincipal.NumeroCampania">
+                            <td></td>
+                            <td>@c.NombreCampania</td>
+                            <td>@c.NombreProveedor</td>
+                            <td>@c.NumeroCuota</td>
+                            <td>@c.FechaPagoProgramada.ToString("dd/MM/yyyy")</td>
+                            <td>@c.MontoCuota.ToString("C")</td>
+                            <td><span class="badge-pendiente">@c.Estado</span></td>
+                        </tr>
+                    }
+                }
+            </tbody>
+
+        </table>
+    </div>
+</div>
+
+@section scripts {
+    <script>
+        $(document).ready(function () {
+            // Inicializa DataTable solo para paginación, sin buscar global
+            $('#tablaEstadoCuenta').DataTable({
+                pageLength: 15,
+                lengthChange: false,
+                searching: false,
+                ordering: false,
+                responsive: true,
+                language: {
+                    paginate: { previous: "Anterior", next: "Siguiente" },
+                    info: "Mostrando _START_ a _END_ de _TOTAL_ registros",
+                    emptyTable: "No hay cuotas pendientes"
+                }
+            });
+        });
+
+        $(document).on('click', '.fila-principal', function () {
+            var campania = $(this).data('campania');
+            var icono = $(this).find('.toggle-icon');
+
+            var filas = $('.fila-detalle[data-campania="' + campania + '"]');
+
+            if (filas.hasClass('d-none')) {
+                filas.removeClass('d-none');
+                icono.removeClass('fa-chevron-right').addClass('fa-chevron-down');
+            } else {
+                filas.addClass('d-none');
+                icono.removeClass('fa-chevron-down').addClass('fa-chevron-right');
+            }
+        });
+
+        // Función de filtro manual por columna
+        function filtrarColumna() {
+            var campoIndex = $('#filtroCampo').val(); // índice de columna
+            var valor = $('#filtroValor').val().toLowerCase(); // valor a buscar
+
+            $('#tablaEstadoCuenta tbody tr').each(function () {
+                var celda = $(this).find('td').eq(campoIndex).text().toLowerCase();
+                if (valor === "" || celda.indexOf(valor) !== -1) {
+                    $(this).show();
+                } else {
+                    $(this).hide();
+                }
+            });
+        }
+
+        // Limpiar filtro al cambiar de columna
+        $('#filtroCampo').change(function () {
+            $('#filtroValor').val('');
+            filtrarColumna();
+        });
+    </script>
+}

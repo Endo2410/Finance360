@@ -1,0 +1,153 @@
+﻿/* Estilos generales */
+.register {
+    background: linear-gradient(to right, #3931af, #00c6ff);
+    margin-top: 3%;
+    padding: 3%;
+}
+
+/* Estilos de la sección izquierda */
+.register-left {
+    text-align: center;
+    color: #fff;
+    margin-top: 4%;
+}
+
+    .register-left input {
+        border: none;
+        border-radius: 1.5rem;
+        padding: 2%;
+        width: 60%;
+        background: #f8f9fa;
+        font-weight: bold;
+        color: #383d41;
+        margin-top: 30%;
+        margin-bottom: 3%;
+        cursor: pointer;
+    }
+
+/* Estilos de la sección derecha */
+.register-right {
+    background: #f8f9fa;
+    border-top-left-radius: 10% 50%;
+    border-bottom-left-radius: 10% 50%;
+    padding: 5%;
+}
+
+/* Animación de imagen */
+.register-left img {
+    margin-top: 15%;
+    margin-bottom: 5%;
+    width: 25%;
+    animation: mover 1s infinite alternate;
+}
+
+@keyframes mover {
+    0% {
+        transform: translateY(0);
+    }
+
+    100% {
+        transform: translateY(-20px);
+    }
+}
+
+/* Título de registro */
+.register-heading {
+    text-align: center;
+    margin-top: 2%; /* Subimos más el título */
+    margin-bottom: 3%; /* Damos más espacio hacia abajo */
+    color: #495057;
+}
+
+/* Formulario de registro */
+.register .register-form {
+    padding: 10%;
+}
+
+/* Ajustar el espacio entre el título y la primera fila */
+.register-form {
+    padding-top: 40px; /* Aumentamos más espacio entre título y primer input */
+}
+
+    /* Espaciado entre filas del formulario */
+    .register-form .form-group {
+        margin-bottom: 20px;
+    }
+
+/* Estilos de la barra de navegación */
+.register .nav-tabs {
+    margin-top: 3%;
+    border: none;
+    background: #0062cc;
+    border-radius: 1.5rem;
+    width: 28%;
+    float: right;
+}
+
+    .register .nav-tabs .nav-link {
+        padding: 2%;
+        font-weight: 600;
+        color: #fff;
+        border-top-right-radius: 1.5rem;
+        border-bottom-right-radius: 1.5rem;
+    }
+
+        .register .nav-tabs .nav-link.active {
+            color: #0062cc;
+            background: #fff;
+            border-radius: 1.5rem;
+        }
+
+/* Ajustar el ancho del input de email y el botón para que coincidan */
+.email-input,
+.btnRegister {
+    width: 100% !important;
+    max-width: 100%;
+    display: block;
+}
+
+/* Estilos del botón de registro */
+.btnRegister {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 12px;
+    font-size: 16px;
+    font-weight: bold;
+    text-align: center;
+    transition: background 0.3s ease;
+}
+
+    .btnRegister:hover {
+        background-color: #0056b3;
+    }
+
+/* Solución a problemas con Bootstrap */
+.register-form {
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+html, body {
+    height: 100%;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/*section {
+    flex: 1;*/ /* Esto hace que la sección ocupe el espacio restante */
+    /*display: flex;
+    align-items: center;*/ /* Centra verticalmente */
+    /*justify-content: center;*/ /* Centra horizontalmente */
+    /*padding: 20px;
+}*/
+
+footer {
+    text-align: center;
+    padding: 10px;
+    background-color: #0d6efd;  Color azul de Bootstrap 
+    color: white;
+    width: 100%;
+}

@@ -1,0 +1,563 @@
+﻿@model List<Capa_Entidad.EstadoCuentaPublicidad>
+
+@{
+    ViewData["Title"] = "Pago de Cuotas Publicidad";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<ol class="breadcrumb mb-4 mt-4">
+    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Inicio</a></li>
+    <li class="breadcrumb-item active">Pago de Cuotas Publicidad</li>
+</ol>
+
+<div class="card shadow border-0">
+    <div class="card-header text-white" style="background-color:#274DF5;">
+        <i class="fas fa-credit-card me-2"></i> Registrar Pago de Publicidad
+    </div>
+
+    <div class="card-body">
+        <!-- PROVEEDOR -->
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <label>Proveedor</label>
+                <div class="input-group">
+                    <input type="text" id="txtProveedorSeleccionado" class="form-control" placeholder="-- Seleccione --" readonly>
+                    <button class="btn btn-primary" type="button" id="btnAbrirModalProveedor">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+                <input type="hidden" id="cmbProveedor">
+            </div>
+        </div>
+
+        <!-- TABLA DE CUOTAS -->
+        <table class="table table-striped" id="tablaCuotas">
+            <thead class="text-white" style="background-color:#274DF5;">
+                <tr>
+                    <th><input type="checkbox" id="chkTodos" /></th>
+                    <th>Nº Campaña</th>
+                    <th>Campaña</th>
+                    <th>Proveedor</th>
+                    <th>Cuota</th>
+                    <th>Fecha Programada</th>
+                    <th>Monto</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+
+        <button id="btnPagar" class="btn btn-success mt-2">
+            <i class="fas fa-check"></i> Registrar Pago
+        </button>
+    </div>
+</div>
+
+<!-- MODAL PROVEEDORES -->
+<div class="modal fade" id="modalProveedores" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Seleccionar Proveedor</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Input de búsqueda -->
+                <div class="mb-2">
+                    <input type="text" id="txtBuscarProveedor" class="form-control" placeholder="Buscar proveedor..." autocomplete="off">
+                </div>
+
+                <table class="table table-hover" id="tablaModalProveedores">
+                    <thead>
+                        <tr>
+                            <th>Proveedor</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach(var p in Model.Select(x => x.NombreProveedor).Distinct())
+                        {
+                            <tr>
+                                <td>@p</td>
+                                <td>
+                                    <button class="btn btn-sm btn-success btnSeleccionarProveedor" data-nombre="@p">Seleccionar</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DE PAGO -->
+<div class="modal fade" id="modalPago" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Datos del Pago</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <h6 class="fw-bold text-primary">Cuotas Seleccionadas</h6>
+
+                <div class="table-responsive mb-3">
+                    <table class="table table-sm table-bordered" id="tablaCuotasSeleccionadas">
+                        <thead class="table-primary text-center">
+                            <tr>
+                                <th>N° Campaña</th>
+                                <th>Campaña</th>
+                                <th>Proveedor</th>
+                                <th>Cuota</th>
+                                <th>Fecha</th>
+                                <th class="text-end">Monto</th>
+                            </tr>
+                        </thead>
+                       <tbody class="align-middle"></tbody>
+                    </table>
+                </div>
+
+                    <div class="alert alert-success d-flex justify-content-between align-items-center">
+                        <strong>Total a Pagar</strong>
+                        <span id="lblTotal" class="fs-4 fw-bold" data-total="0"></span>
+                    </div>
+
+               <hr class="my-4">
+                    <h6 class="fw-bold text-secondary">
+                        <i class="fas fa-file-invoice-dollar me-1"></i> Forma de Pago
+                    </h6>
+                <table class="table" id="tablaPagosTipos">
+                    <thead>
+                        <tr>
+                            <th>Tipo Documento</th>
+                            <th>Monto</th>
+                            <th>N° Confirmación</th>
+                            <th>Comprobante</th>
+                            <th>Eliminar</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <select id="cmbTipoDocAgregar" class="form-control">
+                            <option value="">-- Seleccione Tipo --</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <input type="number" id="txtMontoAgregar" class="form-control" placeholder="Monto">
+                    </div>
+                      <div class="col-md-3">
+                        <input type="text" id="txtNumeroConfirmacionAgregar" class="form-control" placeholder="N° Confirmación">
+                    </div>
+                    <div class="col-md-3">
+                        <input type="file" id="fileComprobanteAgregar" class="form-control" accept=".jpg,.jpeg,.png,.pdf">
+                    </div>
+                    <div class="col-md-12 mt-2">
+                        <button id="btnAgregarPago" class="btn btn-primary">Agregar Pago</button>
+                    </div>
+                </div>
+
+                <label class="mt-2">Observación</label>
+                <textarea id="txtObs" class="form-control"></textarea>
+
+            </div>
+
+            <div class="modal-footer">
+                <button id="btnConfirmarPago" class="btn btn-success">
+                    Confirmar Pago
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DE MENSAJE / ERRORES -->
+<div class="modal fade" id="modalMensaje" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Mensaje</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="modalBody"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DE ÉXITO -->
+<div class="modal fade" id="modalExito" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">Pago Registrado</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>El pago se registró correctamente.</p>
+                <p><strong>Número de Documento:</strong> <span id="lblNumeroDoc"></span></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts{
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script>
+    const todasCuotas = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+        Model.Select(x => new {
+            x.IdEstadoCuenta,
+            x.IdCampania,
+            x.NumeroCampania,
+            x.NombreCampania,
+            x.NombreProveedor,
+            x.NumeroCuota,
+            Fecha = x.FechaPagoProgramada.ToString("yyyy-MM-dd"),
+            x.MontoCuota
+        })
+    ));
+
+    let pagosTipos = [];
+
+    function fFecha(f){ return new Date(f).toLocaleDateString('es-NI'); }
+    function fMonto(m){ return m.toLocaleString('es-NI',{style:'currency',currency:'NIO'}); }
+    function mostrarModal(msg){ $('#modalBody').text(msg); new bootstrap.Modal(document.getElementById('modalMensaje')).show(); }
+
+    // Abrir modal proveedores
+    $('#btnAbrirModalProveedor').click(function(){
+        new bootstrap.Modal(document.getElementById('modalProveedores')).show();
+    });
+
+    // Seleccionar proveedor desde modal
+    $(document).on('click','.btnSeleccionarProveedor', function(){
+        let prov = $(this).data('nombre');
+        $('#txtProveedorSeleccionado').val(prov);
+        $('#cmbProveedor').val(prov).trigger('change');
+        bootstrap.Modal.getInstance(document.getElementById('modalProveedores')).hide();
+    });
+
+    // Filtrar proveedores en el modal
+        $('#txtBuscarProveedor').on('keyup', function(){
+            let texto = $(this).val().toLowerCase();
+            $('#tablaModalProveedores tbody tr').each(function(){
+                let nombre = $(this).find('td:first').text().toLowerCase();
+                $(this).toggle(nombre.includes(texto));
+            });
+        });
+
+    // Cargar cuotas según proveedor
+    $('#cmbProveedor').change(function(){
+        let prov = $(this).val();
+        $('#tablaCuotas tbody').empty();
+        $('#chkTodos').prop('checked',false);
+        if(!prov) return;
+
+        let lista = todasCuotas.filter(x=>x.NombreProveedor===prov);
+        let grupos = {};
+
+        lista.forEach(x=>{ if(!grupos[x.IdCampania]) grupos[x.IdCampania]=[]; grupos[x.IdCampania].push(x); });
+
+        
+
+        for(let id in grupos){
+            let cuotas = grupos[id].sort((a,b)=>a.NumeroCuota-b.NumeroCuota);
+            let ultima = cuotas[0].NumeroCuota - 1;
+
+            cuotas.forEach(e=>{
+                let clase = (e.NumeroCuota !== ultima+1) ? 'table-warning' : '';
+                ultima = e.NumeroCuota;
+
+                $('#tablaCuotas tbody').append(`
+                    <tr class="${clase}">
+                        <td><input type="checkbox" class="chkCuota"
+                            value="${e.IdEstadoCuenta}"
+                            data-campania="${e.IdCampania}"
+                            data-cuota="${e.NumeroCuota}"
+                            data-monto="${e.MontoCuota}"></td>
+                        <td>${e.NumeroCampania}</td>
+                        <td>${e.NombreCampania}</td>
+                        <td>${e.NombreProveedor}</td>
+                        <td>${e.NumeroCuota}</td>
+                        <td>${fFecha(e.Fecha)}</td>
+                        <td>${fMonto(e.MontoCuota)}</td>
+                    </tr>
+                `);
+            });
+        }
+    });
+
+    function cargarCuotasEnModal(seleccionadas) {
+    let tbody = $('#tablaCuotasSeleccionadas tbody');
+    tbody.empty();
+
+    seleccionadas.each(function () {
+        let fila = $(this).closest('tr');
+
+        tbody.append(`
+            <tr>
+                <td>${fila.find('td:eq(1)').text()}</td>
+                <td>${fila.find('td:eq(2)').text()}</td>
+                <td>${fila.find('td:eq(3)').text()}</td>
+                <td>${fila.find('td:eq(4)').text()}</td>
+                <td>${fila.find('td:eq(5)').text()}</td>
+                <td class="text-end">${fila.find('td:eq(6)').text()}</td>
+            </tr>
+        `);
+    });
+}
+
+
+        // Marcar/desmarcar todos
+        $('#chkTodos').click(function(){ $('.chkCuota').prop('checked', this.checked); });
+
+        // Agregar pagos por tipo 
+        $('#btnAgregarPago').click(function(){
+            let idTipo = $('#cmbTipoDocAgregar').val();
+            let nombre = $('#cmbTipoDocAgregar option:selected').text();
+            let monto = parseFloat($('#txtMontoAgregar').val());
+            let numeroConfirmacion = $('#txtNumeroConfirmacionAgregar').val(); 
+            let fileInput = document.getElementById('fileComprobanteAgregar');
+
+            // Validar tipo y monto
+            if(!idTipo || !monto || monto <= 0){
+                mostrarModal('Seleccione tipo y monto válido');
+                return;
+            }
+            if(!numeroConfirmacion){
+                 mostrarError('Debe ingresar N° Confirmación'); 
+                 return;
+             }
+
+            // 🔥 Validación: comprobar que haya archivo
+            if(!fileInput.files || fileInput.files.length === 0){
+                mostrarModal('Debe seleccionar un comprobante para este pago');
+                return;
+            }
+       
+            // Agregar pago al arreglo
+            pagosTipos.push({
+                id: idTipo,
+                nombre: nombre,
+                monto: monto,
+                numeroConfirmacion: numeroConfirmacion, 
+                file: fileInput.files[0] // obligatorio, ya validamos
+            });
+
+            actualizarTablaPagos();
+            $('#txtMontoAgregar').val('');
+             $('#txtNumeroConfirmacionAgregar').val(''); 
+            $('#fileComprobanteAgregar').val('');
+        });
+
+        function actualizarTablaPagos(){
+            let tbody = $('#tablaPagosTipos tbody');
+            tbody.empty();
+            pagosTipos.forEach((p,i)=>{
+                tbody.append(`<tr>
+                    <td>${p.nombre}</td>
+                    <td>${fMonto(p.monto)}</td>
+                    <td>${p.numeroConfirmacion}</td>
+                    <td>${p.file ? p.file.name : ''}</td>
+                    <td><button class="btn btn-sm btn-danger" onclick="eliminarPago(${i})">X</button></td>
+                </tr>`);
+            });
+        }
+
+        function eliminarPago(i){ pagosTipos.splice(i,1); actualizarTablaPagos(); }
+
+        // Botón Pagar -> abrir modal con validaciones existentes
+        $('#btnPagar').click(function(){
+            let seleccionadas = $('.chkCuota:checked');
+            if(seleccionadas.length === 0){ mostrarModal('Seleccione al menos una cuota'); return; }
+
+            // Validar consecutividad y cuotas pendientes
+            let grupos = {};
+            seleccionadas.each(function(){
+                let campania = $(this).data('campania');
+                if(!grupos[campania]) grupos[campania]=[];
+                grupos[campania].push(parseInt($(this).data('cuota')));
+            });
+
+            for(let campania in grupos){
+                let cuotas = grupos[campania].sort((a,b)=>a-b);
+                let pendientes = $('.chkCuota')
+                    .filter(function(){ return $(this).data('campania')==campania; })
+                    .map(function(){ return parseInt($(this).data('cuota')); }).get()
+                    .sort((a,b)=>a-b);
+
+                for(let i=1; i<cuotas.length; i++){
+                    if(cuotas[i] !== cuotas[i-1]+1){
+                        mostrarModal('Las cuotas seleccionadas deben ser consecutivas dentro de la misma campaña.');
+                        return;
+                    }
+                }
+
+                let minSeleccionada = Math.min(...cuotas);
+                let minPendiente = Math.min(...pendientes);
+                if(minSeleccionada > minPendiente){
+
+                    let numeroCampania = $('.chkCuota')
+                        .filter(function(){ return $(this).data('campania') == campania; })
+                        .first()
+                        .closest('tr')
+                        .find('td:eq(1)')
+                        .text();
+
+                    mostrarModal(`Debe incluir todas las cuotas pendientes anteriores (#${minPendiente}) de la campaña ${numeroCampania}`);
+                    return;
+                }
+
+            }
+
+           let total = 0;
+            seleccionadas.each(function(){ total += parseFloat($(this).data('monto')); });
+
+            $('#lblTotal').data('total', total);
+            $('#lblTotal').text(fMonto(total));
+
+            // 👉 NUEVO
+            cargarCuotasEnModal(seleccionadas);
+
+            // Cargar tipos de documento
+            $.get('/TipoDocumentoPago/ListarTipos', function(res){
+                $('#cmbTipoDocAgregar').empty().append('<option value="">-- Seleccione --</option>');
+                res.forEach(t=>$('#cmbTipoDocAgregar').append(`<option value="${t.id}">${t.nombre}</option>`));
+            });
+
+            new bootstrap.Modal(document.getElementById('modalPago')).show();
+        });
+
+
+       // Confirmar Pago
+        $('#btnConfirmarPago').click(async function() {
+
+            let cuotasSeleccionadas = $('.chkCuota:checked');
+            if(cuotasSeleccionadas.length === 0){
+                mostrarModal('Seleccione al menos una cuota');
+                return;
+            }
+
+            // Validar consecutividad y cuotas pendientes
+            let grupos = {};
+            cuotasSeleccionadas.each(function(){
+                let campania = $(this).data('campania');
+                if(!grupos[campania]) grupos[campania]=[];
+                grupos[campania].push(parseInt($(this).data('cuota')));
+            });
+
+            for(let campania in grupos){
+                let cuotas = grupos[campania].sort((a,b)=>a-b);
+                let pendientes = $('.chkCuota')
+                    .filter(function(){ return $(this).data('campania')==campania; })
+                    .map(function(){ return parseInt($(this).data('cuota')); }).get()
+                    .sort((a,b)=>a-b);
+
+                for(let i=1; i<cuotas.length; i++){
+                    if(cuotas[i] !== cuotas[i-1]+1){
+                        mostrarModal('Las cuotas seleccionadas deben ser consecutivas dentro de la misma campaña.');
+                        return;
+                    }
+                }
+
+                let minSeleccionada = Math.min(...cuotas);
+                let minPendiente = Math.min(...pendientes);
+                if(minSeleccionada > minPendiente){
+                    let numeroCampania = $('.chkCuota')
+                        .filter(function(){ return $(this).data('campania') == campania; })
+                        .first()
+                        .closest('tr')
+                        .find('td:eq(1)')
+                        .text();
+                    mostrarModal(`Debe incluir todas las cuotas pendientes anteriores (#${minPendiente}) de la campaña ${numeroCampania}`);
+                    return;
+                }
+            }
+
+            let totalAPagar = parseFloat($('#lblTotal').data('total'));
+
+            // Validar suma exacta de pagos por tipo
+           let totalPagos = pagosTipos.reduce((s, x) => s + x.monto, 0);
+
+            // Solo bloquea si es menor al total a pagar
+            if (totalPagos + 0.01 < totalAPagar) {
+                mostrarModal('El monto total de pagos no puede ser menor al total a pagar');
+                return;
+            }
+
+
+            // Construir detalle de pago – distribuir proporcionalmente cada pago entre cuotas
+            let detalleEnvio = [];
+            let sumaCuotas = 0;
+
+            // Obtener usuario actual de ViewBag o de un campo oculto
+            let usuarioActual = '@ViewBag.UsuarioActual'; 
+
+            cuotasSeleccionadas.each(function(){
+                sumaCuotas += parseFloat($(this).data('monto'));
+            });
+
+            if (sumaCuotas <= 0) {
+    mostrarModal('El monto total de las cuotas es inválido');
+    return;
+}
+
+            cuotasSeleccionadas.each(function(){
+                let fila = $(this);
+                let montoCuota = parseFloat(fila.data('monto'));
+                let proporcion = montoCuota / sumaCuotas;
+
+                pagosTipos.forEach(function(pago){
+                    detalleEnvio.push({
+                        IdEstadoCuenta: parseInt(fila.val()),
+                        MontoPagado: +(pago.monto * proporcion).toFixed(2),
+                        IdTipoDocumento: pago.id,
+                        NumeroConfirmacion: pago.numeroConfirmacion,
+                        RutaComprobante: pago.file ? pago.file.name : null,
+                        UsuarioPago: usuarioActual  
+                    });
+                });
+            });
+
+            // FormData
+            let formData = new FormData();
+            formData.append('IdCampania', cuotasSeleccionadas.first().data('campania'));
+            formData.append('Observacion', $('#txtObs').val());
+            formData.append('DetalleCuotas', JSON.stringify(detalleEnvio));
+            formData.append('TotalAPagar', totalAPagar);
+
+            // Adjuntar archivos
+            pagosTipos.forEach((p,i)=>{
+                if(p.file) formData.append(`PagosTipos[${i}].Comprobante`, p.file);
+            });
+
+            $.ajax({
+                url:'/PagoPublicidad/RegistrarPagoMultiples',
+                type:'POST',
+                data: formData,
+                processData:false,
+                contentType:false,
+                success:function(r){
+                    if(r.success){
+                        $('#lblNumeroDoc').text(r.numeroDocumento);
+                        const modalExito = new bootstrap.Modal(document.getElementById('modalExito'));
+                        modalExito.show();
+                        setTimeout(() => location.reload(), 3000);
+                    } else {
+                        mostrarModal(r.mensajes.join("\n"));
+                    }
+                },
+                error:function(){ mostrarModal('Error al registrar pago'); }
+            });
+        });
+</script>
+}

@@ -1,0 +1,349 @@
+﻿@using System.Text.Json
+@using Capa_Entidad
+@{
+    var jsonMenu = Context.Session.GetString("MenuUsuario");
+    var permisos = !string.IsNullOrEmpty(jsonMenu)
+        ? JsonSerializer.Deserialize<List<Permiso>>(jsonMenu)
+        : new List<Permiso>();
+}
+
+@* Layout general de la aplicación *@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <title>Vista 360 Finance</title>
+
+    <link rel="icon" type="image/x-icon" href="~/images.ico" />
+
+    <!-- CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
+    <link href="~/css/styles.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" />
+
+    @* <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/js/all.min.js" crossorigin="anonymous"></script> *@
+</head>
+<body class="sb-nav-fixed">
+
+    <!-- Navbar superior -->
+    <nav class="sb-topnav navbar navbar-expand navbar-dark bg-dark">
+        <a class="navbar-brand ps-3" asp-area="" asp-controller="Home" asp-action="Index">Vista 360 Finance</a>
+        <button class="btn btn-link btn-sm order-1 order-lg-0 me-4 me-lg-0" id="sidebarToggle"><i class="fas fa-bars"></i></button>
+
+        <!-- Buscador -->
+        <form class="d-none d-md-inline-block form-inline ms-auto me-0 me-md-3 my-2 my-md-0">
+            <div class="input-group">
+               @*  <input class="form-control" type="text" placeholder="Buscar..." aria-label="Buscar..." /> *@
+             @*    <button class="btn btn-primary" type="button"><i class="fas fa-search"></i></button> *@
+            </div>
+        </form>
+
+        <!-- Usuario -->
+        <ul class="navbar-nav ms-auto ms-md-0 me-3 me-lg-4">
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle d-flex align-items-center" id="navbarDropdown" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-user fa-fw me-1"></i>
+                    <span>@Context.Session.GetString("NombreCompleto")</span>
+                </a>
+
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
+                    @* Opciones extra si quieres *@
+                    @* <li><a class="dropdown-item" href="#">Configuración</a></li>
+                  <li><a class="dropdown-item" href="#">Registro de Actividad</a></li> *@
+                    <li><hr class="dropdown-divider" /></li>
+                    <li><a class="dropdown-item" asp-controller="Acceso" asp-action="Logout">Cerrar Sesión</a></li>
+                </ul>
+            </li>
+        </ul>
+
+
+
+    </nav>
+
+    <!-- Layout principal -->
+    <div id="layoutSidenav">
+        <!-- Sidebar -->
+        <div id="layoutSidenav_nav">
+            <nav class="sb-sidenav accordion sb-sidenav-dark" id="sidenavAccordion">
+                <div class="sb-sidenav-menu">
+                    <div class="nav">
+                        <div class="sb-sidenav-menu-heading">Módulos Principales</div>
+
+                        <!--Dashboard -->
+                        @if (permisos.Any(p => p.oModulo != null && p.oModulo.NombreModulo == "Dashboard"))
+                        {
+                            <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Index">
+                                <div class="sb-nav-link-icon"><i class="fas fa-tachometer-alt"></i></div>
+                                Dashboard
+                            </a>
+                        }
+                    
+
+                        <!--Seguridad -->
+                        @if (permisos.Any(p => p.oModulo != null && p.oModulo.NombreModulo == "Seguridad"))
+                        {
+                            <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseUsuarios">
+                                <div class="sb-nav-link-icon"><i class="fas fa-users-cog"></i></div>
+                                Seguridad
+                                <div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div>
+                            </a>
+
+                            <div class="collapse" id="collapseUsuarios">
+                                <nav class="sb-sidenav-menu-nested nav">
+
+                                    @if (permisos.Any(p => p.oSubMenu != null && p.oSubMenu.NombreSubMenu == "Usuarios"))
+                                    {
+                                        <a class="nav-link" asp-controller="Usuarios" asp-action="Index">Usuarios</a>
+                                    }
+
+                                    @if (permisos.Any(p => p.oSubMenu != null && p.oSubMenu.NombreSubMenu == "Rol"))
+                                    {
+                                        <a class="nav-link" asp-controller="Rol" asp-action="Index">Rol</a>
+                                    }
+
+                                    @if (permisos.Any(p => p.oSubMenu != null && p.oSubMenu.NombreSubMenu == "Asignar Permisos"))
+                                    {
+                                        <a class="nav-link" asp-controller="Permiso" asp-action="Index">Asignar Permisos</a>
+                                    }
+
+                                </nav>
+                            </div>
+                        }
+
+                        <!-- Catálogos -->
+                        @if (permisos.Any(p => p.oModulo != null && p.oModulo.NombreModulo == "Catalogo"))
+                        {
+                            <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseCatalogos" aria-expanded="false">
+                                <div class="sb-nav-link-icon"><i class="fas fa-book"></i></div>
+                                Catálogos
+                                <div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div>
+                            </a>
+                            <div class="collapse" id="collapseCatalogos" data-bs-parent="#sidenavAccordion">
+                                <nav class="sb-sidenav-menu-nested nav">
+                                    @if (permisos.Any(p => p.oSubMenu != null && p.oSubMenu.NombreSubMenu == "Proveedores"))
+                                    {
+                                        <a class="nav-link" asp-controller="Proveedores" asp-action="Index">Proveedores</a>
+                                    }
+                                    @if (permisos.Any(p => p.oSubMenu != null && p.oSubMenu.NombreSubMenu == "Pais"))
+                                    {
+                                        <a class="nav-link" asp-controller="Pais" asp-action="Index">Pais</a>
+                                    }
+                                    @if (permisos.Any(p => p.oSubMenu != null && p.oSubMenu.NombreSubMenu == "Moneda"))
+                                    {
+                                        <a class="nav-link" asp-controller="Moneda" asp-action="Index">Moneda</a>
+                                    }
+                                    @if (permisos.Any(p => p.oSubMenu != null && p.oSubMenu.NombreSubMenu == "Modalidad"))
+                                    {
+                                        <a class="nav-link" asp-controller="Modalidad" asp-action="Index">Modalidad</a>
+                                    }
+                                    @if (permisos.Any(p => p.oSubMenu != null && p.oSubMenu.NombreSubMenu == "Tipo_Publicidad"))
+                                    {
+                                        <a class="nav-link" asp-controller="TipoPublicidad" asp-action="Index">Tipo Publicidad</a>
+                                    }
+                                    @if (permisos.Any(p => p.oSubMenu != null && p.oSubMenu.NombreSubMenu == "Tipo_Rebate"))
+                                    {
+                                        <a class="nav-link" asp-controller="TipoRebate" asp-action="Index">Tipo Rebate</a>
+                                    }
+                                    @if (permisos.Any(p => p.oSubMenu != null && p.oSubMenu.NombreSubMenu == "Tipo-Pago"))
+                                    {
+                                        <a class="nav-link" asp-controller="TipoDocumentoPago" asp-action="Index">Tipo Pago</a>
+                                    }
+                                    @if (permisos.Any(p => p.oSubMenu != null && p.oSubMenu.NombreSubMenu == "Operaciones"))
+                                    {
+                                        <a class="nav-link" asp-controller="ModalidadOperacion" asp-action="Index">Operaciones</a>
+                                    }
+                                </nav>
+                            </div>
+                        }
+
+                         <!-- Orden Compra -->
+                        @if (permisos.Any(p => p.oModulo.NombreModulo == "OrdenCompra"))
+                            {
+                            <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseOrdenCompra" aria-expanded="false">
+                                <div class="sb-nav-link-icon"><i class="fas fa-file-invoice-dollar"></i></div>
+                                Orden de Compra
+                                <div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div>
+                            </a>
+                            <div class="collapse" id="collapseOrdenCompra" data-bs-parent="#sidenavAccordion">
+                                <nav class="sb-sidenav-menu-nested nav">                             
+                                    @if (permisos.Any(p => p.oSubMenu != null && p.oSubMenu.NombreSubMenu == "OrdenCompra"))
+                                    {
+                                        <a class="nav-link" asp-controller="OrdenCompra" asp-action="Index">OrdenCompra </a>
+                                    }
+                                </nav>
+                            </div>
+                        }
+
+                        <!-- Publicidad -->
+                        @if (permisos.Any(p => p.oModulo.NombreModulo == "Publicidad"))
+                        {
+                            <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapsePublicidad" aria-expanded="false">
+                                <div class="sb-nav-link-icon"><i class="fas fa-bullhorn me-2"></i></div>
+                                Publicidad
+                                <div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div>
+                            </a>
+                            <div class="collapse" id="collapsePublicidad" data-bs-parent="#sidenavAccordion">
+                                <nav class="sb-sidenav-menu-nested nav">
+                                    @if (permisos.Any(p => p.oSubMenu != null && p.oSubMenu.NombreSubMenu == "Publicidad"))
+                                    {
+                                        <a class="nav-link" asp-controller="Publicidad" asp-action="Index">Campañas </a>
+                                    }
+                                    @if (permisos.Any(p => p.oSubMenu != null && p.oSubMenu.NombreSubMenu == "Estado_Cuenta"))
+                                    {
+                                        <a class="nav-link" asp-controller="EstadoCuenta" asp-action="Index">Estado de Cuenta </a>
+                                    }
+                                    @if (permisos.Any(p => p.oSubMenu != null && p.oSubMenu.NombreSubMenu == "Pago_Publicidad"))
+                                    {
+                                        <a class="nav-link" asp-controller="PagoPublicidad" asp-action="Index">Pago de Campañas </a>
+                                    }
+                                    @if (permisos.Any(p => p.oSubMenu != null && p.oSubMenu.NombreSubMenu == "Lista_Pago"))
+                                    {
+                                        <a class="nav-link" asp-controller="Publicidad" asp-action="ListaPagos">Lista de Pago </a>
+                                    }
+                                </nav>
+                            </div>
+                        }
+
+
+                        <!-- Rebate -->
+                        @if (permisos.Any(p => p.oModulo.NombreModulo == "Rebate"))
+                        {
+                            <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseRebate" aria-expanded="false">
+                                <div class="sb-nav-link-icon"><i class="fas fa-money-bill-wave me-2"></i></div>
+                                Rebate
+                                <div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div>
+                            </a>
+                            <div class="collapse" id="collapseRebate" data-bs-parent="#sidenavAccordion">
+                                <nav class="sb-sidenav-menu-nested nav">
+                                    @if (permisos.Any(p => p.oSubMenu != null && p.oSubMenu.NombreSubMenu == "Acuerdo_Rebate"))
+                                    {
+                                        <a class="nav-link" asp-controller="AcuerdoRebate" asp-action="Index">Acuerdo Rebate </a>
+                                    }
+                                    @if (permisos.Any(p => p.oSubMenu != null && p.oSubMenu.NombreSubMenu == "Ejecucion_Rebate"))
+                                    {
+                                        <a class="nav-link" asp-controller="EjecucionRebate" asp-action="Index">Ejecucion Rebate </a>
+                                    }
+                                    @if (permisos.Any(p => p.oSubMenu != null && p.oSubMenu.NombreSubMenu == "Pago_Rebate"))
+                                    {
+                                        <a class="nav-link" asp-controller="PagoRebate" asp-action="Index">Pago de Rebates </a>
+                                    }
+                                    @if (permisos.Any(p => p.oSubMenu != null && p.oSubMenu.NombreSubMenu == "Lista_Pago_Rebate"))
+                                    {
+                                        <a class="nav-link" asp-controller="EjecucionRebate" asp-action="ListaPagosRebate">Lista de Pago </a>
+                                    }
+                                </nav>
+                            </div>
+                        }
+
+                        <!-- Vencidos -->
+                        @if (permisos.Any(p => p.oModulo.NombreModulo == "Vencidos"))
+                        {
+                            <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseVencidos" aria-expanded="false">
+                                <div class="sb-nav-link-icon"><i class="fas fa-exclamation-triangle me-2"></i></div>
+                                Productos Vencidos
+                                <div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div>
+                            </a>
+                            <div class="collapse" id="collapseVencidos" data-bs-parent="#sidenavAccordion">
+                                <nav class="sb-sidenav-menu-nested nav">
+                                    @if (permisos.Any(p => p.oSubMenu != null && p.oSubMenu.NombreSubMenu == "Vencidos"))
+                                    {
+                                        <a class="nav-link" asp-controller="Vencidos" asp-action="Index">Vencidos </a>
+                                    }
+                                    @if (permisos.Any(p => p.oSubMenu != null && p.oSubMenu.NombreSubMenu == "Lista_Vencidos"))
+                                    {
+                                        <a class="nav-link" asp-controller="Vencidos" asp-action="ListaVencidos">Lista de Pago</a>
+                                    }
+                                    @if (permisos.Any(p => p.oSubMenu != null && p.oSubMenu.NombreSubMenu == "Pago_Vencido"))
+                                    {
+                                        <a class="nav-link" asp-controller="PagoVencido" asp-action="Index">Pagos de Vencidos</a>
+                                    }                                   
+                                </nav>
+                            </div>
+                        }
+
+
+                        <!-- CANJE -->
+                        @if (permisos.Any(p => p.oModulo.NombreModulo == "Canje"))
+                        {
+                            <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseCanje" aria-expanded="false">
+                                <div class="sb-nav-link-icon"><i class="fas fa-exchange-alt me-2"></i></div>
+                                 Canje
+                                <div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div>
+                            </a>
+                            <div class="collapse" id="collapseCanje" data-bs-parent="#sidenavAccordion">
+                                <nav class="sb-sidenav-menu-nested nav">
+                                    @if (permisos.Any(p => p.oSubMenu != null && p.oSubMenu.NombreSubMenu == "Canje"))
+                                    {
+                                        <a class="nav-link" asp-controller="Canje" asp-action="Index">Canje </a>
+                                    }
+                                    @if (permisos.Any(p => p.oSubMenu != null && p.oSubMenu.NombreSubMenu == "Lista_Pago_Canje"))
+                                    {
+                                        <a class="nav-link" asp-controller="Canje" asp-action="ListaPagos">Lista de Pago</a>
+                                    }
+                                    @if (permisos.Any(p => p.oSubMenu != null && p.oSubMenu.NombreSubMenu == "Pago_Canje"))
+                                    {
+                                        <a class="nav-link" asp-controller="PagoCanje" asp-action="Index">Pagos de Canjes</a>
+                                    }
+                                </nav>
+                            </div>
+                        }
+
+                        <!-- Nota de credito -->
+                        @if (permisos.Any(p => p.oModulo.NombreModulo == "Nota_Credito"))
+                        {
+                            <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseNotaCredito" aria-expanded="false">
+                                <div class="sb-nav-link-icon"><i class="fas fa-file-invoice-dollar me-2"></i></div>
+                                Notas de Credito
+                                <div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div>
+                            </a>
+                            <div class="collapse" id="collapseNotaCredito" data-bs-parent="#sidenavAccordion">
+                                <nav class="sb-sidenav-menu-nested nav">
+                                    @if (permisos.Any(p => p.oSubMenu != null && p.oSubMenu.NombreSubMenu == "Nota_Credito"))
+                                    {
+                                        <a class="nav-link" asp-controller="NotaCredito" asp-action="Index">Notas </a>
+                                    }
+                                    @if (permisos.Any(p => p.oSubMenu != null && p.oSubMenu.NombreSubMenu == "Aplicacion_Credito"))
+                                    {
+                                        <a class="nav-link" asp-controller="PagoNC" asp-action="Index">Procesar </a>
+                                    }
+                                </nav>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+            </nav>
+        </div>
+
+        <!-- Contenido principal -->
+        <div id="layoutSidenav_content">
+            <main>
+                <div class="container-fluid px-4">
+                    @RenderBody()  @* Aquí va el contenido de cada vista *@
+                </div>
+            </main>
+
+            <!-- Footer -->
+            <footer class="py-4 bg-light mt-auto">
+                <div class="container-fluid px-4">
+                    <div class="d-flex align-items-center justify-content-between small">
+                        <div class="text-muted"> Farmacia Saba © @DateTime.Now.Year . Todos los derechos reservados.- Desarrollado por Ing. José Luis López</div>
+                    </div>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="~/js/scripts.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/js/all.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+
+    @RenderSection("Scripts", required: false)
+</body>
+</html>

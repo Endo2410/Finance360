@@ -1,0 +1,211 @@
+﻿@using Capa_Entidad
+@{
+    ViewData["Title"] = "Gestión de Permisos";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h3>Gestión de Permisos</h3>
+
+<div class="row mb-3">
+    <div class="col-md-4">
+        <label>Seleccione Rol</label>
+        <select id="cbRol" class="form-select">
+            <option value="">--Seleccione--</option>
+            @foreach (var rol in ViewBag.Roles as List<Rol>)
+            {
+                <option value="@rol.IdRol">@rol.Nombre</option>
+            }
+        </select>
+    </div>
+</div>
+
+<div id="permisosContainer" class="border p-3 rounded shadow-sm bg-light"></div>
+
+<div class="mt-3">
+    <button id="btnGuardar" class="btn btn-primary">Guardar Permisos</button>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+
+            function cargarPermisos(idRol) {
+                $.get('/Permiso/ObtenerPermisos', { idRol: idRol }, function (res) {
+                    const data = res.Estructura || [];
+                    const permisosRol = res.PermisosRol || {};
+                    const accionesRol = permisosRol.Acciones || [];
+                    const submenusRol = permisosRol.SubMenus || [];
+                    const modulosRol = permisosRol.Modulos || [];
+
+                    if (!data.length) {
+                        $('#permisosContainer').html('<p class="text-muted">No hay datos de permisos disponibles.</p>');
+                        return;
+                    }
+
+                    let modulos = {};
+                    data.forEach(item => {
+                        let idMod = item.oModulo?.IdModulo ?? 0;
+                        if (!modulos[idMod]) modulos[idMod] = [];
+                        modulos[idMod].push(item);
+                    });
+
+                    let html = '';
+                    for (let modKey in modulos) {
+                        let modulo = modulos[modKey][0].oModulo;
+
+                        let checkedModulo = modulosRol.includes(modulo.IdModulo) ? 'checked' : '';
+                        html += `
+                            <div class="mb-2">
+                                <label>
+                                    <input type="checkbox" class="chkModulo" data-id="${modulo?.IdModulo ?? 0}" ${checkedModulo} />
+                                    <strong>${modulo?.NombreModulo ?? 'Sin módulo'}</strong>
+                                </label>
+                            </div>`;
+
+                        let submenus = {};
+                        modulos[modKey].forEach(item => {
+                            let idSub = item.oSubMenu?.IdSubMenu ?? 0;
+                            if (!submenus[idSub]) submenus[idSub] = [];
+                            submenus[idSub].push(item);
+                        });
+
+                        html += '<div class="ms-4">';
+                        for (let subKey in submenus) {
+                            let sub = submenus[subKey][0].oSubMenu;
+
+                            if (sub?.NombreSubMenu) {
+                                let checkedSub = submenusRol.includes(sub.IdSubMenu) ? 'checked' : '';
+                                html += `
+                                    <div>
+                                        <label>
+                                            <input type="checkbox" class="chkSubmenu" data-id="${sub.IdSubMenu}" data-modulo="${modulo.IdModulo ?? 0}" data-submenu-nombre="${sub.NombreSubMenu}" ${checkedSub} />
+                                            ${sub.NombreSubMenu}
+                                        </label>
+                                    </div>`;
+                            }
+
+                            html += '<div class="ms-4">';
+                            submenus[subKey].forEach(item => {
+                                let accion = item.oAccion;
+                                if (accion?.NombreAccion) {
+                                    let checkedAcc = accionesRol.includes(accion.IdAccion) ? 'checked' : '';
+                                    html += `
+                                        <div>
+                                            <label>
+                                                <input type="checkbox" class="chkAccion" data-id="${accion.IdAccion}" data-submenu="${sub?.IdSubMenu ?? 0}" ${checkedAcc} />
+                                                ${accion.NombreAccion}
+                                            </label>
+                                        </div>`;
+                                }
+                            });
+                            html += '</div>';
+                        }
+                        html += '</div>';
+                    }
+
+                    $('#permisosContainer').html(html);
+
+                    // Marcar submenús si tienen acciones
+                    $('.chkAccion:checked').each(function () {
+                        const idSub = $(this).data('submenu');
+                        if (idSub) $(`.chkSubmenu[data-id='${idSub}']`).prop('checked', true);
+                    });
+
+                    // Marcar módulos si tienen submenús seleccionados
+                    $('.chkSubmenu:checked').each(function () {
+                        const idModulo = $(this).data('modulo');
+                        if (idModulo) $(`.chkModulo[data-id='${idModulo}']`).prop('checked', true);
+                    });
+
+                    // 🔹 DESHABILITAR “Asignar Permisos” si es rol Administrador
+                    const rolSeleccionado = $('#cbRol option:selected').text().toUpperCase();
+                    if (rolSeleccionado === "ADMINISTRADOR") {
+                        $('.chkSubmenu').each(function () {
+                            if ($(this).data('submenu-nombre') === "Asignar Permisos") {
+                                $(this).prop('disabled', true);
+                                $(this).prop('checked', true);
+                            }
+                        });
+                    } else {
+                        $('.chkSubmenu').prop('disabled', false);
+                    }
+                });
+            }
+
+            // Cambiar rol
+            $('#cbRol').change(function () {
+                let idRol = $(this).val() || 0;
+                cargarPermisos(idRol);
+            });
+
+            // Jerarquía módulo → submenú → acción
+                   $(document).on('change', '.chkModulo', function () {
+            const idModulo = $(this).data('id');
+            const checked = $(this).is(':checked');
+            // Marcar/desmarcar todos los submenús del módulo
+            $(`.chkSubmenu[data-modulo='${idModulo}']`).prop('checked', checked);
+            // Marcar/desmarcar todas las acciones de esos submenús
+            $(`.chkSubmenu[data-modulo='${idModulo}']`).each(function () {
+                const idSub = $(this).data('id');
+                $(`.chkAccion[data-submenu='${idSub}']`).prop('checked', checked);
+            });
+        });
+
+        $(document).on('change', '.chkSubmenu', function () {
+            const idSub = $(this).data('id');
+            const checked = $(this).is(':checked');
+            // Marcar/desmarcar todas las acciones del submenú
+            $(`.chkAccion[data-submenu='${idSub}']`).prop('checked', checked);
+            const idModulo = $(this).data('modulo');
+            // Marcar módulo si algún submenú está marcado
+            if (checked) $(`.chkModulo[data-id='${idModulo}']`).prop('checked', true);
+        });
+
+            // Carga inicial sin rol
+            cargarPermisos(0);
+
+            // Guardar permisos
+                  $('#btnGuardar').click(function () {
+            const idRol = $('#cbRol').val();
+            if (!idRol) {
+                alert('Seleccione un rol primero.');
+                return;
+            }
+
+            // Acciones marcadas
+            const acciones = $('.chkAccion:checked').map((_, e) => $(e).data('id')).get();
+
+            // Submenús marcados (guardar todos los submenús seleccionados)
+            const submenus = $('.chkSubmenu:checked').map((_, e) => $(e).data('id')).get();
+
+            // Módulos que no tienen submenús ni acciones
+            const modulos = $('.chkModulo:checked').map((_, e) => {
+                const idMod = $(e).data('id');
+                const tieneSubmenus = $(`.chkSubmenu[data-modulo='${idMod}']`).length > 0;
+                const tieneAcciones = $(`.chkAccion[data-submenu][data-modulo='${idMod}']`).length > 0;
+                return (!tieneSubmenus && !tieneAcciones) ? idMod : null;
+            }).get().filter(e => e != null);
+
+            // Enviar al servidor
+            $.ajax({
+                url: '/Permiso/GuardarPermisos',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    IdRol: parseInt(idRol),
+                    Acciones: acciones,
+                    SubMenus: submenus,
+                    Modulos: modulos
+                }),
+                success: function (res) {
+                    alert(res.success ? 'Permisos guardados correctamente.' : 'Error: ' + (res.message || 'Intente de nuevo.'));
+                },
+                error: function () {
+                    alert('Ocurrió un error al guardar los permisos.');
+                }
+            });
+        });
+
+        });
+    </script>
+}

@@ -1,0 +1,204 @@
+﻿@model List<Capa_Entidad.Proveedor>
+
+@{
+    ViewData["Title"] = "Proveedores";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<ol class="breadcrumb mb-4 mt-4">
+    <li class="breadcrumb-item">
+        <a asp-controller="Home" asp-action="Index">Inicio</a>
+    </li>
+    <li class="breadcrumb-item active">Proveedores</li>
+</ol>
+
+<div class="card shadow border-0">
+    <div class="card-header text-white d-flex justify-content-between align-items-center"
+         style="background-color:#274DF5;">
+        <div>
+            <i class="fas fa-truck me-2"></i> Lista de Proveedores
+        </div>
+
+        <button class="btn btn-light btn-sm"
+                onclick="abrirConfirmacion()">
+            <i class="fas fa-sync-alt"></i> Importar proveedores
+        </button>
+    </div>
+
+    <!-- FILTROS -->
+    <div class="row mt-3 mb-3 px-3">
+        <div class="col-md-3">
+            <select id="filtroCampoProveedor" class="form-control">
+                <option value="">-- Seleccionar campo --</option>
+                <option value="1">HQID</option>
+                <option value="2">RUC</option>
+                <option value="3">Proveedor</option>
+                <option value="9">Términos</option>
+            </select>
+        </div>
+
+        <div class="col-md-4">
+            <input id="filtroValorProveedor"
+                   class="form-control"
+                   placeholder="Buscar..." />
+        </div>
+    </div>
+
+    <!-- TABLA -->
+    <div class="card-body">
+        <table class="table table-striped align-middle" id="tablaProveedores">
+            <thead class="text-white" style="background-color:#274DF5;">
+                <tr>
+                    <th>ID</th>
+                    <th>HQID</th>
+                    <th>RUC</th>
+                    <th>PROVEEDOR</th>
+                    <th>CONTACTO</th>
+                    <th>CIUDAD</th>
+                    <th>DIRECCIÓN</th>
+                    <th>CORREO</th>
+                    <th>TELÉFONO</th>
+                    <th>TÉRMINOS</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var p in Model)
+                {
+                    <tr>
+                        <td>@p.IdProveedor</td>
+                        <td>@p.HQID</td>
+                        <td>@p.Ruc</td>
+                        <td>@p.NombreProveedor</td>
+                        <td>@p.NombreContacto</td>
+                        <td>@p.Ciudad</td>
+                        <td>@p.Direccion</td>
+                        <td>@p.Correo</td>
+                        <td>@p.NumeroTelefono</td>
+                        <td>@p.Terminos</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ================= MODAL CONFIRMACION ================= -->
+<div class="modal fade" id="modalConfirmSync" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark py-2">
+                <h6 class="modal-title w-100 text-center">
+                    <i class="fas fa-question-circle"></i> Confirmación
+                </h6>
+            </div>
+            <div class="modal-body text-center">
+                <p class="mb-3">¿Desea sincronizar los proveedores?</p>
+                <button class="btn btn-secondary btn-sm me-2"
+                        data-bs-dismiss="modal">
+                    Cancelar
+                </button>
+                <button class="btn btn-primary btn-sm"
+                        onclick="confirmarSincronizacion()">
+                    Sí, sincronizar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================= MODAL RESULTADO ================= -->
+<div class="modal fade" id="modalSync" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white py-2">
+                <h6 class="modal-title w-100 text-center">
+                    <i class="fas fa-check-circle"></i> Sincronización
+                </h6>
+            </div>
+            <div class="modal-body text-center">
+                <p id="mensajeSync" class="mb-0"></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts {
+    <script>
+        let tablaProveedores;
+
+        $(document).ready(function () {
+
+            tablaProveedores = $('#tablaProveedores').DataTable({
+                pageLength: 15,
+                lengthChange: false,
+                searching: false,
+                ordering: false,
+                responsive: true,
+                language: {
+                    paginate: { previous: "Anterior", next: "Siguiente" },
+                    info: "Mostrando _START_ a _END_ de _TOTAL_ registros",
+                    infoEmpty: "Mostrando 0 a 0 de 0 registros",
+                    emptyTable: "No hay datos para mostrar"
+                },
+                columnDefs: [
+                    { targets: [0, 4, 5, 7, 8], visible: false } // 👈 columnas ocultas
+                ]
+            });
+
+            $("#filtroCampoProveedor, #filtroValorProveedor").on("keyup change", function () {
+                let col = $("#filtroCampoProveedor").val();
+                let val = $("#filtroValorProveedor").val();
+
+                tablaProveedores.columns().search('');
+
+                if (col !== "") {
+                    tablaProveedores.column(col).search(val).draw();
+                } else {
+                    tablaProveedores.search(val).draw();
+                }
+            });
+        });
+
+        function abrirConfirmacion() {
+            new bootstrap.Modal(
+                document.getElementById('modalConfirmSync')
+            ).show();
+        }
+
+        function confirmarSincronizacion() {
+
+            bootstrap.Modal
+                .getInstance(document.getElementById('modalConfirmSync'))
+                .hide();
+
+            $.ajax({
+                url: '@Url.Action("Sincronizar", "Proveedores")',
+                type: 'POST',
+                success: function (data) {
+
+                    $("#mensajeSync").html(
+                        `<strong>Actualizados:</strong> ${data.actualizados}<br>
+                         <strong>Insertados:</strong> ${data.insertados}`
+                    );
+
+                    let modal = new bootstrap.Modal(
+                        document.getElementById('modalSync')
+                    );
+                    modal.show();
+
+                    setTimeout(() => {
+                        modal.hide();
+                        location.reload();
+                    }, 2000);
+                },
+                error: function () {
+                    $("#mensajeSync").text("Error al sincronizar proveedores");
+                    new bootstrap.Modal(
+                        document.getElementById('modalSync')
+                    ).show();
+                }
+            });
+        }
+    </script>
+}
+s

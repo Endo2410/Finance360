@@ -1,0 +1,767 @@
+﻿@using System.Text.Json
+@model List<Capa_Entidad.CampaniaPublicitaria>
+
+@{
+    ViewData["Title"] = "Gestión de Campañas Publicitarias";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+
+
+@{
+    var jsonAcciones = Context.Session.GetString("AccionesUsuario");
+    var acciones = !string.IsNullOrEmpty(jsonAcciones)
+        ? JsonSerializer.Deserialize<List<string>>(jsonAcciones)
+        : new List<string>();
+
+    bool puedeCrear = acciones.Contains("Crear_Campania");
+    bool puedeEditar = acciones.Contains("Editar_Campania");
+}
+
+<!-- Breadcrumb -->
+<ol class="breadcrumb mb-4 mt-4">
+    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Inicio</a></li>
+    <li class="breadcrumb-item active">Campañas Publicitarias</li>
+</ol>
+
+<!-- Card principal -->
+<div class="card shadow border-0">
+    <div class="card-header text-white d-flex justify-content-between align-items-center"
+         style="background-color:#274DF5;">
+        <span><i class="fas fa-users me-2"></i> Lista de Campañas</span>
+        @if (puedeCrear)
+        {
+            <button id="btnNuevo" class="btn btn-light btn-sm">
+                <i class="fas fa-plus"></i> Nuevo Campaña
+            </button>
+        }
+    </div>
+
+    <div class="card-body">
+
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <select id="filtroCampo" class="form-control">
+                    <option value="">-- Filtrar por --</option>
+                    <option value="1">Nº Documento</option>
+                    <option value="2">Nombre</option>
+                    <option value="3">Proveedor</option>
+                    <option value="4">Tipo Publicidad</option>
+                    <option value="9">Fecha Inicio</option>
+                    <option value="10">Fecha Fin</option>
+                    <option value="11">Estado</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <input id="filtroValor" class="form-control"
+                       placeholder="Buscar..."
+                       autocomplete="off"
+                       onkeyup="filtrarColumna()" />
+            </div>
+        </div>
+
+        <table class="table table-striped align-middle" id="tablaUsuarios">
+            <thead class="text-white" style="background-color:#274DF5;">
+                <tr>
+                    <th style="display:none;">ID</th>
+                    <th>Nº Documento</th>
+                    <th>Nombre</th>
+                    <th>Proveedor</th>
+                    <th>Tipo Publicidad</th>
+                    <th>Modalidad</th>
+                    <th>País</th>
+                    <th>Moneda</th>
+                    <th>Monto Inversión Total</th>
+                    <th>Fecha Inicio</th>
+                    <th>Fecha Fin</th>
+                    <th>Usuario Registro</th> <!-- nueva columna -->
+                    <th>Documento</th>       <!-- nueva columna -->
+                    <th>Estado</th>
+                    <th class="text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var u in Model
+                                .OrderBy(x => x.oEstado.IdEstado == 3 ? 1 :
+                                x.oEstado.IdEstado == 4 ? 2 : 3)
+                                .ThenByDescending(x => x.IdCampania))
+
+                {
+                    var json = JsonSerializer.Serialize(new
+                    {
+                        u.IdCampania,
+                        u.NumeroCampania,
+                        u.NombreCampania,
+                        IdProveedor = u.oProveedor?.IdProveedor ?? 0,
+                        NombreProveedor = u.oProveedor?.NombreProveedor ?? "",
+                        IdTipoPublicidad = u.oTipoPublicidad?.IdTipoPublicidad ?? 0,
+                        IdModalidad = u.oModalidad?.IdModalidad ?? 0,
+                        IdPais = u.oPais?.IdPais ?? 0,
+                        IdMoneda = u.oMoneda?.IdMoneda ?? 0,
+                        u.MontoInversion,
+                        FechaInicio = u.FechaInicio.ToString("yyyy-MM-dd"),
+                        FechaFin = u.FechaFin.ToString("yyyy-MM-dd"),
+                        u.UsuarioRegistro,
+                        u.DocumentoAdjunto,
+                        IdEstado = u.oEstado?.IdEstado ?? 0,
+                        IdEstadoPago = u.oEstadoPago?.IdEstado ?? 0
+                    });
+
+                    <tr>
+                        <td style="display:none;">@u.IdCampania</td>
+                        <td>@u.NumeroCampania</td>
+                        <td>@u.NombreCampania</td>
+                        <td>@u.oProveedor?.NombreProveedor</td>
+                        <td>@u.oTipoPublicidad?.Nombre</td>
+                        <td>@u.oModalidad?.Nombre</td>
+                        <td>@u.oPais?.Nombre</td>
+                        <td>@u.oMoneda?.Nombre</td>
+                        <td>@u.MontoInversion.ToString("C")</td>
+                        <td>@u.FechaInicio.ToString("yyyy-MM-dd")</td>
+                        <td>@u.FechaFin.ToString("yyyy-MM-dd")</td>
+                        <td>@u.UsuarioRegistro</td> <!-- nuevo -->
+                        <td>
+                            @if (!string.IsNullOrEmpty(u.DocumentoAdjunto))
+                            {
+                                <a href="@Url.Content($"~/archivo/campanias/{u.DocumentoAdjunto}")" target="_blank" class="btn btn-sm btn-secondary">
+                                    <i class="fas fa-file"></i> Ver
+                                </a>
+                            }
+
+                        </td>
+                        <td>
+                            @if (u.oEstado.IdEstado == 3)
+                            {
+                                <span class="badge bg-success">CREADO</span>
+                            }
+                            else if (u.oEstado.IdEstado == 4)
+                            {
+                                <span class="badge bg-danger">FINALIZADO</span>
+                            }
+                        </td>
+                        <td class="text-center">
+                            @{
+                                bool soloLectura =
+                                u.oEstado?.IdEstado == 4 ||      // FINALIZADO
+                                u.oEstadoPago?.IdEstado == 6 ||  // PAGADO
+                                u.oEstadoPago?.IdEstado == 7;    // PARCIAL
+                            }
+
+                            @if (soloLectura)
+                            {
+                                <!-- Siempre solo lectura -->
+                                <button class="btn btn-info btn-sm btn-editar"
+                                        data-json='@Html.Raw(json)'>
+                                    <i class="fas fa-eye"></i> Ver
+                                </button>
+                            }
+                            else
+                            {
+                                if (puedeEditar)
+                                {
+                                    <!-- Puede editar -->
+                                    <button class="btn btn-warning btn-sm btn-editar"
+                                            data-json='@Html.Raw(json)'>
+                                        <i class="fas fa-edit"></i> Editar
+                                    </button>
+                                }
+                                else
+                                {
+                                    <!-- No puede editar → solo ver -->
+                                    <button class="btn btn-info btn-sm btn-editar"
+                                            data-json='@Html.Raw(json)'>
+                                        <i class="fas fa-eye"></i> Ver
+                                    </button>
+                                }
+                            }
+
+                        </td>
+
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+<!-- Modal Crear/Editar Usuario -->
+<div class="modal fade" id="modalUsuario" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Publicidad</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <form id="formUsuario" autocomplete="off">
+                    <input type="hidden" id="txtid" value="0" />
+
+                    <div class="row g-3">
+                        <!-- Fila 1: Nombre campaña -->
+                        <div class="col-12">
+                            <label class="form-label">Nombre Campaña</label>
+                            <input id="txtnombre" name="NombreCampania" class="form-control" required />
+                        </div>
+
+                        <!-- Fila 2: Proveedor y Tipo Publicidad -->
+                        <div class="col-md-6">
+                            <label class="form-label">Proveedor</label>
+                            <div class="input-group">
+                                <input type="hidden" id="cboproveedor" name="IdProveedor" />
+                                <input type="text" id="txtProveedorNombre" class="form-control" placeholder="Seleccionar proveedor" readonly>
+                                <button class="btn btn-secondary" type="button" onclick="abrirModalProveedor()">Buscar</button>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Tipo Publicidad</label>
+                            <select id="cbotipo" name="IdTipoPublicidad" class="form-select"></select>
+                        </div>
+
+                        <!-- Fila 3: Modalidad y País -->
+                        <div class="col-md-6">
+                            <label class="form-label">Modalidad</label>
+                            <select id="cbomodalidad" name="IdModalidad" class="form-select"></select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">País</label>
+                            <select id="cbopais" name="IdPais" class="form-select"></select>
+                        </div>
+
+                        <!-- Fila 4: Moneda y Monto inversión -->
+                        <div class="col-md-6">
+                            <label class="form-label">Moneda</label>
+                            <select id="cbomoneda" name="IdMoneda" class="form-select"></select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Monto Inversión Total</label>
+                            <input id="txtmonto" name="MontoInversion" type="number" class="form-control" step="0.01" required />
+                        </div>
+
+                        <!-- Fila 5: Fechas -->
+                        <div class="col-md-6">
+                            <label class="form-label">Fecha Inicio</label>
+                            <input id="txtinicio" name="FechaInicio" type="date" class="form-control" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Fecha Fin</label>
+                            <input id="txtfin" name="FechaFin" type="date" class="form-control" required />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Documento Adjunto</label>
+                            <input type="file" id="archivo" class="form-control" />
+                            <div id="archivoExistente" class="mt-1"></div>
+                        </div>
+
+                        <!-- Previsualización -->
+                        <div class="col-md-6" id="contenedorPreviewCampania">
+                            <label class="form-label">Vista previa</label>
+                            <div class="border rounded p-2 text-center">
+                                <a id="linkPreviewCampania" target="_blank" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-eye"></i> Ver archivo
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="col-12 mt-3">
+                            <div class="alert alert-danger d-none" id="mensajeError"></div>
+                            <div class="alert alert-success d-none" id="mensajeOk"></div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button class="btn btn-primary" onclick="guardarCampania()">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal global para mensajes de éxito -->
+<div class="modal fade" id="modalExito" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">Éxito</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="cuerpoExito"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Selección de Proveedor -->
+<div class="modal fade" id="modalProveedor" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-md">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Seleccionar Proveedor</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <div class="mb-3">
+                    <input type="text" id="txtFiltrarProveedor" class="form-control" placeholder="Filtrar proveedor por nombre o RUC">
+                </div>
+                <table class="table table-striped table-hover" id="tablaProveedores">
+                    <thead>
+                        <tr>
+                            <th>RUC</th>
+                            <th>Nombre</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Se llena dinámicamente -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal global para errores inesperados -->
+<div class="modal fade" id="modalMensaje" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Error</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="cuerpoMensaje"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $('#tablaUsuarios').DataTable({
+                pageLength: 15,
+                lengthChange: false,
+                searching: false,
+                ordering: false,
+                responsive: true,
+                language: {
+                    paginate: { previous: "Anterior", next: "Siguiente" },
+                    info: "Mostrando _START_ a _END_ de _TOTAL_ registros",
+                    emptyTable: "No hay campañas registradas"
+                },
+                columnDefs: [
+                             { targets: [6, 7], visible: false } // Oculta País (9) y Moneda (10)
+                 ]
+            });
+
+            cargarTiposPublicidad();
+            cargarModalidades();
+            cargarPaises();
+            cargarMonedas();
+
+            $('#btnNuevo').click(() => abrirModal());
+        });
+
+       
+        // FILTRO MANUAL POR COLUMNA (AGREGADO)
+               function filtrarColumna() {
+            let campoIndex = $('#filtroCampo').val();
+            let valor = $('#filtroValor').val().toLowerCase();
+
+            $('#tablaUsuarios tbody tr').each(function () {
+                if (campoIndex === "") { $(this).show(); return; }
+                let textoCelda = $(this).find('td').eq(campoIndex).text().toLowerCase();
+                $(this).toggle(textoCelda.includes(valor));
+            });
+        }
+
+
+        $('#filtroCampo').change(function () {
+            $('#filtroValor').val('');
+            filtrarColumna();
+        });
+
+                // Delegación de eventos para botones de editar
+        $('#tablaUsuarios').on('click', '.btn-editar', function() {
+            let data = $(this).attr('data-json');
+            let c = JSON.parse(data);
+
+            let soloLectura =
+                c.IdEstado === 4 ||
+                c.IdEstadoPago === 6 ||
+                c.IdEstadoPago === 7;
+
+            abrirModal(c, soloLectura ? "lectura" : "editar");
+        });
+
+
+
+                function abrirModal(c = null, modo = "crear") {
+
+            $('#mensajeError, #mensajeOk').addClass('d-none').text('');
+            $('#formUsuario')[0].reset();
+
+
+
+            $('#archivo').val('');
+            $('#archivoExistente').html('');
+            $('#archivoExistente').data('nombre', ''); 
+            $('#contenedorPreviewCampania').addClass('d-none');
+            $('#linkPreviewCampania').attr('href', '#');
+
+            // HABILITAR TODO POR DEFECTO
+            $('#formUsuario input, #formUsuario select, #formUsuario textarea').prop('disabled', false);
+            $('#archivo').prop('disabled', false);
+
+            // ID y Usuario
+            $('#txtid').val(c ? c.IdCampania : 0);
+            $('#txtUsuarioRegistro').val(c ? c.UsuarioRegistro : '@ViewBag.UsuarioActual');
+
+            if (c) {
+
+                $('#txtnombre').val(c.NombreCampania);
+                $('#cboproveedor').val(c.IdProveedor);
+                $('#txtProveedorNombre').val(c.NombreProveedor);
+
+                setTimeout(() => {
+                    $('#cbotipo').val(c.IdTipoPublicidad);
+                    $('#cbomodalidad').val(c.IdModalidad);
+                    $('#cbopais').val(c.IdPais);
+                    $('#cbomoneda').val(c.IdMoneda);
+                }, 200);
+
+                $('#txtmonto').val(c.MontoInversion);
+                $('#txtinicio').val(c.FechaInicio);
+                $('#txtfin').val(c.FechaFin);
+
+                if (c?.DocumentoAdjunto) {
+                    const url = `/archivo/campanias/${c.DocumentoAdjunto}`;
+                    $('#linkPreviewCampania').attr('href', url);
+                    $('#contenedorPreviewCampania').removeClass('d-none');
+                    $('#archivoExistente').data('nombre', c.DocumentoAdjunto);
+                }
+            }
+
+            // MODO LECTURA
+            if (modo === "lectura") {
+
+                $('#formUsuario input, #formUsuario select, #formUsuario textarea')
+                    .prop('disabled', true);
+
+                $('#archivo').prop('disabled', true);
+
+                // Ocultar botón Guardar
+                $('#modalUsuario .btn-primary').hide();
+            }
+            else {
+
+                $('#formUsuario input, #formUsuario select, #formUsuario textarea')
+                    .prop('disabled', false);
+
+                $('#archivo').prop('disabled', false);
+
+                // Mostrar botón Guardar
+                $('#modalUsuario .btn-primary').show();
+            }
+
+
+            // Manejo archivo
+            $('#archivo').off('change').on('change', function () {
+
+                if (this.files.length > 0) {
+                    $('#archivoExistente').data('nombre', '');
+                    previsualizarArchivoCampania();
+                }
+                else if (c?.DocumentoAdjunto) {
+                    $('#archivoExistente').data('nombre', c.DocumentoAdjunto);
+                    const url = `/archivo/campanias/${c.DocumentoAdjunto}`;
+                    $('#linkPreviewCampania').attr('href', url);
+                }
+                else {
+                    $('#archivoExistente').data('nombre', '');
+                    $('#linkPreviewCampania').attr('href', '#');
+                    $('#contenedorPreviewCampania').addClass('d-none');
+                }
+            });
+
+            new bootstrap.Modal('#modalUsuario').show();
+        }
+
+        function previsualizarArchivoCampania() {
+            let input = document.getElementById('archivo');
+            let contenedor = document.getElementById('contenedorPreviewCampania');
+            let link = document.getElementById('linkPreviewCampania');
+
+            if (input.files.length === 0) {
+                contenedor.classList.add('d-none');
+                link.href = '#';
+                return;
+            }
+
+            let file = input.files[0];
+            let url = URL.createObjectURL(file);
+            link.href = url;
+            contenedor.classList.remove('d-none');
+        }
+
+
+        function abrirModalProveedor() {
+            cargarProveedoresModal();
+            $('#txtFiltrarProveedor').val('');
+            new bootstrap.Modal('#modalProveedor').show();
+        }
+
+               function cargarProveedoresModal() {
+            $.get('/Proveedores/Listar', function (data) {
+                let tbody = $('#tablaProveedores tbody');
+                tbody.empty();
+                data.forEach(p => {
+                    tbody.append(`
+                        <tr data-id="${p.idProveedor}" data-nombre="${p.nombre}">
+                            <td>${p.ruc}</td>
+                            <td>${p.nombre}</td>
+                        </tr>
+                    `);
+                });
+
+                // Click en la fila selecciona proveedor automáticamente
+                $('#tablaProveedores tbody tr').click(function () {
+                    let id = $(this).data('id');
+                    let nombre = $(this).data('nombre');
+                    $('#cboproveedor').val(id);
+                    $('#txtProveedorNombre').val(nombre);
+                    bootstrap.Modal.getInstance(document.getElementById('modalProveedor')).hide();
+                });
+            });
+        }
+
+        function seleccionarProveedor(id, nombre) {
+            $('#cboproveedor').val(id);
+            $('#txtProveedorNombre').val(nombre);
+            bootstrap.Modal.getInstance(document.getElementById('modalProveedor')).hide();
+        }
+
+        // Filtro dinámico
+        $('#txtFiltrarProveedor').on('keyup', function () {
+            let valor = $(this).val().toLowerCase();
+            $('#tablaProveedores tbody tr').filter(function () {
+                $(this).toggle($(this).text().toLowerCase().indexOf(valor) > -1);
+            });
+        });
+
+        function cargarTiposPublicidad() {
+            $.get('/TipoPublicidad/Listar', data => {
+                $('#cbotipo').empty();
+                data.forEach(t => $('#cbotipo').append(`<option value="${t.id}">${t.nombre}</option>`));
+            });
+        }
+
+        function cargarModalidades() {
+            $.get('/Modalidad/Listar', data => {
+                $('#cbomodalidad').empty();
+                $('#cbomodalidad').append('<option value="0">-- Seleccionar --</option>');
+
+                data.forEach(m => {
+                    $('#cbomodalidad').append(`
+                        <option
+                            value="${m.id}"
+                            data-tipo="${m.tipoIntervalo}"
+                            data-valor="${m.valorIntervalo}"
+                            data-nombre="${m.nombre}">
+                            ${m.nombre}
+                        </option>
+                    `);
+                });
+            });
+        }
+
+
+        function cargarPaises() {
+            $.get('/Pais/ListarPaises', data => {
+                $('#cbopais').empty();
+                data.forEach(p => $('#cbopais').append(`<option value="${p.id}">${p.nombre}</option>`));
+            });
+        }
+
+        function cargarMonedas() {
+            $.get('/Moneda/ListarMonedas', data => {
+                $('#cbomoneda').empty();
+                data.forEach(m => $('#cbomoneda').append(`<option value="${m.id}">${m.nombre}</option>`));
+            });
+        }
+
+                                  function validarIntervaloPorModalidad(fechaInicio, fechaFin) {
+            const option = $('#cbomodalidad option:selected');
+
+            // Normalizar tipo y valor
+            const tipo = (option.data('tipo') || '').toString().trim().toUpperCase();
+            const valor = parseInt(option.data('valor')) || 0;
+            const nombre = option.data('nombre') || 'la modalidad seleccionada';
+            const valorMinimo = valor > 0 ? valor : 1;
+
+            // Validaciones básicas
+            if (!fechaInicio || !fechaFin) {
+                return { valido: false, mensaje: "Debe ingresar fecha de inicio y fecha de fin." };
+            }
+
+            // Convertir fechas al formato yyyy-MM-dd para evitar problemas
+            function parseFecha(fecha) {
+                if (fecha.includes('/')) { // formato dd/MM/yyyy
+                    let partes = fecha.split('/');
+                    return new Date(`${partes[2]}-${partes[1]}-${partes[0]}T00:00:00`);
+                } else { // yyyy-MM-dd
+                    return new Date(fecha + 'T00:00:00');
+                }
+            }
+
+            const inicio = parseFecha(fechaInicio);
+            const fin = parseFecha(fechaFin);
+
+            if (fin <= inicio) {
+                return { valido: false, mensaje: "La fecha fin debe ser mayor a la fecha inicio." };
+            }
+
+            // Diferencia en días
+            const diasDiferencia = Math.floor((fin - inicio) / (1000 * 60 * 60 * 24)) + 1;
+
+            switch (tipo) {
+                case "DIA":
+                    if (diasDiferencia < valorMinimo) {
+                        return {
+                            valido: false,
+                            mensaje: `La modalidad "${nombre}" requiere un intervalo mínimo de ${valorMinimo} día(s). (Actual: ${diasDiferencia} días)`
+                        };
+                    }
+                    break;
+
+                case "MES":
+                    let fechaMinMes = new Date(inicio);
+                    fechaMinMes.setMonth(fechaMinMes.getMonth() + valorMinimo);
+                    if (fin < fechaMinMes) {
+                        return {
+                            valido: false,
+                            mensaje: `La modalidad "${nombre}" requiere un intervalo mínimo de ${valorMinimo} mes(es).`
+                        };
+                    }
+                    break;
+
+                case "ANIO":
+                    // Comparación aproximada usando días
+                    if (diasDiferencia < valorMinimo * 365) {
+                        return {
+                            valido: false,
+                            mensaje: `La modalidad "${nombre}" requiere un intervalo mínimo de ${valorMinimo} año(s). (Actual: ${diasDiferencia} días)`
+                        };
+                    }
+                    break;
+
+                default:
+                    if (diasDiferencia < valorMinimo) {
+                        return {
+                            valido: false,
+                            mensaje: `El intervalo de fechas debe ser de al menos ${valorMinimo} día(s). (Actual: ${diasDiferencia} días)`
+                        };
+                    }
+                    break;
+            }
+
+            return { valido: true };
+        }
+
+        function guardarCampania() {
+            $('#mensajeError, #mensajeOk').addClass('d-none').text('');
+
+            let idCampania = parseInt($('#txtid').val()) || 0;
+            let nombre = $('#txtnombre').val()?.trim() || '';
+            let idProveedor = parseInt($('#cboproveedor').val()) || 0;
+            let idTipoPublicidad = parseInt($('#cbotipo').val()) || 0;
+            let idModalidad = parseInt($('#cbomodalidad').val()) || 0;
+            let idPais = parseInt($('#cbopais').val()) || 0;
+            let idMoneda = parseInt($('#cbomoneda').val()) || 0;
+            let montoRaw = $('#txtmonto').val()?.replace(',', '') || '0';
+            let monto = parseFloat(montoRaw);
+            let fechaInicio = $('#txtinicio').val() || '';
+            let fechaFin = $('#txtfin').val() || '';
+
+            let archivo = $('#archivo')[0].files[0];
+            let documentoExistente = $('#archivoExistente').data('nombre') || '';
+
+            // Validaciones
+            let errores = [];
+            if (!nombre) errores.push("El nombre de la campaña es obligatorio.");
+            if (isNaN(monto) || monto <= 0) errores.push("El monto de inversión debe ser mayor a cero.");
+            if (!fechaInicio) errores.push("La fecha de inicio es obligatoria.");
+            if (!fechaFin) errores.push("La fecha de fin es obligatoria.");
+            if (fechaInicio && fechaFin && fechaInicio > fechaFin) errores.push("La fecha de inicio no puede ser mayor a la fecha de fin.");
+            if (idProveedor === 0) errores.push("Debe seleccionar un proveedor.");
+            if (idTipoPublicidad === 0) errores.push("Debe seleccionar un tipo de publicidad.");
+            if (idModalidad === 0) errores.push("Debe seleccionar una modalidad.");
+            if (idPais === 0) errores.push("Debe seleccionar un país.");
+            if (idMoneda === 0) errores.push("Debe seleccionar una moneda.");
+            if (!archivo && !documentoExistente) errores.push("Debe adjuntar un documento.");
+            if (fechaInicio && fechaFin && idModalidad > 0) {
+                const resultado = validarIntervaloPorModalidad(fechaInicio, fechaFin);
+                if (!resultado.valido) errores.push(resultado.mensaje);
+            }
+
+            if (errores.length > 0) {
+                $('#mensajeError').removeClass('d-none').html(errores.map(e => `<p>${e}</p>`).join(''));
+                return;
+            }
+
+            // Construir FormData
+            let formData = new FormData();
+            formData.append("IdCampania", idCampania);
+            formData.append("NombreCampania", nombre);
+            formData.append("IdProveedor", idProveedor);
+            formData.append("IdTipoPublicidad", idTipoPublicidad);
+            formData.append("IdModalidad", idModalidad);
+            formData.append("IdPais", idPais);
+            formData.append("IdMoneda", idMoneda);
+            formData.append("MontoInversion", monto);
+            formData.append("FechaInicio", fechaInicio);
+            formData.append("FechaFin", fechaFin);
+
+            // Adjuntar archivo nuevo o nombre del existente
+            if (archivo) {
+                formData.append("archivo", archivo); // archivo físico
+            } else if (documentoExistente) {
+                formData.append("DocumentoAdjunto", documentoExistente); // enviar nombre existente
+            }
+
+            // AJAX
+            $.ajax({
+                type: "POST",
+                url: idCampania === 0 ? '/Publicidad/Crear' : '/Publicidad/Editar',
+                data: formData,
+                contentType: false,
+                processData: false,
+                success: function (res) {
+                    $('#mensajeError, #mensajeOk').addClass('d-none').text('');
+                    if (res.success) {
+                        bootstrap.Modal.getInstance(document.getElementById('modalUsuario')).hide();
+                        $('#cuerpoExito').html(res.mensajes.join('<br/>'));
+                        new bootstrap.Modal('#modalExito').show();
+                        setTimeout(() => location.reload(), 1500);
+                    } else {
+                        let htmlErrores = res.mensajes?.map(m => `<p>${m}</p>`).join('') ?? '<p>Ocurrió un error inesperado.</p>';
+                        $('#mensajeError').removeClass('d-none').html(htmlErrores);
+                    }
+                },
+                error: function () {
+                    $('#mensajeError').removeClass('d-none').html('<p>Ocurrió un error de comunicación con el servidor.</p>');
+                }
+            });
+        }
+
+
+
+    </script>
+}

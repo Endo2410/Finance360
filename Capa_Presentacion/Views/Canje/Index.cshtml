@@ -1,0 +1,533 @@
+﻿@using System.Text.Json
+@model List<Capa_Entidad.Canje>
+
+@{
+    ViewData["Title"] = "Gestión de Canjes";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+
+@{
+    var jsonAcciones = Context.Session.GetString("AccionesUsuario");
+    var acciones = !string.IsNullOrEmpty(jsonAcciones)
+        ? JsonSerializer.Deserialize<List<string>>(jsonAcciones)
+        : new List<string>();
+
+    bool puedeCrear = acciones.Contains("Crear_Canje");
+    bool puedeEditar = acciones.Contains("Editar_Canje");
+}
+
+<!-- Breadcrumb -->
+<ol class="breadcrumb mb-4 mt-4">
+    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Inicio</a></li>
+    <li class="breadcrumb-item active">Canjes</li>
+</ol>
+
+<!-- Card principal -->
+<div class="card shadow border-0">
+    <div class="card-header text-white d-flex justify-content-between align-items-center"
+         style="background-color:#274DF5;">
+        <span><i class="fas fa-exchange-alt me-2"></i> Lista de Canjes</span>
+        @if (puedeCrear)
+        {
+            <button id="btnNuevo" class="btn btn-light btn-sm">
+                <i class="fas fa-plus"></i> Nuevo Canje
+            </button>
+        }
+
+    </div>
+
+    <div class="card-body">
+
+        <!-- Filtro por columna -->
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <select id="filtroCampo" class="form-control">
+                    <option value="">-- Filtrar por --</option>
+                    <option value="1">N° Canje</option>
+                    <option value="2">Proveedor</option>
+                    <option value="3">Tipo Canje</option>
+                    <option value="4">Volumen</option>
+                    <option value="5">Monto</option>
+                    <option value="6">Estado</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <input id="filtroValor" class="form-control" placeholder="Buscar..."
+                       autocomplete="off" onkeyup="filtrarColumna()" />
+            </div>
+        </div>
+
+        <table class="table table-striped align-middle" id="tablaCanjes">
+            <thead class="text-white" style="background-color:#274DF5;">
+                <tr>
+                    <th style="display:none;">ID</th>
+                    <th>N° Canje</th>
+                    <th>Proveedor</th>
+                    <th>Periodo</th>
+                    <th>Volumen</th>
+                    <th>Monto</th>
+                    <th>Fecha Vencimiento</th>
+                    <th>Usuario Creador</th>
+                    <th>Estado</th>
+                    <th>Documento</th>
+                    <th class="text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var c in Model
+                                .OrderBy(c =>
+                                c.oEstado.IdEstado == 9 ? 1 :
+                                c.oEstado.IdEstado == 5 ? 2 :
+                                c.oEstado.IdEstado == 6 ? 3 : 4
+                                )
+                                .ThenBy(c => c.FechaVencimiento ?? DateTime.MaxValue)
+                                )
+                {
+                    var json = JsonSerializer.Serialize(new
+                    {
+                        c.IdCanje,
+                        IdProveedor = c.oProveedor?.IdProveedor ?? 0,
+                        NombreProveedor = c.oProveedor?.NombreProveedor ?? "",
+                        IdTipoCanje = c.oTipoCanje?.IdTipoCanje ?? 0,
+                        c.Volumen,
+                        Monto = c.Monto,
+                        FechaVencimiento = c.FechaVencimiento?.ToString("yyyy-MM-dd"),
+                        c.DocumentoAdjunto,
+                        c.Comentario,
+                        UsuarioRegistro = c.UsuarioRegistro,
+                        IdEstado = c.oEstado?.IdEstado ?? 0,
+                    });
+
+                    <tr>
+                        <td style="display:none;">@c.IdCanje</td>
+                        <td>@c.NumeroCanje</td>
+                        <td>@c.oProveedor?.NombreProveedor</td>
+                        <td>@c.oTipoCanje?.Nombre</td>
+                        <td>@c.Volumen.ToString("N2")</td>
+                        <td>@("C$ " + c.Monto.ToString("N2"))</td>
+                        <td>
+                            @(c.FechaVencimiento.HasValue
+                                                    ? c.FechaVencimiento.Value.ToString("dd/MM/yyyy")
+                                                    : "")
+                    </td>
+                    <td>@c.UsuarioRegistro</td>
+                    <td>
+                        @if (c.oEstado.IdEstado == 5)
+                            {
+                                <span class="badge bg-warning">PENDIENTE</span>
+                            }
+                            else if (c.oEstado.IdEstado == 9)
+                            {
+                                <span class="badge bg-danger text-dark">VENCIDO</span>
+                            }
+                            else if (c.oEstado.IdEstado == 6)
+                            {
+                                <span class="badge bg-success">PAGADO</span>
+                            }
+                    </td>
+                        <td>
+                            @if (!string.IsNullOrEmpty(c.DocumentoAdjunto))
+                                {
+                                    <a class="btn btn-sm btn-secondary"
+                                       target="_blank"
+                                       href="@Url.Content($"~/archivo/canje/{c.DocumentoAdjunto}")">
+                                    <i class="fas fa-file"></i>Ver
+                                    </a>
+                            }
+                        </td>
+                        <td class="text-center">
+                            @{
+                                bool esPendiente = c.oEstado?.IdEstado == 5;
+                            }
+
+                            @if (esPendiente && puedeEditar)
+                            {
+                                <!-- PENDIENTE Y TIENE PERMISO -->
+                                <button class="btn btn-warning btn-sm btn-editar"
+                                        data-json='@Html.Raw(json)'>
+                                    <i class="fas fa-edit"></i> Editar
+                                </button>
+                            }
+                            else
+                            {
+                                <!-- PAGADO, VENCIDO o SIN PERMISO -->
+                                <button class="btn btn-info btn-sm btn-editar"
+                                        data-json='@Html.Raw(json)'>
+                                    <i class="fas fa-eye"></i> Ver
+                                </button>
+                            }
+
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ================= MODAL CANJE ================= -->
+<div class="modal fade" id="modalCanje" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Canje</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <input type="hidden" id="txtid" value="0" />
+                <input type="hidden" id="cboproveedor" />
+                <input type="hidden" id="txtDocumentoExistente" />
+
+
+                <div class="row g-3">
+
+                    <div class="col-md-6">
+                        <label class="form-label">Proveedor</label>
+                        <div class="input-group">
+                            <input id="txtProveedorNombre" class="form-control" readonly />
+                            <button class="btn btn-secondary" type="button"
+                                    onclick="abrirModalProveedor()">
+                                Buscar
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Periodo</label>
+                        <select id="cbotipocanje" class="form-select"></select>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Fecha de Vencimiento</label>
+                        <input id="txtVencimiento" type="date" class="form-control" />
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">Volumen</label>
+                        <input id="txtvolumen" type="number" step="0.01" class="form-control" />
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">Monto</label>
+                        <div class="input-group">
+                            <span class="input-group-text">C$</span>
+                            <input id="txtmonto" type="number" step="0.01" class="form-control" />
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label">Comentario</label>
+                        <textarea id="txtcomentario" class="form-control"></textarea>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Documento</label>
+                        <input type="file" id="archivo" class="form-control" />
+                    </div>
+
+                    <div class="col-md-6" id="contenedorPreview" style="display:none;">
+                        <label class="form-label">Vista previa</label>
+                        <div class="border rounded p-2 text-center">
+                            <button id="btnPreview" class="btn btn-outline-primary btn-sm"
+                                    type="button">
+                                <i class="fas fa-eye"></i> Ver archivo
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <div class="alert alert-danger d-none" id="mensajeError"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button class="btn btn-primary" onclick="guardarCanje()">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============ MODAL PROVEEDOR ============ -->
+<div class="modal fade" id="modalProveedor" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-md">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Seleccionar Proveedor</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input id="txtFiltrarProveedor" class="form-control mb-2"
+                       placeholder="Buscar proveedor..." />
+                <table class="table table-striped table-hover" id="tablaProveedores">
+                    <thead>
+                        <tr>
+                            <th>RUC</th>
+                            <th>Nombre</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Modal global para mensajes de éxito -->
+<div class="modal fade" id="modalExito" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">Éxito</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="cuerpoExito"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal global para errores inesperados -->
+<div class="modal fade" id="modalMensaje" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Error</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="cuerpoMensaje"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+
+            $('#tablaCanjes').DataTable({
+                pageLength: 15,
+                lengthChange: false,
+                searching: false,
+                ordering: false,
+                responsive: true,
+                language: {
+                    paginate: { previous: "Anterior", next: "Siguiente" },
+                    info: "Mostrando _START_ a _END_ de _TOTAL_ registros",
+                    emptyTable: "No hay canjes registrados"
+                }
+            });
+
+            cargarTipoCanje();
+            $('#btnNuevo').click(() => abrirModal());
+        });
+
+        /* ===== FILTRO MANUAL ===== */
+        function filtrarColumna() {
+            let idx = $('#filtroCampo').val();
+            let val = $('#filtroValor').val().toLowerCase();
+            $('#tablaCanjes tbody tr').each(function () {
+                if (idx === "") { $(this).show(); return; }
+                let texto = $(this).find('td').eq(idx).text().toLowerCase();
+                $(this).toggle(texto.includes(val));
+            });
+        }
+
+        /* ===== EDITAR ===== */
+        $('#tablaCanjes').on('click', '.btn-editar', function () {
+
+            let data = JSON.parse($(this).attr('data-json'));
+
+            let modo = (data.IdEstado === 5 && @puedeEditar.ToString().ToLower())
+                ? "editar"
+                : "lectura";
+
+            abrirModal(data, modo);
+        });
+
+
+        /* ===== MODAL ===== */
+        function abrirModal(c = null, modo = "crear"){
+            $('#archivo').val('');
+
+            $('#mensajeError').addClass('d-none');
+            $('#txtid').val(c?.IdCanje ?? 0);
+            $('#txtProveedorNombre').val(c?.NombreProveedor ?? '');
+            $('#cboproveedor').val(c?.IdProveedor ?? 0);
+            $('#txtvolumen').val(c?.Volumen ?? '');
+            $('#txtmonto').val(c?.Monto ?? '');
+            $('#txtcomentario').val(c?.Comentario ?? '');
+
+            cargarTipoCanje(c?.IdTipoCanje);
+
+            // FECHA DE VENCIMIENTO
+            if (c?.FechaVencimiento) {
+                $('#txtVencimiento').val(c.FechaVencimiento);
+            } else {
+                let hoy = new Date();
+                let mes = hoy.getMonth() + 1;
+                let anio = hoy.getFullYear();
+                let dia = hoy.getDate();
+                mes += 1;
+                if (mes > 12) { mes = 1; anio += 1; }
+                let mesStr = mes < 10 ? '0' + mes : mes;
+                let diaStr = dia < 10 ? '0' + dia : dia;
+                $('#txtVencimiento').val(`${anio}-${mesStr}-${diaStr}`);
+            }
+
+                  if (c?.DocumentoAdjunto) {
+
+            $('#contenedorPreview').show();
+
+            $('#btnPreview').off('click').on('click', function () {
+                window.open(`/archivo/canje/${c.DocumentoAdjunto}`, '_blank');
+            });
+
+            // 🔥 GUARDAR NOMBRE REAL
+            $('#txtDocumentoExistente').val(c.DocumentoAdjunto);
+
+        } else {
+
+            $('#contenedorPreview').hide();
+            $('#txtDocumentoExistente').val('');
+        }
+
+
+            //CONTROL DE MODO
+            if (modo === "lectura") {
+
+                $('#modalCanje input, #modalCanje select, #modalCanje textarea')
+                    .prop('disabled', true);
+
+                $('#archivo').prop('disabled', true);
+
+                $('#modalCanje .btn-primary').hide();
+            }
+            else {
+
+                $('#modalCanje input, #modalCanje select, #modalCanje textarea')
+                    .prop('disabled', false);
+
+                $('#archivo').prop('disabled', false);
+
+                $('#modalCanje .btn-primary').show();
+            }
+
+
+            new bootstrap.Modal('#modalCanje').show();
+        }
+
+        /* ===== PREVIEW AL SELECCIONAR ARCHIVO ===== */
+        $('#archivo').on('change', function () {
+            let file = this.files[0];
+            if (!file) { $('#contenedorPreview').hide(); return; }
+            $('#contenedorPreview').show();
+            $('#btnPreview').off('click').on('click', function () {
+                let url = URL.createObjectURL(file);
+                window.open(url, '_blank');
+            });
+        });
+
+        /* ===== COMBOS ===== */
+        function cargarTipoCanje(selected = 0) {
+            $.get('/TipoCanje/Listar', data => {
+                let cb = $('#cbotipocanje');
+                cb.empty();
+                data.forEach(t => cb.append(`<option value="${t.id}">${t.nombre}</option>`));
+                if (selected) cb.val(selected);
+            });
+        }
+
+        /* ===== PROVEEDOR ===== */
+        function abrirModalProveedor() {
+            $.get('/Proveedores/Listar', data => {
+                let tbody = $('#tablaProveedores tbody');
+                tbody.empty();
+                data.forEach(p => {
+                    tbody.append(`
+                        <tr data-id="${p.idProveedor}" data-nombre="${p.nombre}">
+                            <td>${p.ruc}</td>
+                            <td>${p.nombre}</td>
+                        </tr>`);
+                });
+
+                $('#tablaProveedores tbody tr').click(function () {
+                    $('#cboproveedor').val($(this).data('id'));
+                    $('#txtProveedorNombre').val($(this).data('nombre'));
+                    bootstrap.Modal.getInstance(modalProveedor).hide();
+                });
+            });
+
+            new bootstrap.Modal('#modalProveedor').show();
+        }
+
+         $('#txtFiltrarProveedor').on('keyup', function () {
+            let valor = $(this).val().toLowerCase();
+            $('#tablaProveedores tbody tr').filter(function () {
+                $(this).toggle($(this).text().toLowerCase().indexOf(valor) > -1);
+            });
+        });
+
+        /* ===== GUARDAR ===== */
+        function guardarCanje() {
+            let fd = new FormData();
+            fd.append("IdCanje", $('#txtid').val());
+            fd.append("IdProveedor", $('#cboproveedor').val());
+            fd.append("IdTipoCanje", $('#cbotipocanje').val());
+            fd.append("Volumen", $('#txtvolumen').val());
+            fd.append("Monto", $('#txtmonto').val());
+            fd.append("FechaVencimiento", $('#txtVencimiento').val());
+            fd.append("Comentario", $('#txtcomentario').val());
+
+                let file = $('#archivo')[0].files[0];
+                let documentoExistente = $('#txtDocumentoExistente').val();
+
+                if (file) {
+                    fd.append("archivo", file);
+                } else {
+                    fd.append("DOCUMENTO_EXISTENTE", documentoExistente);
+                }
+
+
+            $.ajax({
+                url: $('#txtid').val() == 0 ? '/Canje/Crear' : '/Canje/Editar',
+                type: 'POST',
+                data: fd,
+                processData: false,
+                contentType: false,
+                success: function (r) {
+                    if (r.success) {
+                        // Mostrar modal de éxito
+                        $('#cuerpoExito').html(r.mensaje || "Operación realizada con éxito");
+                        let modal = new bootstrap.Modal(document.getElementById('modalExito'));
+                        modal.show();
+
+                        // Recargar automáticamente después de 2 segundos (2000 ms)
+                        setTimeout(() => {
+                            location.reload();
+                        }, 2000);
+
+                    } else {
+                        // Mostrar modal de error
+                        $('#cuerpoMensaje').html(r.mensajes ? r.mensajes.join('<br/>') : "Ocurrió un error inesperado");
+                        let modal = new bootstrap.Modal(document.getElementById('modalMensaje'));
+                        modal.show();
+                    }
+                },
+                error: function () {
+                    $('#cuerpoMensaje').html("Error al conectar con el servidor.");
+                    let modal = new bootstrap.Modal(document.getElementById('modalMensaje'));
+                    modal.show();
+                }
+            });
+        }
+    </script>
+}

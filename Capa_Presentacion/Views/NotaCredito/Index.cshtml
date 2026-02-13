@@ -1,0 +1,271 @@
+﻿@model List<Capa_Entidad.NotaCredito>
+
+@{
+    ViewData["Title"] = "Notas de Crédito";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+   
+}
+
+<ol class="breadcrumb mb-4 mt-4">
+    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Inicio</a></li>
+    <li class="breadcrumb-item active">Notas de Crédito</li>
+</ol>
+
+<div class="card shadow border-0">
+    <div class="card-header text-white" style="background-color:#274DF5;">
+        <i class="fas fa-file-invoice me-2"></i> Lista de Notas de Crédito
+    </div>
+
+    <div class="card-body">
+
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <select id="filtroCampo" class="form-control">
+                    <option value="">-- Filtrar por --</option>
+                    <option value="0">N° Nota Crédito</option>
+                    <option value="1">N° Documento Origen</option>
+                    <option value="2">N° Confirmacion</option>
+                    <option value="4">Origen</option>
+                    <option value="5">Proveedor</option>
+                    <option value="8">Estado</option>
+                    <option value="9">Fecha Emisión</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <input id="filtroValor" class="form-control" placeholder="Buscar..." autocomplete="off" onkeyup="filtrarColumna()" />
+            </div>
+        </div>
+
+        <table class="table table-striped align-middle" id="tablaNC">
+            <thead class="text-white" style="background-color:#274DF5;">
+                <tr>
+                    <th>N° Nota Crédito</th>
+                    <th>N° Documento Origen</th>
+                    <th>N° Confirmacion</th>
+                    <th>ID Origen</th>
+                    <th>Origen</th>
+                    <th>Proveedor</th>
+                    <th>Monto</th>
+                    <th>Archivo</th>
+                    <th>Estado</th>
+                    <th>Fecha Emisión</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var nc in Model
+                                .OrderByDescending(n => n.oEstado.IdEstado == 5) // PENDIENTE primero
+                                .ThenBy(n => n.oEstado.IdEstado == 8))          // luego APLICADA
+
+                {
+                    <tr>
+                        <td>@nc.NumeroNC</td>
+                        <td>@nc.NumeroDocumentoOrigen</td>
+                        <td>@nc.NumeroDocumentoConfirmacion</td>
+                        <td>@nc.IdOrigen</td>
+                        <td>
+                            @{
+                                var colorOrigen = nc.TipoOrigen switch
+                                {
+                                    "PUBLICIDAD" => "bg-primary",
+                                    "REBATE" => "bg-success",
+                                    "VENCIDO" => "bg-danger",
+                                    "CANJE" => "bg-warning text-dark",
+                                    _ => "bg-secondary"
+                                };
+                            }
+                            <span class="badge @colorOrigen">@nc.TipoOrigen</span>
+                        </td>
+                        <td>@nc.oProveedor?.NombreProveedor</td>
+                        <td>@nc.Monto.ToString("C")</td>
+                        <td>
+                            @if (!string.IsNullOrEmpty(nc.DocumentoAdjunto))
+                            {
+                                var carpeta = nc.TipoOrigen switch
+                                {
+                                    "PUBLICIDAD" => "Comprobantes",
+                                    "REBATE" => "ComprobantesRebate",
+                                    "VENCIDO" => "ComprobantesVencidos",
+                                    "CANJE" => "ComprobantesCanje",
+                                    _ => ""
+                                };
+                                if (!string.IsNullOrEmpty(carpeta))
+                                {
+                                    <a href="@Url.Action("Ver", "NotaCredito", new { carpeta = carpeta, archivo = nc.DocumentoAdjunto })"
+                                       target="_blank" class="btn btn-sm btn-secondary">
+                                        <i class="fas fa-file"></i> Ver
+                                    </a>
+                                }
+                            }
+                        </td>
+                        <td>
+                            @if (nc.oEstado.IdEstado == 5)
+                            {
+                                <span class="badge bg-warning">PENDIENTE</span>
+                                
+                            }
+                            else if (nc.oEstado.IdEstado == 10)
+                            {
+                                <span class="badge bg-danger">ANULADA</span>
+                            }
+                            else if (nc.oEstado.IdEstado == 8)
+                            {
+                                <span class="badge bg-success">APLICADA</span>
+                            }
+                        </td>
+                        <td>@nc.FechaEmision.ToString("yyyy-MM-dd")</td>
+                        <td>
+                            @if (nc.oEstado.IdEstado == 8)
+                            {
+                                <button class="btn btn-info btn-sm mb-1"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#detallePagoModal"
+                                        onclick="cargarDetallePagoNC(@nc.IdNC)">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            }
+                            @if (!string.IsNullOrEmpty(nc.NumeroDocumentoOrigen))
+                            {
+                                string controller;
+                                string action;
+
+                                switch (nc.TipoOrigen)
+                                {
+                                    case "PUBLICIDAD":
+                                        controller = "Publicidad";
+                                        action = "ListaPagos";
+                                        break;
+
+                                    case "REBATE":
+                                        controller = "EjecucionRebate";
+                                        action = "ListaPagosRebate";
+                                        break;
+
+                                    case "VENCIDO":
+                                        controller = "Vencidos";
+                                        action = "ListaVencidos";
+                                        break;
+
+                                    case "CANJE":
+                                        controller = "Canje";
+                                        action = "ListaPagos";
+                                        break;
+
+                                    default:
+                                        controller = "Publicidad";
+                                        action = "ListaPagos";
+                                        break;
+                                }
+
+                                <a href="@Url.Action(action, controller, new { doc = nc.NumeroDocumentoOrigen })"
+                                   class="btn btn-success btn-sm mb-1" title="Ver Pagos">
+                                    <i class="fas fa-external-link-alt"></i>
+                                </a>
+                            }
+
+
+
+
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal Detalle de Pagos -->
+<div class="modal fade" id="detallePagoModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Detalle de Pagos</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>N° Confirmación</th>
+                            <th>Usuario que Aplicó</th>
+                            <th>Fecha Registro</th>
+                            <th>Comprobante</th>
+                        </tr>
+                    </thead>
+                    <tbody id="detallePagosBody"></tbody>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $('#tablaNC').DataTable({
+                pageLength: 15,
+                lengthChange: false,
+                searching: false,
+                ordering: false,
+                responsive: true,
+                language: {
+                    paginate: { previous: "Anterior", next: "Siguiente" },
+                    info: "Mostrando _START_ a _END_ de _TOTAL_ registros",
+                    emptyTable: "No hay notas de crédito registradas"
+                }
+            });
+        });
+
+        function filtrarColumna() {
+            let campoIndex = $('#filtroCampo').val();
+            let valor = $('#filtroValor').val().toLowerCase();
+
+            $('#tablaNC tbody tr').each(function () {
+                if (campoIndex === "") { $(this).show(); return; }
+                let textoCelda = $(this).find('td').eq(campoIndex).text().toLowerCase();
+                $(this).toggle(textoCelda.includes(valor));
+            });
+        }
+
+        $('#filtroCampo').change(function () {
+            $('#filtroValor').val('');
+            filtrarColumna();
+        });
+
+        function cargarDetallePagoNC(idNC){
+            $('#detallePagosBody').html('<tr><td colspan="4" class="text-center">Cargando...</td></tr>');
+
+            $.ajax({
+                url: '@Url.Action("VerDetallePago", "NotaCredito")',
+                type: 'GET',
+                data: { id: idNC },
+                success: function(detalles){
+                    $('#detallePagosBody').html('');
+                    if (!detalles || detalles.length === 0) {
+                        $('#detallePagosBody').html('<tr><td colspan="4" class="text-center">No hay pagos registrados</td></tr>');
+                        return;
+                    }
+                    detalles.forEach(function(d){
+                        var fecha = d.fechaRegistro ? new Date(d.fechaRegistro).toLocaleDateString('es-NI') : 'No disponible';
+                        var con = d.numeroConfirmacion || 'No disponible';
+                        var usuario = d.usuarioAplica || 'No disponible';
+                        var comp = d.comprobante ? '<a href="/ComprobantesNC/'+d.comprobante+'" target="_blank">Ver</a>' : 'No disponible';
+
+                        $('#detallePagosBody').append('<tr>'+
+                            '<td>'+con+'</td>'+
+                            '<td>'+usuario+'</td>'+
+                            '<td>'+fecha+'</td>'+
+                            '<td>'+comp+'</td>'+
+                        '</tr>');
+                    });
+                },
+                error: function(){
+                    $('#detallePagosBody').html('<tr><td colspan="4" class="text-center text-danger">Error al cargar los pagos</td></tr>');
+                }
+            });
+        }
+    </script>
+}

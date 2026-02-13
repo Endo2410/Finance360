@@ -1,0 +1,202 @@
+﻿@using System.Text.Json
+@model List<Capa_Entidad.TipoRebate>
+
+@{
+    ViewData["Title"] = "Gestión Tipo Rebate";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<!-- Breadcrumb -->
+<ol class="breadcrumb mb-4 mt-4">
+    <li class="breadcrumb-item">
+        <a asp-controller="Home" asp-action="Index">Inicio</a>
+    </li>
+    <li class="breadcrumb-item active">Tipo Rebate</li>
+</ol>
+
+<!-- Card principal -->
+<div class="card shadow border-0">
+    <div class="card-header text-white d-flex justify-content-between align-items-center"
+         style="background-color:#274DF5;">
+        <span>
+            <i class="fas fa-percentage me-2"></i>Lista Tipo Rebate
+        </span>
+        <button id="btnNuevo" class="btn btn-light btn-sm">
+            <i class="fas fa-plus"></i> Nuevo
+        </button>
+    </div>
+
+    <div class="card-body">
+        <table class="table table-striped align-middle">
+            <thead class="text-white" style="background-color:#274DF5;">
+                <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Estado</th>
+                    <th class="text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var r in Model)
+                {
+                    var json = JsonSerializer.Serialize(new
+                    {
+                        r.IdTipoRebate,
+                        r.Nombre,
+                        IdEstado = r.oEstado?.IdEstado ?? 0
+                    });
+
+                    <tr>
+                        <td>@r.IdTipoRebate</td>
+                        <td>@r.Nombre</td>
+                        <td>@r.oEstado?.Nombre</td>
+                        <td class="text-center">
+                            <button class="btn btn-warning btn-sm"
+                                    onclick='abrirModal(@Html.Raw(json))'>
+                                <i class="fas fa-edit"></i>
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- MODAL Crear / Editar -->
+<div class="modal fade" id="modalTipoRebate" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Tipo Rebate</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <form id="formTipoRebate" autocomplete="off">
+                    <input type="hidden" id="txtid" value="0" />
+
+                    <div class="mb-3">
+                        <label class="form-label">Nombre</label>
+                        <input id="txtnombre" class="form-control" required />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Estado</label>
+                        <select id="cboestado" class="form-select"></select>
+                    </div>
+
+                    <div class="mt-3">
+                        <div class="alert alert-danger d-none" id="mensajeError"></div>
+                    </div>
+                </form>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button class="btn btn-primary" onclick="guardar()">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Éxito -->
+<div class="modal fade" id="modalExito" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">Éxito</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="cuerpoExito"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Error -->
+<div class="modal fade" id="modalMensaje" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Error</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="cuerpoMensaje"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            cargarEstados();
+            $('#btnNuevo').click(() => abrirModal());
+        });
+
+        function abrirModal(data = null) {
+            $('#mensajeError').addClass('d-none').html('');
+            $('#formTipoRebate')[0].reset();
+            $('#txtid').val(data ? data.IdTipoRebate : 0);
+
+            if (data) {
+                $('#txtnombre').val(data.Nombre);
+                $('#cboestado').val(data.IdEstado);
+            }
+
+            new bootstrap.Modal('#modalTipoRebate').show();
+        }
+
+        function cargarEstados() {
+            $.get('/TipoRebate/Estado', data => {
+                $('#cboestado').empty();
+
+                if (data.success) {
+                    data.estados.forEach(e => {
+                        $('#cboestado').append(
+                            `<option value="${e.idEstado}">${e.nombre}</option>`
+                        );
+                    });
+                } else {
+                    $('#cuerpoMensaje').html(data.mensajes.join('<br/>'));
+                    new bootstrap.Modal('#modalMensaje').show();
+                }
+            });
+        }
+
+        function guardar() {
+            let obj = {
+                IdTipoRebate: $('#txtid').val(),
+                Nombre: $('#txtnombre').val(),
+                oEstado: { IdEstado: $('#cboestado').val() }
+            };
+
+            let url = obj.IdTipoRebate == 0
+                ? '/TipoRebate/Crear'
+                : '/TipoRebate/Editar';
+
+            $.post(url, obj, res => {
+                $('#mensajeError').addClass('d-none').html('');
+
+                if (res.success) {
+                    bootstrap.Modal.getInstance(
+                        document.getElementById('modalTipoRebate')
+                    ).hide();
+
+                    $('#cuerpoExito').html(res.mensajes.join('<br/>'));
+                    new bootstrap.Modal('#modalExito').show();
+
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    let errores = res.mensajes?.map(m => `<p>${m}</p>`).join('');
+                    $('#mensajeError').removeClass('d-none').html(errores);
+                }
+            });
+        }
+    </script>
+}

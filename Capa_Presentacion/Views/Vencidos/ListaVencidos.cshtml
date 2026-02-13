@@ -1,0 +1,350 @@
+﻿@using System.Text.Json 
+@model List<Capa_Entidad.Vencido>
+
+@{
+    ViewData["Title"] = "Lista de Vencidos";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@{
+    var accionesJson = Context.Session.GetString("AccionesUsuario");
+    var acciones = string.IsNullOrEmpty(accionesJson)
+        ? new List<string>()
+        : JsonSerializer.Deserialize<List<string>>(accionesJson);
+
+    bool puedeAnularVencido = acciones.Contains("Anular_Vencido");
+}
+
+
+<ol class="breadcrumb mb-4 mt-4">
+    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Inicio</a></li>
+    <li class="breadcrumb-item active">Lista de Vencidos</li>
+</ol>
+
+<div class="card shadow border-0">
+    <div class="card-header text-white d-flex justify-content-between align-items-center" style="background-color:#274DF5;">
+        <span><i class="fas fa-file-invoice-dollar me-2"></i> Lista de Vencidos</span>
+    </div>
+
+    <div class="card-body">
+        <!-- FILTRO POR COLUMNA -->
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <select id="filtroCampo" class="form-control">
+                    <option value="">-- Filtrar por --</option>
+                    <option value="0">Nº Orden</option>
+                    <option value="1">Proveedor</option>
+                    <option value="3">Usuario</option>
+                    <option value="4">Fecha Creación</option>
+                    <option value="9">Estado Pago</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <input id="filtroValor" class="form-control" placeholder="Buscar..." onkeyup="filtrarColumna()" autocomplete="off" />
+            </div>
+        </div>
+
+        <table class="table table-striped align-middle table-nowrap" id="tablaVencidos">
+            <thead class="text-white" style="background-color:#274DF5;">
+                <tr>
+                    <th>Nº Orden</th>
+                    <th>Proveedor</th>
+                    <th>Concepto</th>
+                    <th>Usuario</th>
+                    <th>Fecha Creación</th>
+                    <th>Saldo Vencido</th>
+                    <th>Monto Total</th>
+                    <th>Monto Pagado</th>
+                    <th>Saldo</th>
+                    <th>Estado Pago</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var v in Model.OrderBy(x => x.IdEstado))
+                {
+                    <tr>
+                        <td>@v.NumeroOrden</td>
+                        <td>@v.NombreProveedor</td>
+                        <td>@v.Concepto</td>
+                        <td>@v.Usuario</td>
+                        <td>@v.FechaCreacion.ToShortDateString()</td>
+                        <td>@v.Saldovencido.ToString("C")</td>
+                        <td>@v.MontoTotal.ToString("C")</td>
+                        <td>@v.MontoPagado.ToString("C")</td>
+                        <td>
+                            @if (v.MontoPagado > v.MontoTotal)
+                            {
+                                <span class="badge bg-success">@v.SaldoPendiente.ToString("C")</span>
+                            }
+                            else if (v.MontoPagado < v.MontoTotal)
+                            {
+                                <span class="badge bg-danger">@v.SaldoPendiente.ToString("C")</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">@v.SaldoPendiente.ToString("C")</span>
+                            }
+                        </td>
+                        <td>
+                            @if (v.IdEstado == 5)
+                            {
+                                <span class="badge bg-warning">PENDIENTE</span>
+                            }
+                            else if (v.IdEstado == 6)
+                            {
+                                <span class="badge bg-success">PAGADO</span>
+                            }
+                            else if (v.IdEstado == 9)
+                            {
+                                <span class="badge bg-danger">VENCIDOS</span>
+                            }
+                        </td>
+                        <td>
+                            <button class="btn btn-info btn-sm"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#detallePagoModal"
+                                    onclick="cargarDetallePagoVencido(@v.IdVencido)">
+                                <i class="fas fa-eye"></i> Ver Pagos
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+<!-- MODAL DETALLE PAGOS -->
+<div class="modal fade" id="detallePagoModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header text-white" style="background-color:#274DF5;">
+                <h5 class="modal-title">Detalle de Pagos</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Tipo Doc</th>
+                            <th>Nº Documento</th>
+                            <th>Confirmación</th>
+                            <th>Monto</th>
+                            <th>Comprobante</th>
+                            <th>Usuario</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="detallePagosBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODALES REUTILIZADOS -->
+<div class="modal fade" id="modalConfirmacion" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title">Confirmación</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="cuerpoConfirmacion"></div>
+            <div class="modal-footer" id="footerConfirmacion"></div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalExito" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">Éxito</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="cuerpoExito"></div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalError" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Error</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="cuerpoError"></div>
+        </div>
+    </div>
+</div>
+
+@section scripts {
+    <script>
+        $(document).ready(function () {
+            // Inicializar DataTable con paginación y responsive
+               tablaVencidos = $('#tablaVencidos').DataTable({
+                pageLength: 15,
+                lengthChange: false,
+                searching: true,
+                ordering: false,
+                responsive: true,
+                language: {
+                    paginate: { previous: "Anterior", next: "Siguiente" },
+                    info: "Mostrando _START_ a _END_ de _TOTAL_ registros",
+                    emptyTable: "No hay registros"
+                }
+            });
+
+            $('#tablaVencidos_filter').hide();
+
+            // Aplicar filtro si viene desde Notas de Crédito
+                var filtroDoc = '@ViewBag.FiltroDocumento';
+
+            if (filtroDoc) {
+                $('#filtroCampo').val(0);          // columna: Nº Documento Soporte
+                $('#filtroValor').val(filtroDoc); // valor recibido
+                filtrarColumna();
+            }
+
+        });
+
+        // Filtro manual por columna
+                     function filtrarColumna() {
+            let col = $("#filtroCampo").val();
+            let val = $("#filtroValor").val();
+
+            tablaVencidos.columns().search('');
+
+            if (col !== "") {
+                tablaVencidos.column(col).search(val).draw();
+            } else {
+                tablaVencidos.search(val).draw();
+            }
+        }
+
+
+
+        $('#filtroCampo').change(function () {
+            $('#filtroValor').val('');
+            filtrarColumna();
+        });
+
+
+ 
+
+        // Cargar detalle de pagos vía AJAX
+              function cargarDetallePagoVencido(idVencido) {
+
+            $('#detallePagosBody').html(
+                '<tr><td colspan="8" class="text-center">Cargando...</td></tr>'
+            );
+
+            $.ajax({
+                url: '@Url.Action("DetallePagoVencido", "Vencidos")',
+                type: 'GET',
+                data: { id: idVencido },
+                success: function (detalles) {
+
+                    $('#detallePagosBody').html('');
+
+                    if (!detalles || detalles.length === 0) {
+                        $('#detallePagosBody').html(
+                            '<tr><td colspan="8" class="text-center">No hay pagos registrados</td></tr>'
+                        );
+                        return;
+                    }
+
+                    detalles.forEach(function (d) {
+
+                        let accion = '';
+
+                        if (d.idEstado === 10) {
+                            accion = '<span class="badge bg-secondary">ANULADO</span>';
+                        }
+                        else if (d.notaCreditoAplicada) {
+                            accion = '<span class="badge bg-info">NC APLICADA</span>';
+                        }
+                        else {
+
+                            if (@puedeAnularVencido.ToString().ToLower()) {
+
+                                accion =
+                                    '<button class="btn btn-danger btn-sm" ' +
+                                    'onclick="anularPagoVencido(' + d.idDetallePago + ')">' +
+                                    '<i class="fas fa-ban"></i> Anular</button>';
+                            }
+                            else {
+                                accion = '';
+                            }
+                        }
+
+
+                        $('#detallePagosBody').append(`
+                            <tr>
+                                <td>${d.fechaDocumento ? new Date(d.fechaDocumento).toLocaleDateString('es-NI') : ''}</td>
+                                <td>${d.tipoDocumento}</td>
+                                <td>${d.documentoPago}</td>
+                                <td>${d.numeroConfirmacion}</td>
+                                <td>${parseFloat(d.montoPagado).toLocaleString("es-NI",{style:"currency",currency:"NIO"})}</td>
+                                <td>${d.comprobante ? `<a href="/ComprobantesVencidos/${d.comprobante}" target="_blank">Ver</a>` : ''}</td>
+                                <td>${d.usuarioPago}</td>
+                                <td>${accion}</td>
+                            </tr>
+                        `);
+                    });
+                }
+            });
+        }
+
+        // ================= ANULAR =================
+        function anularPagoVencido(idDetallePago) {
+
+            $('#cuerpoConfirmacion').html(
+                '<p>¿Desea <strong>anular este pago</strong>?</p>'
+            );
+
+            $('#footerConfirmacion').html(`
+                <button class="btn btn-secondary" data-bs-dismiss="modal">No</button>
+                <button class="btn btn-danger" id="btnConfirmarAnular">Sí, anular</button>
+            `);
+
+            let modal = new bootstrap.Modal(
+                document.getElementById('modalConfirmacion')
+            );
+            modal.show();
+
+            $('#btnConfirmarAnular').off('click').on('click', function () {
+
+                $.ajax({
+                    url: '@Url.Action("AnularPagoVencido", "Vencidos")',
+                    type: 'POST',
+                    data: { idDetallePago },
+                    success: function (r) {
+
+                        modal.hide();
+
+                        if (!r.success) {
+                            $('#cuerpoError').html(r.mensaje);
+                            new bootstrap.Modal(
+                                document.getElementById('modalError')
+                            ).show();
+                            return;
+                        }
+
+                        $('#cuerpoExito').html(r.mensaje);
+                        new bootstrap.Modal(
+                            document.getElementById('modalExito')
+                        ).show();
+
+                        setTimeout(() => location.reload(), 2000);
+                    }
+                });
+            });
+        }
+    </script>
+}

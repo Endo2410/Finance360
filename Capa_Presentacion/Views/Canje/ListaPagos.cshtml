@@ -1,0 +1,331 @@
+﻿@using System.Text.Json 
+@model List<Capa_Entidad.Canje>
+
+@{
+    ViewData["Title"] = "Lista de Canjes con Pagos";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@{
+    var accionesJson = Context.Session.GetString("AccionesUsuario");
+    var acciones = string.IsNullOrEmpty(accionesJson)
+        ? new List<string>()
+        : JsonSerializer.Deserialize<List<string>>(accionesJson);
+
+    bool puedeAnularCanje = acciones.Contains("Anular_Canje");
+}
+
+<ol class="breadcrumb mb-4 mt-4">
+    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Inicio</a></li>
+    <li class="breadcrumb-item active">Lista de Canjes con Pagos</li>
+</ol>
+
+<div class="card shadow border-0">
+    <div class="card-header text-white d-flex justify-content-between align-items-center" style="background-color:#274DF5;">
+        <span><i class="fas fa-exchange-alt me-2"></i> Lista de Canjes con Pagos</span>
+    </div>
+
+    <div class="card-body">
+
+        <!-- FILTRO -->
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <select id="filtroCampo" class="form-control">
+                    <option value="">-- Filtrar por --</option>
+                    <option value="0">Nº Canje</option>
+                    <option value="1">Proveedor</option>
+                    <option value="2">Periodo</option>
+                    <option value="8">Estado</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <input id="filtroValor" class="form-control" placeholder="Buscar..." onkeyup="filtrarColumna()" autocomplete="off" />
+            </div>
+        </div>
+
+        <table class="table table-striped align-middle table-nowrap" id="tablaCanjes">
+            <thead class="text-white" style="background-color:#274DF5;">
+                <tr>
+                    <th>Nº Canje</th>
+                    <th>Proveedor</th>
+                    <th>Periodo</th>
+                    <th>Volumen</th>
+                    <th>Saldo Vencido</th>
+                    <th>Monto</th>
+                    <th>Monto Pagado</th>
+                    <th>Saldo</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var c in Model
+                                .OrderBy(x => x.IdEstado == 5 ? 1 :
+                                x.IdEstado == 7 ? 2 :
+                                x.IdEstado == 6 ? 3 : 4))
+                {
+                    <tr>
+                        <td>@c.NumeroCanje</td>
+                        <td>@c.oProveedor?.NombreProveedor</td>
+                        <td>@c.oTipoCanje?.Nombre</td>
+                        <td>@c.Volumen.ToString("N2")</td>
+                        <td>@c.Saldovencido.ToString("C")</td>
+                        <td>@c.Monto.ToString("C")</td>
+                        <td>@c.MontoPagado.ToString("C")</td>
+                        <td>
+                            @if (c.MontoPagado > c.Monto)
+                            {
+                                <span class="badge bg-success">
+                                    @c.SaldoPendiente.ToString("C")
+                                </span>
+                            }
+                            else if (c.MontoPagado < c.Monto)
+                            {
+                                <span class="badge bg-danger">
+                                    @c.SaldoPendiente.ToString("C")
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">
+                                    @c.SaldoPendiente.ToString("C")
+                                </span>
+                            }
+                        </td>
+
+                        <td>
+                            @if (c.oEstado.IdEstado == 5)
+                            {
+                                <span class="badge bg-warning">PENDIENTE</span>
+                            }
+                            else if (c.oEstado.IdEstado == 7)
+                            {
+
+                                <span class="badge bg-info">PARCIAL</span>
+                            }
+                            else if (c.oEstado.IdEstado == 6)
+                            {
+
+                                <span class="badge bg-success">PAGADO</span>
+                            }
+                        </td>
+                        <td>
+                            <button class="btn btn-info btn-sm"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#detallePagoModal"
+                                    onclick="cargarDetallePago(@c.IdCanje)">
+                                <i class="fas fa-eye"></i> Ver Pagos
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+    </div>
+</div>
+
+<!-- ================= MODAL DETALLE PAGOS ================= -->
+<div class="modal fade" id="detallePagoModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header text-white" style="background-color:#274DF5;">
+                <h5 class="modal-title">Detalle de Pagos</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Tipo Doc</th>
+                            <th>N° Documento</th>
+                            <th>N° Confirmación</th>
+                            <th>Monto</th>
+                            <th>Comprobante</th>
+                            <th>Usuario</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="detallePagosBody"></tbody>
+                </table>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================= MODALES REUTILIZADOS DE PUBLICIDAD ================= -->
+<!-- Confirmación -->
+<div class="modal fade" id="modalConfirmacion" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title">Confirmación</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="cuerpoConfirmacion"></div>
+            <div class="modal-footer" id="footerConfirmacion"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Éxito -->
+<div class="modal fade" id="modalExito" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">Éxito</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="cuerpoExito"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Error -->
+<div class="modal fade" id="modalError" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Error</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="cuerpoError"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts {
+    <script>
+        let tablaCanjes;
+
+        $(document).ready(function () {
+
+            tablaCanjes = $('#tablaCanjes').DataTable({
+                pageLength: 15,
+                lengthChange: false,
+                searching: true,
+                ordering: false,
+                responsive: true,
+                language: {
+                    paginate: { previous: "Anterior", next: "Siguiente" },
+                    info: "Mostrando _START_ a _END_ de _TOTAL_ registros"
+                }
+            });
+
+            $('#tablaCanjes_filter').hide();
+
+              // Aplicar filtro automático si viene desde Notas de Crédito
+            var filtroDoc = '@ViewBag.FiltroDocumento';
+            if (filtroDoc) {
+                $('#filtroCampo').val(0); // 0 = columna "Nº Documento"
+                $('#filtroValor').val(filtroDoc);
+                filtrarColumna(); // Ejecutamos la función que ya tienes
+            }
+        });
+
+        function filtrarColumna() {
+            let col = $("#filtroCampo").val();
+            let val = $("#filtroValor").val();
+
+            tablaCanjes.columns().search('');
+            if (col !== "") tablaCanjes.column(col).search(val).draw();
+            else tablaCanjes.search(val).draw();
+        }
+
+        // ================= DETALLE =================
+        function cargarDetallePago(idCanje) {
+
+            $('#detallePagosBody').html('<tr><td colspan="8" class="text-center">Cargando...</td></tr>');
+
+            $.get('@Url.Action("DetallePagoCanje", "Canje")', { id: idCanje }, function (detalles) {
+
+                $('#detallePagosBody').html('');
+
+                if (!detalles || detalles.length === 0) {
+                    $('#detallePagosBody').html('<tr><td colspan="8" class="text-center">No hay pagos</td></tr>');
+                    return;
+                }
+
+                detalles.forEach(d => {
+                    var fecha = d.fechaRegistro
+                            ? new Date(d.fechaRegistro).toLocaleDateString('es-NI')
+                            : 'No disponible';
+
+                    let accion = '';
+                    if (d.idEstado === 10)
+                        accion = '<span class="badge bg-secondary">ANULADO</span>';
+                    else if (d.notaCreditoAplicada)
+                        accion = '<span class="badge bg-info">NC APLICADA</span>';
+                           else {
+
+                                if (@puedeAnularCanje.ToString().ToLower()) {
+
+                                    accion = `<button class="btn btn-danger btn-sm" onclick="anularPago(${d.idDetallePago})">
+                                                <i class="fas fa-ban"></i> Anular
+                                              </button>`;
+                                }
+                                else {
+                                    accion = '';
+                                }
+                            }
+
+                    $('#detallePagosBody').append(`
+                        <tr>
+                            <td>${new Date(d.fechaRegistro).toLocaleDateString('es-NI')}</td>
+                            <td>${d.tipoDocumento}</td>
+                            <td>${d.documentoPago}</td>
+                            <td>${d.numeroConfirmacion ?? ''}</td>
+                            <td>${parseFloat(d.montoPagado).toLocaleString('es-NI',{style:'currency',currency:'NIO'})}</td>
+                            <td>${d.comprobante ? `<a href="/ComprobantesCanje/${d.comprobante}" target="_blank">Ver</a>` : ''}</td>
+                            <td>${d.usuarioPago}</td>
+                            <td>${accion}</td>
+                        </tr>
+                    `);
+                });
+            });
+        }
+
+        // ================= ANULAR =================
+        function anularPago(idDetallePago) {
+
+            $('#cuerpoConfirmacion').html('<p>¿Desea anular este pago?</p>');
+            $('#footerConfirmacion').html(`
+                <button class="btn btn-secondary" data-bs-dismiss="modal">No</button>
+                <button class="btn btn-danger" id="btnConfirmar">Sí, anular</button>
+            `);
+
+            let modal = new bootstrap.Modal(document.getElementById('modalConfirmacion'));
+            modal.show();
+
+            $('#btnConfirmar').off().on('click', function () {
+
+                $.post('@Url.Action("AnularPagoCanje", "Canje")',
+                    { idDetallePago: idDetallePago },
+                    function (r) {
+
+                        modal.hide();
+                        $('#cuerpoExito').html(r.mensaje);
+                        new bootstrap.Modal(document.getElementById('modalExito')).show();
+                        setTimeout(() => location.reload(), 1500);
+                    }
+                ).fail(xhr => {
+                    modal.hide();
+                    $('#cuerpoError').html(xhr.responseText);
+                    new bootstrap.Modal(document.getElementById('modalError')).show();
+                });
+            });
+        }
+    </script>
+}

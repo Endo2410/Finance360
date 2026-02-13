@@ -1,0 +1,159 @@
+﻿@using System.Text.Json
+@model List<Capa_Entidad.Estado>
+
+@{
+    ViewData["Title"] = "Gestión de Estados";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<!-- Breadcrumb -->
+<ol class="breadcrumb mb-4 mt-4">
+    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Inicio</a></li>
+    <li class="breadcrumb-item active">Estados</li>
+</ol>
+
+<!-- Card principal -->
+<div class="card shadow border-0">
+    <div class="card-header text-white d-flex justify-content-between align-items-center"
+         style="background-color:#274DF5;">
+        <span><i class="fas fa-list me-2"></i>Lista de Estados</span>
+        <button id="btnNuevo" class="btn btn-light btn-sm">
+            <i class="fas fa-plus"></i> Nuevo Estado
+        </button>
+    </div>
+
+    <div class="card-body">
+        <table class="table table-striped align-middle" id="tablaEstados">
+            <thead class="text-white" style="background-color:#274DF5;">
+                <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Descripción</th>
+                    <th>Módulo</th>
+                    <th>Fecha Registro</th>
+                    <th class="text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var e in Model)
+                {
+                    var json = JsonSerializer.Serialize(new
+                    {
+                        e.IdEstado,
+                        e.Nombre,
+                        e.Descripcion,
+                        e.Modulo
+                    });
+
+                    <tr>
+                        <td>@e.IdEstado</td>
+                        <td>@e.Nombre</td>
+                        <td>@e.Descripcion</td>
+                        <td>@e.Modulo</td>
+                        <td>@e.FechaRegistro.ToString("dd/MM/yyyy")</td>
+                        <td class="text-center">
+                            <button class="btn btn-warning btn-sm" onclick='abrirModal(@Html.Raw(json))'>
+                                <i class="fas fa-edit"></i>
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal fade" id="modalEstado" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Estado</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <form id="formEstado" autocomplete="off">
+                    <input type="hidden" id="txtid" value="0" />
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Nombre</label>
+                            <input id="txtnombre" class="form-control" required />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Descripción</label>
+                            <input id="txtdescripcion" class="form-control" />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Módulo</label>
+                            <input id="txtmodulo" class="form-control" />
+                        </div>
+
+                        <div class="col-12 mt-3">
+                            <div class="alert alert-danger d-none" id="mensajeError"></div>
+                            <div class="alert alert-success d-none" id="mensajeOk"></div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button class="btn btn-primary" onclick="guardarEstado()">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $('#btnNuevo').click(() => abrirModal());
+        });
+
+        function abrirModal(e = null) {
+            $('#mensajeError, #mensajeOk').addClass('d-none').text('');
+            $('#formEstado')[0].reset();
+            $('#txtid').val(e ? e.IdEstado : 0);
+
+            if (e) {
+                $('#txtnombre').val(e.Nombre);
+                $('#txtdescripcion').val(e.Descripcion);
+                $('#txtmodulo').val(e.Modulo);
+            }
+
+            new bootstrap.Modal('#modalEstado').show();
+        }
+
+        function guardarEstado() {
+            let estado = {
+                IdEstado: $('#txtid').val(),
+                Nombre: $('#txtnombre').val(),
+                Descripcion: $('#txtdescripcion').val(),
+                Modulo: $('#txtmodulo').val()
+            };
+
+            let url = estado.IdEstado == 0 ? '/Estado/Crear' : '/Estado/Editar';
+
+            $.post(url, estado, res => {
+                $('#mensajeError, #mensajeOk').addClass('d-none').text('');
+
+                if (res.success) {
+                    $('#mensajeOk').removeClass('d-none').html(res.mensajes.join('<br/>'));
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    let htmlErrores = '';
+                    if (res.mensajes && res.mensajes.length > 0) {
+                        res.mensajes.forEach(m => htmlErrores += `<p>${m}</p>`);
+                    } else {
+                        htmlErrores = '<p>Ocurrió un error inesperado.</p>';
+                    }
+                    $('#mensajeError').removeClass('d-none').html(htmlErrores);
+                }
+            });
+        }
+    </script>
+}

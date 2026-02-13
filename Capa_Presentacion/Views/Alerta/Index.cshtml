@@ -1,0 +1,83 @@
+﻿@{
+    ViewData["Title"] = "Configuración de Alertas";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    // =====================================
+    // Usuarios simulados
+    // =====================================
+    var usuarios = new List<string> { "FINANZAS", "GERENCIA", "MARKETING" };
+
+    // =====================================
+    // Tipos de alerta simulados
+    // =====================================
+    var tiposAlerta = new List<dynamic>
+    {
+        new { Tipo = "Pagos atrasados", Descripcion = "Alertas sobre pagos atrasados de Publicidad/Rebate", UsuariosAsignados = new List<string> { "FINANZAS", "GERENCIA" } },
+        new { Tipo = "Pagos por vencerse", Descripcion = "Alertas sobre pagos próximos a vencer de Publicidad/Rebate", UsuariosAsignados = new List<string> { "FINANZAS", "GERENCIA" } },
+        new { Tipo = "Acuerdos Finalizados", Descripcion = "Notificación de acuerdos que han finalizado", UsuariosAsignados = new List<string> { "GERENCIA" } },
+        new { Tipo = "Acuerdos Activos", Descripcion = "Alertas sobre acuerdos activos", UsuariosAsignados = new List<string> { "MARKETING", "GERENCIA" } },
+        new { Tipo = "Ingresos por Publicidad/Rebates", Descripcion = "Notificación de ingresos recibidos por campañas o rebates", UsuariosAsignados = new List<string> { "FINANZAS" } },
+        new { Tipo = "Alerta por vencimiento de acuerdos", Descripcion = "Alerta de próximos vencimientos de acuerdos y términos de periodos", UsuariosAsignados = new List<string> { "GERENCIA", "MARKETING" } }
+    };
+}
+
+<ol class="breadcrumb mb-4 mt-4">
+    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Inicio</a></li>
+    <li class="breadcrumb-item active">Configuración de Alertas</li>
+</ol>
+
+<div class="row row-cols-1 row-cols-md-2 g-4">
+    @foreach (var alerta in tiposAlerta)
+    {
+        <div class="col">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <strong>@alerta.Tipo</strong>
+                </div>
+                <div class="card-body">
+                    <p>@alerta.Descripcion</p>
+                    <div class="d-flex flex-wrap gap-2">
+                        @foreach (var u in usuarios)
+                        {
+                            var asignado = alerta.UsuariosAsignados.Contains(u);
+                            <div class="form-check">
+                                <input class="form-check-input chk-usuario" type="checkbox" data-tipo="@alerta.Tipo" data-usuario="@u" @(asignado ? "checked" : "") />
+                                <label class="form-check-label">@u</label>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<div class="mt-4 text-end">
+    <button class="btn btn-success" onclick="guardarConfiguracion()">
+        <i class="fas fa-save"></i> Guardar Configuración
+    </button>
+</div>
+
+@section Scripts {
+    <script>
+        function guardarConfiguracion() {
+            let config = [];
+            $('.chk-usuario').each(function () {
+                let tipo = $(this).data('tipo');
+                let usuario = $(this).data('usuario');
+                let checked = $(this).is(':checked');
+
+                let fila = config.find(f => f.Tipo === tipo);
+                if (!fila) {
+                    fila = { Tipo: tipo, UsuariosAsignados: [] };
+                    config.push(fila);
+                }
+
+                if (checked) fila.UsuariosAsignados.push(usuario);
+            });
+
+            console.log("Configuración guardada:", config);
+            alert("¡Configuración de alertas simulada guardada! Revisa la consola para ver el JSON.");
+        }
+    </script>
+}

@@ -1,0 +1,199 @@
+﻿@using System.Text.Json
+@model List<Capa_Entidad.Pais>
+
+@{
+    ViewData["Title"] = "Gestión de Países";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<!-- Breadcrumb -->
+<ol class="breadcrumb mb-4 mt-4">
+    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Inicio</a></li>
+    <li class="breadcrumb-item active">Países</li>
+</ol>
+
+<!-- Card principal -->
+<div class="card shadow border-0">
+    <div class="card-header text-white d-flex justify-content-between align-items-center"
+         style="background-color:#274DF5;">
+        <span><i class="fas fa-flag me-2"></i>Lista de Países</span>
+        <button id="btnNuevo" class="btn btn-light btn-sm">
+            <i class="fas fa-plus"></i> Nuevo País
+        </button>
+    </div>
+
+    <div class="card-body">
+        <table class="table table-striped align-middle" id="tablaPaises">
+            <thead class="text-white" style="background-color:#274DF5;">
+                <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Estado</th>
+                    <th class="text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var p in Model)
+                {
+                    var json = JsonSerializer.Serialize(new
+                    {
+                        p.IdPais,
+                        p.Nombre,
+                        IdEstado = p.oEstado?.IdEstado ?? 0
+                    });
+
+                    <tr>
+                        <td>@p.IdPais</td>
+                        <td>@p.Nombre</td>
+                        <td>@p.oEstado?.Nombre</td>
+                        <td class="text-center">
+                            <button class="btn btn-warning btn-sm" onclick='abrirModal(@Html.Raw(json))'>
+                                <i class="fas fa-edit"></i>
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal Crear/Editar País -->
+<div class="modal fade" id="modalPais" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">País</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <form id="formPais" autocomplete="off">
+                    <input type="hidden" id="txtid" value="0" />
+
+                    <div class="mb-3">
+                        <label class="form-label">Nombre</label>
+                        <input id="txtnombre" class="form-control" required />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Estado</label>
+                        <select id="cboestado" class="form-select"></select>
+                    </div>
+
+                    <div class="mt-3">
+                        <!-- Mensajes de error dentro del modal -->
+                        <div class="alert alert-danger d-none" id="mensajeError"></div>
+                    </div>
+                </form>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button class="btn btn-primary" onclick="guardarPais()">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal global para mensajes de éxito -->
+<div class="modal fade" id="modalExito" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">Éxito</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="cuerpoExito"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal global para errores inesperados -->
+<div class="modal fade" id="modalMensaje" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Error</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="cuerpoMensaje"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            cargarEstados();
+            $('#btnNuevo').click(() => abrirModal());
+        });
+
+        function abrirModal(p = null) {
+            $('#mensajeError').addClass('d-none').text('');
+            $('#formPais')[0].reset();
+            $('#txtid').val(p ? p.IdPais : 0);
+
+            if (p) {
+                $('#txtnombre').val(p.Nombre);
+                $('#cboestado').val(p.IdEstado);
+            }
+
+            new bootstrap.Modal('#modalPais').show();
+        }
+
+        function cargarEstados() {
+            $.get('/Pais/Estado', data => {
+                $('#cboestado').empty();
+
+                if (data.success) {
+                    data.estados.forEach(e => {
+                        $('#cboestado').append(`<option value="${e.idEstado}">${e.nombre}</option>`);
+                    });
+                } else {
+                    let errores = data.mensajes ? data.mensajes.join('<br/>') : 'No se pudieron cargar los estados.';
+                    $('#cuerpoMensaje').html(errores);
+                    new bootstrap.Modal('#modalMensaje').show();
+                }
+            });
+        }
+
+        function guardarPais() {
+            let pais = {
+                IdPais: $('#txtid').val(),
+                Nombre: $('#txtnombre').val(),
+                IdEstado: $('#cboestado').val()
+            };
+
+            let url = pais.IdPais == 0 ? '/Pais/Crear' : '/Pais/Editar';
+
+            $.post(url, pais, res => {
+                $('#mensajeError').addClass('d-none').html('');
+
+                if (res.success) {
+                    // Cerrar modal del formulario
+                    bootstrap.Modal.getInstance(document.getElementById('modalPais')).hide();
+
+                    // Mostrar modal global de éxito
+                    $('#cuerpoExito').html(res.mensajes.join('<br/>'));
+                    new bootstrap.Modal('#modalExito').show();
+
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    // Mostrar errores dentro del mismo modal
+                    let htmlErrores = res.mensajes && res.mensajes.length > 0
+                        ? res.mensajes.map(m => `<p>${m}</p>`).join('')
+                        : '<p>Ocurrió un error inesperado.</p>';
+
+                    $('#mensajeError').removeClass('d-none').html(htmlErrores);
+                }
+            });
+        }
+    </script>
+}

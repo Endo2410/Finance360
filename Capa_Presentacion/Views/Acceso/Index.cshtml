@@ -1,0 +1,130 @@
+﻿@{
+	Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Inicio de Sesión</title>
+
+	@*<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+
+		<link href="~/Content/DataTables/css/loadingoverlaylogin.css" rel="stylesheet" />
+		<link href="~/Content/DataTables/css/REGISTRO.css" rel="stylesheet" />
+		<link href="~/Content/DataTables/css/login01.css" rel="stylesheet">*@
+
+	<link href="~/Content/Site.css" rel="stylesheet" />
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+	<link href="~/css/nuevo.css" rel="stylesheet" />
+	<link href="~/css/loadingoverlaylogin.css" rel="stylesheet" />
+	<link href="~/css/login01.css" rel="stylesheet" />
+	<link href="~/css/REGISTRO.css" rel="stylesheet" />
+
+
+</head>
+<body class="bg-light">
+	<section class="vh-100 vw-100">
+
+		<div class="container-fluid h-100">
+			<div class="row d-flex justify-content-center align-items-center h-100">
+				<!-- Imagen -->
+				<div class="col-md-9 col-lg-6 col-xl-5">
+					<img src="https://mdbcdn.b-cdn.net/img/Photos/new-templates/bootstrap-login-form/draw2.webp"
+						 class="img-fluid" alt="Imagen de inicio de sesión">
+				</div>
+
+				<!-- Formulario -->
+				<div class="col-md-8 col-lg-6 col-xl-4 offset-xl-1">
+					<form id="loginForm" action="@Url.Action("Index","Acceso")" method="post" novalidate>
+						<div class="text-center">
+							<i class="fas fa-user icon-big"></i>
+							<p class="lead fw-normal mb-3">Inicio de Sesión</p>
+						</div>
+
+						<!-- Nombre de usuario -->
+						<div class="mb-4">
+							<label for="nombreUsuario" class="form-label">Nombre de usuario</label>
+							<input id="nombreUsuario" class="form-control" name="nombreUsuario" type="text" required maxlength="50">
+							<div class="invalid-feedback">Por favor, ingrese su nombre de usuario.</div>
+						</div>
+
+						<!-- Contraseña -->
+						<div class="mb-3">
+							<label for="clave" class="form-label">Contraseña</label>
+							<input id="clave" class="form-control" name="clave" type="password" required autocomplete="off">
+							<div class="invalid-feedback">La contraseña es obligatoria.</div>
+						</div>
+
+						<!-- Mensaje de error -->
+						@if (ViewBag.Error != null)
+						{
+							<div class="alert alert-danger" role="alert">
+								@ViewBag.Error
+							</div>
+						}
+
+						<!-- Enlace para restablecer contraseña -->
+						<div class="d-flex justify-content-between align-items-center">
+							<a href="@Url.Action("Reestablecer", "Acceso")" class="text-body">¿Olvidaste tu contraseña?</a>
+						</div>
+
+						<!-- Botón de inicio de sesión -->
+						<div class="text-center text-lg-start mt-4 pt-2">
+							<button id="btnLogin" type="submit" class="btn btn-primary w-100">Iniciar sesión</button>
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+
+		<!-- Overlay de carga -->
+		<div id="loadingOverlay" class="d-none">
+			<div class="spinner-border text-light"
+				 role="status"
+				 style="width: 4rem; height: 4rem;">
+			</div>
+			<p class="text-white mt-3 fs-5">Iniciando sesión...</p>
+		</div>
+
+
+
+	</section>
+	<!-- Footer -->
+	<footer class="text-center py-3 bg-primary text-white footer">
+		Farmacia Saba © @DateTime.Now.Year . Todos los derechos reservados. - Desarrollado por Ing. José Luis López
+	</footer>
+	<!-- Scripts -->
+	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+
+	<script>
+		(function () {
+			'use strict';
+			var forms = document.querySelectorAll('form');
+
+			Array.prototype.slice.call(forms).forEach(function (form) {
+				form.addEventListener('submit', function (event) {
+					if (!form.checkValidity()) {
+						event.preventDefault();
+						event.stopPropagation();
+					} else {
+						event.preventDefault();
+						document.getElementById('loadingOverlay')
+							.classList.remove('d-none');
+
+						setTimeout(() => form.submit(), 1200);
+					}
+					form.classList.add('was-validated');
+				}, false);
+			});
+		})();
+	</script>
+
+</body>
+</html>
+
+

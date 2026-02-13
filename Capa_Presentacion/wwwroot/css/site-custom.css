@@ -1,0 +1,46 @@
+﻿/* ===========================
+   TABLAS GENERALES
+   =========================== */
+.table-nowrap th,
+.table-nowrap td {
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+/* ===========================
+   BADGES DE ESTADO
+   =========================== */
+.badge-pendiente {
+    display: inline-block;
+    padding: 0.25em 0.6em;
+    font-size: 0.875em;
+    font-weight: bold;
+    color: #000000;
+    background-color: #f0f005;
+    border-radius: 0.25rem;
+    text-align: center;
+}
+
+/* Opcionales para el futuro */
+.badge-pagado {
+    color: #ffffff;
+    background-color: #28a745;
+}
+
+.badge-vencido {
+    color: #ffffff;
+    background-color: #dc3545;
+}
+
+
+/* Estado pendiente por IdEstado == 5 */
+.badge-estado5vencidos{
+    display: inline-block;
+    padding: 0.25em 0.6em;
+    font-size: 0.875em;
+    font-weight: bold;
+    color: #000000;
+    background-color: #f0f005; /* amarillo */
+    border-radius: 0.25rem;
+    text-align: center;
+}

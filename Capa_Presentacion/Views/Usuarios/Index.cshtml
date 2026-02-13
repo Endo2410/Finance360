@@ -1,0 +1,260 @@
+﻿@using System.Text.Json
+@model List<Capa_Entidad.Usuario>
+
+@{
+    ViewData["Title"] = "Gestión de Usuarios";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<!-- Breadcrumb -->
+<ol class="breadcrumb mb-4 mt-4">
+    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Inicio</a></li>
+    <li class="breadcrumb-item active">Usuarios</li>
+</ol>
+
+<!-- Card principal -->
+<div class="card shadow border-0">
+    <div class="card-header text-white d-flex justify-content-between align-items-center"
+         style="background-color:#274DF5;">
+        <span><i class="fas fa-users me-2"></i>Lista de Usuarios</span>
+        <button id="btnNuevo" class="btn btn-light btn-sm">
+            <i class="fas fa-user-plus"></i> Nuevo Usuario
+        </button>
+    </div>
+
+    <div class="card-body">
+        <table class="table table-striped align-middle" id="tablaUsuarios">
+            <thead class="text-white" style="background-color:#274DF5;">
+                <tr>
+                    <th>ID</th>
+                    <th>Nombres</th>
+                    <th>Apellidos</th>
+                    <th>Usuario</th>
+                    <th>Correo</th>
+                    <th>Rol</th>
+                    <th>Estado</th>
+                    <th class="text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var u in Model)
+                {
+                    var json = JsonSerializer.Serialize(new
+                    {
+                        u.IdUsuario,
+                        u.Nombres,
+                        u.Apellidos,
+                        u.NombreUsuario,
+                        u.Correo,
+                        IdRol = u.oRol?.IdRol ?? 0,
+                        IdEstado = u.oEstado?.IdEstado ?? 0
+                    });
+
+                    <tr>
+                        <td>@u.IdUsuario</td>
+                        <td>@u.Nombres</td>
+                        <td>@u.Apellidos</td>
+                        <td>@u.NombreUsuario</td>
+                        <td>@u.Correo</td>
+                        <td>@u.oRol?.Nombre</td>
+                        <td>@u.oEstado?.Nombre</td>
+                        <td class="text-center">
+                            <button class="btn btn-warning btn-sm" onclick='abrirModal(@Html.Raw(json))'>
+                                <i class="fas fa-edit"></i>
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<input type="hidden" id="idUsuarioLogueado" value="@Context.Session.GetInt32("IdUsuario")" />
+
+<!-- Modal Crear/Editar Usuario -->
+<div class="modal fade" id="modalUsuario" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Usuario</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <form id="formUsuario" autocomplete="off">
+                    <input type="hidden" id="txtid" value="0" />
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Nombres</label>
+                            <input id="txtnombres" class="form-control" required />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Apellidos</label>
+                            <input id="txtapellidos" class="form-control" required />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Usuario</label>
+                            <input id="txtusuario" class="form-control" required />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Correo</label>
+                            <input id="txtcorreo" type="email" class="form-control" required />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Rol</label>
+                            <select id="cborol" class="form-select"></select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Estado</label>
+                            <select id="cboestado" class="form-select"></select>
+                        </div>
+
+                        <div class="col-12 mt-3">
+                            <div class="alert alert-danger d-none" id="mensajeError"></div>
+                            <div class="alert alert-success d-none" id="mensajeOk"></div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button class="btn btn-primary" onclick="guardarUsuario()">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal global para mensajes de éxito -->
+<div class="modal fade" id="modalExito" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">Éxito</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="cuerpoExito"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal global para errores inesperados -->
+<div class="modal fade" id="modalMensaje" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Error</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="cuerpoMensaje"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            cargarRoles();
+            cargarEstados();
+            $('#btnNuevo').click(() => abrirModal());
+        });
+
+        function abrirModal(u = null) {
+            $('#mensajeError, #mensajeOk').addClass('d-none').text('');
+            $('#formUsuario')[0].reset();
+            $('#txtid').val(u ? u.IdUsuario : 0);
+
+            if (u) {
+                $('#txtnombres').val(u.Nombres);
+                $('#txtapellidos').val(u.Apellidos);
+                $('#txtusuario').val(u.NombreUsuario);
+                $('#txtcorreo').val(u.Correo);
+                $('#cborol').val(u.IdRol);
+                $('#cboestado').val(u.IdEstado);
+
+                // 🔒 Bloquear estado si es el usuario logueado
+                let idUsuarioLogueado = $('#idUsuarioLogueado').val();
+                $('#cboestado').prop('disabled', u.IdUsuario == idUsuarioLogueado);
+            } else {
+                $('#cboestado').prop('disabled', false);
+            }
+
+            new bootstrap.Modal('#modalUsuario').show();
+        }
+
+        function cargarRoles() {
+            $.get('/Rol/Listar', data => {
+                $('#cborol').empty();
+                data.forEach(r => $('#cborol').append(`<option value="${r.idRol}">${r.nombre}</option>`));
+            });
+        }
+
+        function cargarEstados() {
+            $.get('/Pais/Estado', data => {
+                $('#cboestado').empty();
+
+                if (data.success) {
+                    data.estados.forEach(e => {
+                        $('#cboestado').append(`<option value="${e.idEstado}">${e.nombre}</option>`);
+                    });
+                } else {
+                    let errores = data.mensajes ? data.mensajes.join('<br/>') : 'No se pudieron cargar los estados.';
+                    $('#cuerpoMensaje').html(errores);
+                    new bootstrap.Modal('#modalMensaje').show();
+                }
+            });
+        }
+
+        function guardarUsuario() {
+            // habilitar antes de enviar para que llegue el valor
+            $('#cboestado').prop('disabled', false);
+
+            let usuario = {
+                IdUsuario: $('#txtid').val(),
+                Nombres: $('#txtnombres').val(),
+                Apellidos: $('#txtapellidos').val(),
+                NombreUsuario: $('#txtusuario').val(),
+                Correo: $('#txtcorreo').val(),
+                IdRol: $('#cborol').val(),
+                IdEstado: $('#cboestado').val()
+            };
+
+            let url = usuario.IdUsuario == 0 ? '/Usuarios/Crear' : '/Usuarios/Editar';
+
+            $.post(url, usuario, res => {
+                $('#mensajeError, #mensajeOk').addClass('d-none').text('');
+
+                if (res.success) {
+                    // Cerrar modal del formulario
+                    bootstrap.Modal.getInstance(document.getElementById('modalUsuario')).hide();
+
+                    // Mostrar modal global de éxito
+                    $('#cuerpoExito').html(res.mensajes.join('<br/>'));
+                    new bootstrap.Modal('#modalExito').show();
+
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    // Mostrar errores dentro del mismo modal
+                    let htmlErrores = res.mensajes && res.mensajes.length > 0
+                        ? res.mensajes.map(m => `<p>${m}</p>`).join('')
+                        : '<p>Ocurrió un error inesperado.</p>';
+
+                    $('#mensajeError').removeClass('d-none').html(htmlErrores);
+                }
+            });
+        }
+    </script>
+}

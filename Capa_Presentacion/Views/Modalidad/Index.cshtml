@@ -1,0 +1,211 @@
+﻿@using System.Text.Json
+@model List<Capa_Entidad.Modalidad>
+
+@{
+    ViewData["Title"] = "Gestión de Modalidades";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<ol class="breadcrumb mb-4 mt-4">
+    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Inicio</a></li>
+    <li class="breadcrumb-item active">Modalidades</li>
+</ol>
+
+<div class="card shadow border-0">
+    <div class="card-header text-white d-flex justify-content-between align-items-center"
+         style="background-color:#274DF5;">
+        <span><i class="fas fa-cogs me-2"></i>Lista de Modalidades</span>
+        <button id="btnNuevo" class="btn btn-light btn-sm">
+            <i class="fas fa-plus"></i> Nueva Modalidad
+        </button>
+    </div>
+
+    <div class="card-body">
+        <table class="table table-striped align-middle" id="tablaModalidades">
+            <thead class="text-white" style="background-color:#274DF5;">
+                <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Tipo Intervalo</th>
+                    <th>Valor Intervalo</th>
+                    <th>Estado</th>
+                    <th class="text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var m in Model)
+                {
+                    var json = JsonSerializer.Serialize(new
+                    {
+                        m.IdModalidad,
+                        m.Nombre,
+                        m.TipoIntervalo,    
+                        m.ValorIntervalo, 
+                        IdEstado = m.oEstado?.IdEstado ?? 0
+                    });
+
+                    <tr>
+                        <td>@m.IdModalidad</td>
+                        <td>@m.Nombre</td>
+                        <td>@m.TipoIntervalo</td>    
+                        <td>@m.ValorIntervalo</td>      
+                        <td>@m.oEstado?.Nombre</td>
+                        <td class="text-center">
+                            <button class="btn btn-warning btn-sm" onclick='abrirModal(@Html.Raw(json))'>
+                                <i class="fas fa-edit"></i>
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+<!-- Modal Crear/Editar -->
+<div class="modal fade" id="modalModalidad" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Modalidad</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <form id="formModalidad" autocomplete="off">
+                    <input type="hidden" id="txtid" value="0" />
+
+                    <div class="mb-3">
+                        <label class="form-label">Nombre</label>
+                        <input id="txtnombre" class="form-control" required />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Tipo de Intervalo</label>
+                        <input id="txtTipoIntervalo" class="form-control" placeholder="DIA, SEMANA, MES, ANIO" required />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Valor de Intervalo</label>
+                        <input id="txtValorIntervalo" type="number" class="form-control" placeholder="1, 15, 2, ..." required />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Estado</label>
+                        <select id="cboestado" class="form-select"></select>
+                    </div>
+
+                    <div class="mt-3">
+                        <div class="alert alert-danger d-none" id="mensajeError"></div>
+                    </div>
+                </form>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button class="btn btn-primary" onclick="guardarModalidad()">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal éxito -->
+<div class="modal fade" id="modalExito" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">Éxito</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="cuerpoExito"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal error -->
+<div class="modal fade" id="modalMensaje" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Error</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="cuerpoMensaje"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            cargarEstados();
+            $('#btnNuevo').click(() => abrirModal());
+        });
+
+        function abrirModal(m = null) {
+            $('#mensajeError').addClass('d-none').text('');
+            $('#formModalidad')[0].reset();
+            $('#txtid').val(m ? m.IdModalidad : 0);
+
+            if (m) {
+                $('#txtnombre').val(m.Nombre);
+                $('#txtTipoIntervalo').val(m.TipoIntervalo);  
+                $('#txtValorIntervalo').val(m.ValorIntervalo); 
+                $('#cboestado').val(m.IdEstado);
+            }
+
+            new bootstrap.Modal('#modalModalidad').show();
+        }
+
+        function cargarEstados() {
+            $.get('/Modalidad/Estado', data => {
+                $('#cboestado').empty();
+
+                if (data.success) {
+                    data.estados.forEach(e => {
+                        $('#cboestado').append(`<option value="${e.idEstado}">${e.nombre}</option>`);
+                    });
+                } else {
+                    let errores = data.mensajes ? data.mensajes.join('<br/>') : 'No se pudieron cargar los estados.';
+                    $('#cuerpoMensaje').html(errores);
+                    new bootstrap.Modal('#modalMensaje').show();
+                }
+            });
+        }
+
+        function guardarModalidad() {
+            let modalidad = {
+                IdModalidad: $('#txtid').val(),
+                Nombre: $('#txtnombre').val(),
+                TipoIntervalo: $('#txtTipoIntervalo').val(),
+                ValorIntervalo: $('#txtValorIntervalo').val(),
+                IdEstado: $('#cboestado').val()
+            };
+
+            let url = modalidad.IdModalidad == 0 ? '/Modalidad/Crear' : '/Modalidad/Editar';
+
+            $.post(url, modalidad, res => {
+                $('#mensajeError').addClass('d-none').html('');
+
+                if (res.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('modalModalidad')).hide();
+                    $('#cuerpoExito').html(res.mensajes.join('<br/>'));
+                    new bootstrap.Modal('#modalExito').show();
+
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    let htmlErrores = res.mensajes && res.mensajes.length > 0
+                        ? res.mensajes.map(m => `<p>${m}</p>`).join('')
+                        : '<p>Ocurrió un error inesperado.</p>';
+
+                    $('#mensajeError').removeClass('d-none').html(htmlErrores);
+                }
+            });
+        }
+
+    </script>
+}

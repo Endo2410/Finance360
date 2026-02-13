@@ -1,0 +1,390 @@
+﻿@model List<Capa_Entidad.NotaCredito>
+
+@{
+    ViewData["Title"] = "Notas de Crédito";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+}
+
+<ol class="breadcrumb mb-4 mt-4">
+    <li class="breadcrumb-item">
+        <a asp-controller="Home" asp-action="Index">Inicio</a>
+    </li>
+    <li class="breadcrumb-item active">Notas de Crédito</li>
+</ol>
+
+<div class="card shadow border-0">
+    <div class="card-header text-white" style="background-color:#274DF5;">
+        <i class="fas fa-exclamation-circle me-2"></i> Aplicar Notas de Crédito
+    </div>
+
+    <div class="card-body">
+        <!-- PROVEEDOR -->
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <label>Proveedor</label>
+                <div class="input-group">
+                    <input type="text" id="txtProveedorSeleccionado"
+                           class="form-control"
+                           placeholder="-- Seleccione --"
+                           readonly>
+                    <button class="btn btn-primary" type="button" id="btnAbrirModalProveedor">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+                <input type="hidden" id="cmbProveedor">
+            </div>
+        </div>
+
+        <!-- TABLA DE NOTAS DE CRÉDITO -->
+        <table class="table table-striped" id="tablaNotas">
+            <thead class="bg-primary text-white">
+                <tr>
+                    <th><input type="checkbox" id="chkTodos" /></th>
+                    <th>Número Nota</th>
+                    <th>N° Confirmacion</th>
+                    <th>Fecha Creación</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+
+        <button id="btnPagar" class="btn btn-success mt-2">
+            <i class="fas fa-check"></i> Aplicar Nota
+        </button>
+    </div>
+</div>
+
+<!-- MODAL PROVEEDORES -->
+<div class="modal fade" id="modalProveedores" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Seleccionar Proveedor</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-2">
+                    <input type="text" id="txtBuscarProveedor" class="form-control" placeholder="Buscar proveedor..." autocomplete="off">
+                </div>
+                <table class="table table-hover" id="tablaModalProveedores">
+                    <thead>
+                        <tr>
+                            <th>Proveedor</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var p in Model.Select(x => x.oProveedor.NombreProveedor).Distinct())
+                        {
+                            <tr>
+                                <td>@p</td>
+                                <td>
+                                    <button class="btn btn-sm btn-success btnSeleccionarProveedor" data-nombre="@p">Seleccionar</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DE PAGO -->
+<div class="modal fade" id="modalPago" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Detalles de Notas</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <h6 class="fw-bold text-primary">Nota Seleccionada</h6>
+
+                <div class="table-responsive mb-3">
+                    <table class="table table-sm table-bordered" id="tablaNotasSeleccionadas">
+                        <thead class="table-primary text-center">
+                            <tr>
+                                <th>Número Nota</th>
+                                <th>N° Confirmacion</th>
+                                <th>Fecha Emision</th>
+                                <th class="text-end">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <div class="alert alert-success d-flex justify-content-between align-items-center">
+                    <strong>Total</strong>
+                    <span id="lblTotal" class="fs-4 fw-bold" data-total="0">C$0.00</span>
+                </div>
+
+                <hr>
+
+                <h6 class="fw-bold text-secondary">
+                    <i class="fas fa-file-invoice-dollar me-1"></i> Implementación
+                </h6>
+
+                <table class="table" id="tablaPagosTipos">
+                    <thead>
+                        <tr>
+                            <th>Documento</th>
+                            <th>N° Cheque</th>
+                            <th>Comprobante</th>
+                            <th>Eliminar</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <input type="text" id="txtNumeroCheque" class="form-control" placeholder="Número de Cheque">
+                    </div>
+                    <div class="col-md-6">
+                        <input type="file" id="fileComprobanteAgregar" class="form-control" accept=".jpg,.jpeg,.png,.pdf">
+                    </div>
+                    <div class="col-md-12 mt-2">
+                        <button id="btnAgregarPago" class="btn btn-primary">Agregar</button>
+                    </div>
+                </div>
+
+                <label>Observación</label>
+                <textarea id="txtObs" class="form-control"></textarea>
+            </div>
+
+            <div class="modal-footer">
+                <button id="btnConfirmarPago" class="btn btn-success">Procesar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL MENSAJE -->
+<div class="modal fade" id="modalMensaje" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Mensaje</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="modalBody"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL ÉXITO -->
+<div class="modal fade" id="modalExito" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"> Registrado</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Se aplico correctamente</strong></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts {
+<script>
+    const todasNotas = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+        Model.Select(x => new {
+            x.IdNC,
+            x.NumeroNC,
+            x.NumeroDocumentoConfirmacion,
+            NombreProveedor = x.oProveedor.NombreProveedor,
+            FechaCreacion = x.FechaEmision.ToString("yyyy-MM-dd"),
+            x.Monto
+        })
+    ));
+
+    let pagosTipos = [];
+
+    function fMonto(m) { return m.toLocaleString('es-NI', { style: 'currency', currency: 'NIO' }); }
+    function mostrarModal(msg) { $('#modalBody').text(msg); new bootstrap.Modal(document.getElementById('modalMensaje')).show(); }
+
+    $('#btnAbrirModalProveedor').click(() => new bootstrap.Modal(document.getElementById('modalProveedores')).show());
+
+    $(document).on('click', '.btnSeleccionarProveedor', function() {
+        let prov = $(this).data('nombre');
+        $('#txtProveedorSeleccionado').val(prov);
+        $('#cmbProveedor').val(prov).trigger('change');
+        bootstrap.Modal.getInstance(document.getElementById('modalProveedores')).hide();
+    });
+
+    $('#txtBuscarProveedor').on('keyup', function() {
+        let texto = $(this).val().toLowerCase();
+        $('#tablaModalProveedores tbody tr').each(function() {
+            let nombre = $(this).find('td:first').text().toLowerCase();
+            $(this).toggle(nombre.includes(texto));
+        });
+    });
+
+    $('#cmbProveedor').change(function() {
+        let prov = $(this).val();
+        let tbody = $('#tablaNotas tbody');
+        tbody.empty();
+        $('#chkTodos').prop('checked', false);
+        if (!prov) return;
+
+        todasNotas
+            .filter(x => x.NombreProveedor === prov)
+            .forEach(n => {
+                tbody.append(`
+                    <tr>
+                        <td><input type="checkbox" class="chkNota" value="${n.IdNC}" data-total="${n.Monto}" /></td>
+                        <td>${n.NumeroNC}</td>
+                        <td>${n.NumeroDocumentoConfirmacion}</td>
+                        <td>${n.FechaCreacion}</td>
+                        <td>${fMonto(n.Monto)}</td>
+                    </tr>
+                `);
+            });
+    });
+
+    $('#chkTodos').on('change', function(){ $('.chkNota').prop('checked', this.checked); });
+
+    $('#btnPagar').click(function() {
+        let sel = $('.chkNota:checked');
+        if (sel.length === 0) return mostrarModal('Seleccione al menos una nota');
+
+        let tbody = $('#tablaNotasSeleccionadas tbody').empty();
+        let total = 0;
+
+        sel.each(function() {
+            let fila = $(this).closest('tr');
+            let monto = parseFloat($(this).data('total'));
+            total += monto;
+            tbody.append(`
+                <tr data-id="${$(this).val()}">
+                    <td>${fila.find('td:eq(1)').text()}</td>
+                    <td>${fila.find('td:eq(2)').text()}</td>
+                    <td>${fila.find('td:eq(3)').text()}</td>
+                    <td class="text-end">${fMonto(monto)}</td>
+                </tr>
+            `);
+        });
+
+        $('#lblTotal').text(fMonto(total)).data('total', total);
+
+        // Limpiar aplicaciones anteriores
+        pagosTipos = [];
+        $('#tablaPagosTipos tbody').empty();
+        $('#txtNumeroCheque').val('');
+        $('#fileComprobanteAgregar').val('');
+
+        new bootstrap.Modal(document.getElementById('modalPago')).show();
+    });
+
+    // Agregar pago: tipo de documento siempre Cheque
+    $('#btnAgregarPago').click(function() {
+
+        //Solo se permite un cheque
+        if (pagosTipos.length >= 1) {
+            return mostrarModal('Solo se permite agregar un cheque');
+        }
+
+
+        let numeroCheque = $('#txtNumeroCheque').val().trim();
+        let file = $('#fileComprobanteAgregar')[0].files[0];
+
+        if (!numeroCheque) return mostrarModal('Ingrese el número de cheque');
+        if (!file) return mostrarModal('Seleccione un comprobante');
+
+        pagosTipos.push({
+            numeroCheque,
+            file
+        });
+
+        let tbody = $('#tablaPagosTipos tbody');
+        tbody.append(`
+            <tr>
+                <td>Cheque</td>
+                <td>${numeroCheque}</td>
+                <td>${file.name}</td>
+                <td><button class="btn btn-sm btn-danger btnEliminarPago">X</button></td>
+            </tr>
+        `);
+
+        $('#btnAgregarPago').prop('disabled', true);
+
+
+        $('#txtNumeroCheque').val('');
+        $('#fileComprobanteAgregar').val('');
+    });
+
+    $(document).on('click', '.btnEliminarPago', function() {
+        let index = $(this).closest('tr').index();
+        pagosTipos.splice(index, 1);
+        $(this).closest('tr').remove();
+
+         // volver a permitir agregar
+           $('#btnAgregarPago').prop('disabled', false);
+    });
+
+  $('#btnConfirmarPago').click(function () {
+
+    let notasSeleccionadas = $('.chkNota:checked');
+    if (notasSeleccionadas.length === 0)
+        return mostrarModal('Seleccione al menos una nota');
+
+    if (pagosTipos.length === 0)
+        return mostrarModal('Agregue al menos una aplicación');
+
+    let usuarioActual = '@ViewBag.UsuarioActual';
+
+    // 🔹 Enviar todas las notas seleccionadas
+    let notasIds = [];
+    notasSeleccionadas.each(function () {
+        notasIds.push(parseInt($(this).val()));
+    });
+
+    let detalleEnvio = pagosTipos.map(p => ({
+        NumeroConfirmacion: p.numeroCheque,
+        UsuarioPago: usuarioActual
+    }));
+
+    let formData = new FormData();
+    formData.append('IdsNotas', JSON.stringify(notasIds));
+    formData.append('Observacion', $('#txtObs').val());
+    formData.append('DetalleAplicaciones', JSON.stringify(detalleEnvio));
+
+    pagosTipos.forEach((p, i) => {
+        if (p.file)
+            formData.append(`Aplicaciones[${i}].Comprobante`, p.file);
+    });
+
+    $.ajax({
+        url: '/PagoNC/AplicarNotaCredito',
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function (r) {
+            if (r.success) {
+                $('#lblNumeroDoc').text(r.numeroDocumento);
+                new bootstrap.Modal(document.getElementById('modalExito')).show();
+                setTimeout(() => location.reload(), 3000);
+            } else {
+                mostrarModal(r.mensajes.join("\n"));
+            }
+        },
+        error: function () {
+            mostrarModal('Error al registrar la aplicación');
+        }
+    });
+});
+
+</script>
+}

@@ -1,0 +1,414 @@
+﻿@using System.Text.Json 
+@model List<Capa_Entidad.CampaniaPublicitaria>
+
+@{
+    ViewData["Title"] = "Lista de Campañas con Pagos";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@{
+    var jsonAcciones = Context.Session.GetString("AccionesUsuario");
+    var acciones = !string.IsNullOrEmpty(jsonAcciones)
+        ? JsonSerializer.Deserialize<List<string>>(jsonAcciones)
+        : new List<string>();
+
+    bool puedeanular = acciones.Contains("Anular_Publicidad");
+}
+
+
+<ol class="breadcrumb mb-4 mt-4">
+    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Inicio</a></li>
+    <li class="breadcrumb-item active">Lista de Campañas con Pagos</li>
+</ol>
+
+<div class="card shadow border-0">
+    <div class="card-header text-white d-flex justify-content-between align-items-center" style="background-color:#274DF5;">
+        <span><i class="fas fa-file-invoice-dollar me-2"></i> Lista de Campañas con Pagos</span>
+    </div>
+
+    <div class="card-body">
+        <!-- FILTRO POR COLUMNA -->
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <select id="filtroCampo" class="form-control">
+                    <option value="">-- Filtrar por --</option>
+                    <option value="0">Nº Documento</option>
+                    <option value="1">Nombre</option>
+                    <option value="2">Proveedor</option>
+                    <option value="3">Tipo Publicidad</option>
+                    <option value="10">Estado Pago</option>
+
+                </select>
+            </div>
+            <div class="col-md-4">
+                <input id="filtroValor" class="form-control" placeholder="Buscar..." onkeyup="filtrarColumna()" autocomplete="off" />
+            </div>
+        </div>
+
+        <table class="table table-striped align-middle table-nowrap" id="tablaCampanias">
+            <thead class="text-white" style="background-color:#274DF5;">
+                <tr>
+                    <th>Nº Documento</th>
+                    <th>Nombre</th>
+                    <th>Proveedor</th>
+                    <th>Tipo Publicidad</th>
+                    <th>Modalidad</th>
+                    <th>País</th>
+                    <th>Moneda</th>
+                    <th>Saldo Vencido</th>
+                    <th>Monto Inversión</th>
+                    <th>Monto Pagado</th>
+                    <th>Saldo</th>
+                    <th>Estado Pago</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var c in Model
+                                .OrderBy(x => x.IdEstado == 5 ? 1 :
+                                x.IdEstado == 7 ? 2 :
+                                x.IdEstado == 6 ? 3 : 4)
+                                .ThenBy(x => x.FechaInicio)) // Orden ascendente por fecha inicio
+                {
+                    <tr>
+                        <td>@c.NumeroCampania</td>
+                        <td>@c.NombreCampania</td>
+                        <td>@c.oProveedor?.NombreProveedor</td>
+                        <td>@c.oTipoPublicidad?.Nombre</td>
+                        <td>@c.oModalidad?.Nombre</td>
+                        <td>@c.oPais?.Nombre</td>
+                        <td>@c.oMoneda?.Nombre</td>
+                        <td>@c.Saldovencido.ToString("C")</td>
+                        <td>@c.MontoInversion.ToString("C")</td>
+                        <td>@c.MontoPagado.ToString("C")</td>
+                        <td>
+                            @if (c.MontoPagado > c.MontoInversion)
+                            {
+                                <span class="badge bg-success">@c.SaldoPendiente.ToString("C")</span>
+                            }
+                            else if (c.MontoPagado < c.MontoInversion)
+                            {
+                                <span class="badge bg-danger">@c.SaldoPendiente.ToString("C")</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">@c.SaldoPendiente.ToString("C")</span>
+                            }
+                        </td>
+                        <td>
+                            @if (c.IdEstado == 5)
+                            {
+                                <span class="badge bg-danger">PENDIENTE</span>
+                            }
+                            else if (c.IdEstado == 7)
+                            {
+                                <span class="badge bg-warning text-dark">PARCIAL</span>
+                            }
+                            else if (c.IdEstado == 6)
+                            {
+                                <span class="badge bg-success">PAGADO</span>
+                            }
+                        </td>
+                        <td>
+                            <button class="btn btn-info btn-sm"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#detallePagoModal"
+                                    onclick="cargarDetallePago(@c.IdCampania)">
+                                <i class="fas fa-eye"></i> Ver Pagos
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal Detalle de Pagos -->
+<div class="modal fade" id="detallePagoModal" tabindex="-1" aria-labelledby="detallePagoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header" style="background-color:#274DF5; color:white;">
+                <h5 class="modal-title" id="detallePagoModalLabel">Detalle de Pagos</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <table class="table table-striped" id="tablaDetallePagos">
+                    <thead>
+                        <tr>
+                            <th>Fecha Pago</th>
+                            <th>Tipo Documento</th>
+                            <th>Número Documento</th>
+                            <th>N° Confirmación</th> 
+                            <th>Monto Pagado</th>
+                            <th>Comprobante</th>
+                            <th>Usuario Pago</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="detallePagosBody">
+                        <!-- Se llenará vía AJAX -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Mensaje -->
+<div class="modal fade" id="modalMensaje" tabindex="-1" aria-labelledby="modalMensajeLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" style="background-color:#dc3545; color:white;">
+                <h5 class="modal-title" id="modalMensajeLabel">Error</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body" id="cuerpoMensaje">
+                <!-- Aquí se mostrará el mensaje -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Éxito -->
+<div class="modal fade" id="modalExito" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">Éxito</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="cuerpoExito"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Confirmación -->
+<div class="modal fade" id="modalConfirmacion" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title">Confirmación</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="cuerpoConfirmacion"></div>
+            <div class="modal-footer" id="footerConfirmacion"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Error -->
+<div class="modal fade" id="modalError" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Error</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="cuerpoError"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+@section scripts {
+    <script>
+         $(document).ready(function() {
+            // Inicializar DataTable
+               tablaCampanias = $('#tablaCampanias').DataTable({
+                pageLength: 15,
+                lengthChange: false,
+                searching: true,   // 👈 importante
+                ordering: false,
+                responsive: true,
+                language: {
+                    paginate: { previous: "Anterior", next: "Siguiente" },
+                    info: "Mostrando _START_ a _END_ de _TOTAL_ registros",
+                    emptyTable: "No hay campañas registradas"
+                }
+            });
+
+            $('#tablaCampanias_filter').hide();
+
+            // Aplicar filtro automático si viene desde Notas de Crédito
+            var filtroDoc = '@ViewBag.FiltroDocumento';
+            if (filtroDoc) {
+                $('#filtroCampo').val(0); // 0 = columna "Nº Documento"
+                $('#filtroValor').val(filtroDoc);
+                filtrarColumna(); // Ejecutamos la función que ya tienes
+            }
+        });
+
+
+        // Filtro manual por columna
+        function filtrarColumna() {
+            let col = $("#filtroCampo").val();
+            let val = $("#filtroValor").val();
+
+            tablaCampanias.columns().search('');
+
+            if (col !== "") {
+                tablaCampanias.column(col).search(val).draw();
+            } else {
+                tablaCampanias.search(val).draw();
+            }
+        }
+
+
+        $('#filtroCampo').change(function () {
+            $('#filtroValor').val('');
+            filtrarColumna();
+        });
+
+          // ================= CARGAR DETALLE PAGOS =================
+    window.cargarDetallePago = function (idCampania) {
+
+        $('#detallePagosBody').html(
+            '<tr><td colspan="8" class="text-center">Cargando...</td></tr>'
+        );
+
+        $.ajax({
+            url: '@Url.Action("DetallePagoCampania", "Publicidad")',
+            type: 'GET',
+            data: { id: idCampania },
+            success: function (detalles) {
+
+                $('#detallePagosBody').html('');
+
+                if (!detalles || detalles.length === 0) {
+                    $('#detallePagosBody').html(
+                        '<tr><td colspan="8" class="text-center">No hay pagos registrados</td></tr>'
+                    );
+                    return;
+                }
+
+                detalles.forEach(function (d) {
+
+                    var monto = d.montoPagado ? parseFloat(d.montoPagado) : 0;
+                    var fechaPago = d.fechaDocumento
+                        ? new Date(d.fechaDocumento).toLocaleDateString('es-NI')
+                        : 'No disponible';
+
+                    var tipoDoc = d.tipoDocumento || 'No disponible';
+                    var numDoc = d.documentoPago || 'No disponible';
+                    var con = d.numeroConfirmacion || 'No disponible';
+
+                    var comprobanteHtml = d.comprobante
+                        ? '<a href="/Comprobantes/' + d.comprobante + '" target="_blank">Ver</a>'
+                        : 'No disponible';
+
+                    // ===== BOTÓN ANULAR =====
+                          var accion = '';
+
+                    if (d.idEstado === 10) {
+                        // 🔒 Pago ya anulado
+                        accion = '<span class="badge bg-secondary">ANULADO</span>';
+                    }
+                    else if (d.notaCreditoAplicada) {
+                        // 🔐 Tiene Nota de Crédito aplicada
+                        accion = '<span class="badge bg-info">NC APLICADA</span>';
+                    }
+                    else {
+
+                        if (@puedeanular.ToString().ToLower()) {
+
+                            accion =
+                                '<button class="btn btn-danger btn-sm" ' +
+                                'onclick="anularPago(' + d.idDetallePago + ')">' +
+                                '<i class="fas fa-ban me-1"></i> Anular' +
+                                '</button>';
+                        }
+                        else {
+                            accion = '';
+                        }
+                    }
+
+
+                    $('#detallePagosBody').append(
+                        '<tr>' +
+                            '<td>' + fechaPago + '</td>' +
+                            '<td>' + tipoDoc + '</td>' +
+                            '<td>' + numDoc + '</td>' +
+                            '<td>' + con + '</td>' +
+                            '<td>' + monto.toLocaleString("es-NI", { style: "currency", currency: "NIO" }) + '</td>' +
+                            '<td>' + comprobanteHtml + '</td>' +
+                            '<td>' + (d.usuarioPago || '') + '</td>' +
+                            '<td>' + accion + '</td>' +
+                        '</tr>'
+                    );
+                });
+            },
+            error: function () {
+                $('#detallePagosBody').html(
+                    '<tr><td colspan="8" class="text-center text-danger">Error al cargar los pagos</td></tr>'
+                );
+            }
+        });
+    };
+
+    // ================= ANULAR PAGO =================
+           function anularPago(idDetallePago) {
+
+            // Texto confirmación
+            $('#cuerpoConfirmacion').html(`
+                <p>¿Está seguro que desea <strong>anular este pago</strong>?</p>
+            `);
+
+            $('#footerConfirmacion').html(`
+                <button class="btn btn-secondary" data-bs-dismiss="modal">No</button>
+                <button class="btn btn-danger" id="btnConfirmarAnular">Sí, anular</button>
+            `);
+
+            let modal = new bootstrap.Modal(
+                document.getElementById('modalConfirmacion')
+            );
+            modal.show();
+
+            $('#btnConfirmarAnular').off('click').on('click', function () {
+
+                $.ajax({
+                    url: '@Url.Action("AnularPagoPublicidad", "Publicidad")',
+                    type: 'POST',
+                    data: { idDetallePago: idDetallePago },
+                    success: function (r) {
+
+                        modal.hide();
+
+                        $('#cuerpoExito').html(r.mensaje);
+
+                        new bootstrap.Modal(
+                            document.getElementById('modalExito')
+                        ).show();
+
+                        setTimeout(() => location.reload(), 2000);
+                    },
+                    error: function (xhr) {
+
+                        modal.hide();
+
+                        $('#cuerpoError').html(
+                            xhr.responseText || 'No se pudo anular el pago.'
+                        );
+
+                        new bootstrap.Modal(
+                            document.getElementById('modalError')
+                        ).show();
+                    }
+                });
+            });
+        }
+    </script>
+}

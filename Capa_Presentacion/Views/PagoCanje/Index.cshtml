@@ -1,0 +1,424 @@
+﻿@model List<Capa_Entidad.Canje>
+
+@{
+    ViewData["Title"] = "Pago de Canje";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+ // Filtrar únicamente canjes con estado 5 o 9
+    var canjesActivos = Model
+        .Where(x => x.oEstado != null && (x.oEstado.IdEstado == 5 || x.oEstado.IdEstado == 9))
+        .ToList();
+
+}
+
+<ol class="breadcrumb mb-4 mt-4">
+    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Inicio</a></li>
+    <li class="breadcrumb-item active">Pago de Canje</li>
+</ol>
+
+<div class="card shadow border-0">
+    <div class="card-header text-white" style="background-color:#274DF5;">
+        <i class="fas fa-credit-card me-2"></i> Registrar Pago de Canje
+    </div>
+
+    <div class="card-body">
+        <!-- PROVEEDOR -->
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <label>Proveedor</label>
+                <div class="input-group">
+                    <input type="text" id="txtProveedorSeleccionado" class="form-control" placeholder="-- Seleccione --" readonly>
+                    <button class="btn btn-primary" type="button" id="btnAbrirModalProveedor">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+                <input type="hidden" id="cmbProveedor">
+            </div>
+        </div>
+
+        <!-- TABLA DE CANJES -->
+        <table class="table table-striped" id="tablaCanjes">
+            <thead class="text-white" style="background-color:#274DF5;">
+                <tr>
+                    <th><input type="checkbox" id="chkTodos" /></th>
+                    <th>N° Canje</th>
+                    <th>Proveedor</th>
+                    <th class="text-center">Monto Canje</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+
+        <button id="btnPagar" class="btn btn-success mt-2">
+            <i class="fas fa-check"></i> Registrar Pago
+        </button>
+    </div>
+</div>
+
+<!-- MODAL PROVEEDORES -->
+<div class="modal fade" id="modalProveedores" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Seleccionar Proveedor</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-2">
+                    <input type="text" id="txtBuscarProveedor" class="form-control" placeholder="Buscar proveedor..." autocomplete="off">
+                </div>
+                <table class="table table-hover" id="tablaModalProveedores">
+                    <thead>
+                        <tr>
+                            <th>Proveedor</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                       @foreach(var p in canjesActivos.Select(x => x.oProveedor.NombreProveedor).Distinct())
+                        {
+                            <tr>
+                                <td>@p</td>
+                                <td>
+                                    <button class="btn btn-sm btn-success btnSeleccionarProveedor" data-nombre="@p">Seleccionar</button>
+                                </td>
+                            </tr>
+                        }
+
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DE PAGO -->
+<div class="modal fade" id="modalPago" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Datos del Pago</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <h6 class="fw-bold text-primary">Canjes Seleccionados</h6>
+
+                <div class="table-responsive mb-3">
+                    <table class="table table-sm table-bordered" id="tablaCanjesSeleccionados">
+                        <thead class="table-primary text-center">
+                            <tr>
+                                <th>N° Canje</th>
+                                <th>Proveedor</th>
+                                <th class="text-end">Monto Canje</th>
+                            </tr>
+                        </thead>
+                        <tbody class="align-middle"></tbody>
+                    </table>
+                </div>
+
+                <div class="alert alert-success d-flex justify-content-between align-items-center">
+                    <strong>Total a Pagar</strong>
+                    <span id="lblTotal" class="fs-4 fw-bold" data-total="0"></span>
+                </div>
+
+               <hr class="my-4">
+                <h6 class="fw-bold text-secondary">
+                    <i class="fas fa-file-invoice-dollar me-1"></i> Forma de Pago
+                </h6>
+                <table class="table" id="tablaPagosTipos">
+                    <thead>
+                        <tr>
+                            <th>Tipo Documento</th>
+                            <th>Monto</th>
+                            <th>N° Confirmación</th>
+                            <th>Comprobante</th>
+                            <th>Eliminar</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+
+               <div class="row mb-3">
+                    <div class="col-md-3">
+                        <select id="cmbTipoDocAgregar" class="form-control">
+                            <option value="">-- Seleccione Tipo --</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <input type="number" id="txtMontoAgregar" class="form-control" placeholder="Monto">
+                    </div>
+                    <div class="col-md-3">
+                        <input type="text" id="txtNumeroConfirmacionAgregar" class="form-control" placeholder="N° Confirmación">
+                    </div>
+                    <div class="col-md-3">
+                        <input type="file" id="fileComprobanteAgregar" class="form-control" accept=".jpg,.jpeg,.png,.pdf">
+                    </div>
+                    <div class="col-md-12 mt-2">
+                        <button id="btnAgregarPago" class="btn btn-primary">Agregar Pago</button>
+                    </div>
+                </div>
+
+
+                <label class="mt-2">Observación</label>
+                <textarea id="txtObs" class="form-control"></textarea>
+
+            </div>
+
+            <div class="modal-footer">
+                <button id="btnConfirmarPago" class="btn btn-success">
+                    Confirmar Pago
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DE ÉXITO -->
+<div class="modal fade" id="modalExito" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">Pago Registrado</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>El pago se registró correctamente.</p>
+                <p><strong>Número de Documento:</strong> <span id="lblNumeroDoc"></span></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DE ERROR -->
+<div class="modal fade" id="modalError" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Error</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p id="lblMensajeError"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts{
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+
+        <script>
+        const todosCanjes = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+            canjesActivos.Select(x => new {
+                x.IdCanje,
+                x.NumeroCanje,
+                NombreProveedor = x.oProveedor.NombreProveedor,
+                x.Monto
+            })
+        ));
+
+        let pagosTipos = [];
+
+        function fMonto(m){ return m.toLocaleString('es-NI',{style:'currency',currency:'NIO'}); }
+
+        function mostrarError(msg){
+            $('#lblMensajeError').text(msg);
+            new bootstrap.Modal(document.getElementById('modalError')).show();
+        }
+
+        // Abrir modal proveedores
+        $('#btnAbrirModalProveedor').click(function(){
+            new bootstrap.Modal(document.getElementById('modalProveedores')).show();
+        });
+
+        // Seleccionar proveedor desde modal
+        $(document).on('click','.btnSeleccionarProveedor', function(){
+            let prov = $(this).data('nombre');
+            $('#txtProveedorSeleccionado').val(prov);
+            $('#cmbProveedor').val(prov).trigger('change');
+            bootstrap.Modal.getInstance(document.getElementById('modalProveedores')).hide();
+
+            // Cargar tabla canjes
+            $('#tablaCanjes tbody').empty();
+            let lista = todosCanjes.filter(x=>x.NombreProveedor===prov);
+            lista.forEach(c=>{
+                $('#tablaCanjes tbody').append(`
+                    <tr>
+                        <td>
+                            <input type="checkbox"
+                                   class="chkCanje"
+                                   value="${c.IdCanje}"
+                                   data-monto="${c.Monto}">
+                        </td>
+                        <td>${c.NumeroCanje}</td>
+                        <td>${c.NombreProveedor}</td>
+                        <td class="text-center">${fMonto(c.Monto)}</td>
+                    </tr>
+                `);
+            });
+
+        });
+
+        // Agregar pagos por tipo
+        $('#btnAgregarPago').click(function(){
+            let idTipo = $('#cmbTipoDocAgregar').val();
+            let nombre = $('#cmbTipoDocAgregar option:selected').text();
+            let monto = parseFloat($('#txtMontoAgregar').val());
+            let numeroConfirmacion = $('#txtNumeroConfirmacionAgregar').val(); // nuevo
+            let fileInput = document.getElementById('fileComprobanteAgregar');
+
+            if(!idTipo || !monto || monto <= 0){
+                mostrarError('Seleccione tipo y monto válido');
+                return;
+            }
+            if(!numeroConfirmacion){
+                mostrarError('Debe ingresar N° Confirmación'); // validación
+                return;
+            }
+            if(!fileInput.files || fileInput.files.length === 0){
+                mostrarError('Debe seleccionar un comprobante');
+                return;
+            }
+
+            let total = parseFloat($('#lblTotal').data('total'));
+            let totalActual = pagosTipos.reduce((s,x)=>s+x.monto,0);
+            
+
+            pagosTipos.push({
+                id: idTipo,
+                nombre: nombre,
+                monto: monto,
+                numeroConfirmacion: numeroConfirmacion, // agregado
+                file: fileInput.files[0]
+            });
+
+            actualizarTablaPagos();
+            $('#txtMontoAgregar').val('');
+            $('#txtNumeroConfirmacionAgregar').val(''); // limpiar
+            $('#fileComprobanteAgregar').val('');
+        });
+
+
+        function actualizarTablaPagos(){
+            let tbody = $('#tablaPagosTipos tbody');
+            tbody.empty();
+            pagosTipos.forEach((p,i)=>{
+                tbody.append(`<tr>
+                    <td>${p.nombre}</td>
+                    <td>${fMonto(p.monto)}</td>
+                    <td>${p.numeroConfirmacion}</td> <!-- mostrar confirmación -->
+                    <td>${p.file ? p.file.name : ''}</td>
+                    <td><button class="btn btn-sm btn-danger" onclick="eliminarPago(${i})">X</button></td>
+                </tr>`);
+            });
+        }
+
+        function eliminarPago(i){ pagosTipos.splice(i,1); actualizarTablaPagos(); }
+
+        // Pagar
+        $('#btnPagar').click(function(){
+            pagosTipos = [];
+            $('#tablaPagosTipos tbody').empty();
+            $('#txtObs').val('');
+            $('#txtMontoAgregar').val('');
+            $('#fileComprobanteAgregar').val('');
+
+            let seleccionadas = $('.chkCanje:checked');
+            if(seleccionadas.length === 0){ mostrarError('Seleccione al menos un canje'); return; }
+
+            let total = 0;
+            $('#tablaCanjesSeleccionados tbody').empty();
+            seleccionadas.each(function(){
+                total += parseFloat($(this).data('monto'));
+                let fila = $(this).closest('tr');
+                $('#tablaCanjesSeleccionados tbody').append(`<tr>
+                    <td>${fila.find('td:eq(1)').text()}</td>
+                    <td>${fila.find('td:eq(2)').text()}</td>
+                    <td class="text-end">${fila.find('td:eq(3)').text()}</td>
+                </tr>`);
+            });
+
+            $('#lblTotal').data('total', total);
+            $('#lblTotal').text(fMonto(total));
+
+            $.get('/TipoDocumentoPago/ListarTipos', function(res){
+                $('#cmbTipoDocAgregar').empty().append('<option value="">-- Seleccione Tipo --</option>');
+                res.forEach(t => $('#cmbTipoDocAgregar').append(`<option value="${t.id}">${t.nombre}</option>`));
+            });
+
+            new bootstrap.Modal(document.getElementById('modalPago')).show();
+        });
+
+        // Confirmar pago
+        $('#btnConfirmarPago').click(async function() {
+            let seleccionadas = $('.chkCanje:checked');
+            if(seleccionadas.length === 0){ mostrarError('Seleccione al menos un canje'); return; }
+
+            let totalAPagar = parseFloat($('#lblTotal').data('total'));
+            let totalPagos = pagosTipos.reduce((s,x)=>s+x.monto,0);
+            if(totalPagos + 0.01 < totalAPagar){ 
+                mostrarError('El monto total de pagos no puede ser menor al total a pagar'); 
+                return; 
+            }
+
+
+            let detalleEnvio = [];
+            let suma = 0;
+            seleccionadas.each(function(){ suma += parseFloat($(this).data('monto')); });
+
+            let usuarioActual = '@ViewBag.UsuarioActual';
+
+            seleccionadas.each(function(){
+                let fila = $(this);
+                let proporcion = parseFloat(fila.data('monto')) / suma;
+                pagosTipos.forEach(function(pago){
+                    detalleEnvio.push({
+                        IdCanje: parseInt(fila.val()),
+                        MontoPagado: +(pago.monto * proporcion).toFixed(2),
+                        IdTipoDocumento: pago.id,
+                        NumeroConfirmacion: pago.numeroConfirmacion,
+                        RutaComprobante: pago.file ? pago.file.name : null,
+                        UsuarioPago: usuarioActual
+                    });
+                });
+            });
+
+            let formData = new FormData();
+            formData.append('IdCanje', seleccionadas.first().val());
+            formData.append('Observacion', $('#txtObs').val());
+            formData.append('DetalleCanjes', JSON.stringify(detalleEnvio));
+            formData.append('TotalAPagar', totalAPagar);
+
+            pagosTipos.forEach((p,i)=>{
+                if(p.file) formData.append(`PagosTipos[${i}].Comprobante`, p.file);
+            });
+
+            $.ajax({
+                url:'/PagoCanje/RegistrarPagoMultiples',
+                type:'POST',
+                data: formData,
+                processData:false,
+                contentType:false,
+                success:function(r){
+                    if(r.success){
+                        $('#lblNumeroDoc').text(r.numeroDocumento);
+                        new bootstrap.Modal(document.getElementById('modalExito')).show();
+                        setTimeout(()=>location.reload(),3000);
+                    } else {
+                        mostrarError(r.mensajes.join('\n'));
+                    }
+                },
+                error:function(){ mostrarError('Error al registrar pago'); }
+            });
+        });
+</script>
+}
