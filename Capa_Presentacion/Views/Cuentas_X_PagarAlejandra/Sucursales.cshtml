@@ -1,9 +1,16 @@
-﻿@model List<Capa_Entidad.Proveedor>
+﻿@using System.Text.Json
+@model List<Capa_Entidad.Contabilidad_Alejandra.E_Sucursales>
 
 @{
-    ViewData["Title"] = "Proveedores";
+    ViewData["Title"] = "Sucursales";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
+<ol class="breadcrumb mb-4 mt-4">
+    <li class="breadcrumb-item">
+        <a asp-controller="Home" asp-action="Index">Inicio</a>
+    </li>
+    <li class="breadcrumb-item active">Proveedores</li>
+</ol>
 
 <div class="card shadow border-0">
     <div class="card-header text-white d-flex justify-content-between align-items-center"
@@ -14,11 +21,11 @@
 
         <button class="btn btn-light btn-sm"
                 onclick="abrirConfirmacion()">
-            <i class="fas fa-sync-alt"></i> Importar proveedores
+            <i class="fas fa-sync-alt"></i> Importar Sucursales
         </button>
     </div>
 
- 
+
 
     <!-- TABLA -->
     <div class="card-body">
@@ -26,31 +33,19 @@
             <thead class="text-white" style="background-color:#274DF5;">
                 <tr>
                     <th>ID</th>
-                    <th>HQID</th>
-                    <th>RUC</th>
-                    <th>PROVEEDOR</th>
-                    <th>CONTACTO</th>
-                    <th>CIUDAD</th>
-                    <th>DIRECCIÓN</th>
-                    <th>CORREO</th>
-                    <th>TELÉFONO</th>
-                    <th>TÉRMINOS</th>
+                    <th>NOMBRE SUCURSAL</th>
+                    <th>NUMERO SUCURSAL</th>
+
                 </tr>
             </thead>
             <tbody>
                 @foreach (var p in Model)
                 {
                     <tr>
-                        <td>@p.IdProveedor</td>
-                        <td>@p.HQID</td>
-                        <td>@p.Ruc</td>
-                        <td>@p.NombreProveedor</td>
-                        <td>@p.NombreContacto</td>
-                        <td>@p.Ciudad</td>
-                        <td>@p.Direccion</td>
-                        <td>@p.Correo</td>
-                        <td>@p.NumeroTelefono</td>
-                        <td>@p.Terminos</td>
+                        <td>@p.IdSucursal</td>
+                        <td>@p.NombreSucursal</td>
+                        <td>@p.Codigo</td>
+
                     </tr>
                 }
             </tbody>
@@ -68,7 +63,8 @@
                 </h6>
             </div>
             <div class="modal-body text-center">
-                <p class="mb-3">¿Desea sincronizar los proveedores?</p>
+                <p class="mb-3">¿Desea sincronizar las sucursales?</p>
+
                 <button class="btn btn-secondary btn-sm me-2"
                         data-bs-dismiss="modal">
                     Cancelar
@@ -99,30 +95,39 @@
 </div>
 
 @section scripts {
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
+
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+
     <script>
-        let tablaProveedores;
+        let tablaSucursales;
 
         $(document).ready(function () {
 
-            tablaProveedores = $('#tablaSucursales').DataTable({
-                pageLength: 15,
-                lengthChange: false,
-                searching: false,
-                ordering: false,
-                responsive: true,
-                language: {
-                    paginate: { previous: "Anterior", next: "Siguiente" },
-                    info: "Mostrando _START_ a _END_ de _TOTAL_ registros",
-                    infoEmpty: "Mostrando 0 a 0 de 0 registros",
-                    emptyTable: "No hay datos para mostrar"
-                },
-                columnDefs: [
-                    { targets: [0, 4, 5, 7, 8], visible: false } // 👈 columnas ocultas
-                ]
+            // Clonar encabezado para filtros
+            $('#tablaSucursales thead tr').clone(true).appendTo('#tablaSucursales thead');
+
+            $('#tablaSucursales thead tr:eq(1) th').each(function (i) {
+                $(this).html('<input type="text" placeholder="Buscar" style="width:100%;" />');
+
+                $('input', this).on('keyup change', function () {
+                    if (tabla.column(i).search() !== this.value) {
+                        tabla.column(i).search(this.value).draw();
+                    }
+                });
             });
 
-      
+            // Inicializar DataTable
+            var tabla = $('#tablaSucursales').DataTable({
+                orderCellsTop: true,
+                fixedHeader: true,
+                language: {
+                    url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json"
+                }
+            });
+
         });
+
 
         function abrirConfirmacion() {
             new bootstrap.Modal(
@@ -137,7 +142,8 @@
                 .hide();
 
             $.ajax({
-                url: '@Url.Action("Sincronizar", "Proveedores")',
+            url: '@Url.Action("Sincronizar", "Cuentas_X_PagarAlejandra")',
+
                 type: 'POST',
                 success: function (data) {
 
@@ -145,6 +151,7 @@
                         `<strong>Actualizados:</strong> ${data.actualizados}<br>
                          <strong>Insertados:</strong> ${data.insertados}`
                     );
+
 
                     let modal = new bootstrap.Modal(
                         document.getElementById('modalSync')
@@ -166,3 +173,4 @@
         }
     </script>
 }
+

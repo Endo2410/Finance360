@@ -79,7 +79,7 @@
                                 Dashboard
                             </a>
                         }
-                    
+
 
                         <!--Seguridad -->
                         @if (permisos.Any(p => p.oModulo != null && p.oModulo.NombreModulo == "Seguridad"))
@@ -154,20 +154,24 @@
                                     {
                                         <a class="nav-link" asp-controller="ModalidadOperacion" asp-action="Index">Operaciones</a>
                                     }
+                                    @if (permisos.Any(p => p.oSubMenu != null && p.oSubMenu.NombreSubMenu == "Sucursales"))
+                                    {
+                                        <a class="nav-link" asp-controller="Cuentas_X_PagarAlejandra" asp-action="Sucursales">Sucursales </a>
+                                    }
                                 </nav>
                             </div>
                         }
 
-                         <!-- Orden Compra -->
+                        <!-- Orden Compra -->
                         @if (permisos.Any(p => p.oModulo.NombreModulo == "OrdenCompra"))
-                            {
+                        {
                             <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseOrdenCompra" aria-expanded="false">
                                 <div class="sb-nav-link-icon"><i class="fas fa-file-invoice-dollar"></i></div>
                                 Orden de Compra
                                 <div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div>
                             </a>
                             <div class="collapse" id="collapseOrdenCompra" data-bs-parent="#sidenavAccordion">
-                                <nav class="sb-sidenav-menu-nested nav">                             
+                                <nav class="sb-sidenav-menu-nested nav">
                                     @if (permisos.Any(p => p.oSubMenu != null && p.oSubMenu.NombreSubMenu == "OrdenCompra"))
                                     {
                                         <a class="nav-link" asp-controller="OrdenCompra" asp-action="Index">OrdenCompra </a>
@@ -258,7 +262,7 @@
                                     @if (permisos.Any(p => p.oSubMenu != null && p.oSubMenu.NombreSubMenu == "Pago_Vencido"))
                                     {
                                         <a class="nav-link" asp-controller="PagoVencido" asp-action="Index">Pagos de Vencidos</a>
-                                    }                                   
+                                    }
                                 </nav>
                             </div>
                         }
@@ -269,7 +273,7 @@
                         {
                             <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseCanje" aria-expanded="false">
                                 <div class="sb-nav-link-icon"><i class="fas fa-exchange-alt me-2"></i></div>
-                                 Canje
+                                Canje
                                 <div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div>
                             </a>
                             <div class="collapse" id="collapseCanje" data-bs-parent="#sidenavAccordion">
@@ -304,6 +308,24 @@
                                     {
                                         <a class="nav-link" asp-controller="NotaCredito" asp-action="Index">Notas </a>
                                     }
+                                    @if (permisos.Any(p => p.oSubMenu != null && p.oSubMenu.NombreSubMenu == "Aplicacion_Credito"))
+                                    {
+                                        <a class="nav-link" asp-controller="PagoNC" asp-action="Index">Procesar </a>
+                                    }
+                                </nav>
+                            </div>
+                        }
+                        <!--Cuentas por pagar Alejandra -->
+                        @if (permisos.Any(p => p.oModulo.NombreModulo == "CuentasXPagar_Alejandra"))
+                        {
+                            <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseCuentasxPagar" aria-expanded="false">
+                                <div class="sb-nav-link-icon"><i class="fas fa-file-invoice-dollar me-2"></i></div>
+                               Cuentas por pagar (Servicios)
+                                <div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div>
+                            </a>
+                            <div class="collapse" id="collapseCuentasxPagar" data-bs-parent="#sidenavAccordion">
+                                <nav class="sb-sidenav-menu-nested nav">
+                                
                                     @if (permisos.Any(p => p.oSubMenu != null && p.oSubMenu.NombreSubMenu == "Aplicacion_Credito"))
                                     {
                                         <a class="nav-link" asp-controller="PagoNC" asp-action="Index">Procesar </a>
