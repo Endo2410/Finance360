@@ -1,0 +1,1209 @@
+﻿@using System.Text.Json
+@model List<Capa_Entidad.Incentivo>
+
+@{
+    ViewData["Title"] = "Gestión de Incentivos";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@{
+    var jsonAcciones = Context.Session.GetString("AccionesUsuario");
+    var acciones = !string.IsNullOrEmpty(jsonAcciones)
+        ? JsonSerializer.Deserialize<List<string>>(jsonAcciones)
+        : new List<string>();
+
+    bool puedeEditar = acciones.Contains("Editar_Incentivo");
+}
+
+<!-- BREADCRUMB -->
+<ol class="breadcrumb mb-4 mt-4">
+    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Inicio</a></li>
+    <li class="breadcrumb-item active">Incentivos</li>
+</ol>
+
+<!-- CARD -->
+<div class="card shadow border-0">
+
+    <div class="card-header text-white d-flex justify-content-between"
+         style="background-color:#274DF5;">
+        <span><i class="fas fa-gift me-2"></i> Lista de Incentivos</span>
+
+        <button id="btnNuevo" class="btn btn-light btn-sm">
+            <i class="fas fa-plus"></i> Nuevo
+        </button>
+    </div>
+
+    <div class="card-body">
+
+        <!-- FILTRO MANUAL -->
+        <div class="row mb-3">
+
+            <div class="col-md-3">
+                <select id="filtroCampo" class="form-control">
+                    <option value="">-- Filtrar por --</option>
+                    <option value="1">Documento</option>
+                    <option value="2">Nombre</option>
+                    <option value="3">Sucursal</option>
+                    <option value="4">Proveedor</option>
+                    <option value="5">Periodo</option>
+                    <option value="6">Tipo Incentivo</option>
+                    <option value="8">Usuario</option>
+                    <option value="10">Estado</option>
+                </select>
+            </div>
+
+            <div class="col-md-4">
+                <input id="filtroValor"
+                       class="form-control"
+                       placeholder="Buscar..."
+                       onkeyup="filtrarColumna()" />
+            </div>
+
+        </div>
+
+        <!-- TABLA -->
+        <table class="table table-striped align-middle" id="tablaIncentivos">
+
+            <thead class="text-white" style="background-color:#274DF5;">
+                <tr>
+                    <th hidden>ID</th>
+                    <th>Documento</th>
+                    <th>Nombre</th>
+                    <th>Sucursal</th>
+                    <th>Proveedor</th>
+                    <th>Periodo</th>
+                    <th>Tipo Incentivo</th>
+                    <th>Usuario</th>
+                    <th>Documento</th>
+                    <th>Estado</th>
+                    <th class="text-center">Acciones</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                @foreach (var i in Model.OrderByDescending(x => x.IdIncentivo))
+                {
+                    var json = JsonSerializer.Serialize(new
+                    {
+                        i.IdIncentivo,
+                        i.Nombre,
+                        i.NumeroDocumento,
+                        i.UsuarioRegistro,
+                        i.DocumentoAdjunto,
+                        i.Comentario,
+
+                        IdSucursal = i.oSucursal?.IdSucursal ?? 0,
+                        NombreSucursal = i.oSucursal?.NombreSucursal ?? "",
+
+                        IdProveedor = i.oProveedor?.IdProveedor ?? 0,
+                        NombreProveedor = i.oProveedor?.NombreProveedor ?? "",
+
+                        IdTipoCanje = i.oTipoCanje?.IdTipoCanje ?? 0,
+                        IdTipoIncentivo = i.oTipoIncentivo?.IdTipoIncentivo ?? 0,
+
+                        IdEstado = i.oEstado?.IdEstado ?? 0
+                    });
+
+                    <tr>
+
+                        <td hidden>@i.IdIncentivo</td>
+                        <td>@i.NumeroDocumento</td>
+                        <td>@i.Nombre</td>
+                        <td>@i.oSucursal?.NombreSucursal</td>
+                        <td>@i.oProveedor?.NombreProveedor</td>
+                        <td>@i.oTipoCanje?.Nombre</td>
+                        <td>@i.oTipoIncentivo?.Nombre</td>
+                        <td>@i.UsuarioRegistro</td>
+
+                        <td>
+                            @if (!string.IsNullOrEmpty(i.DocumentoAdjunto))
+                            {
+                                <a target="_blank"
+                                   href="~/archivo/incentivo/@i.DocumentoAdjunto"
+                                   class="btn btn-sm btn-secondary">
+
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            }
+                        </td>
+                        <td>
+                            @if (i.oEstado.IdEstado == 5)
+                            {
+                                <span class="badge bg-warning">PENDIENTE </span>
+                            }
+                            else if (i.oEstado.IdEstado == 6)
+                            {
+                                <span class="badge bg-success">PAGADO</span>
+                            }
+                        </td>
+                        <td class="text-center">
+
+                            @* SI ESTA PENDIENTE *@
+                            @if (i.oEstado.IdEstado == 5)
+                            {
+                                <button class="btn btn-warning btn-sm btn-editar"
+                                        data-json='@Html.Raw(json)'
+                                        title="Editar">
+
+                                    <i class="fas fa-edit"></i>
+                                </button>
+
+                                <button class="btn btn-success btn-sm"
+                                        onclick="abrirModalPago(@i.IdIncentivo, '@i.NumeroDocumento')"
+                                        title="Registrar pago">
+
+                                    <i class="fas fa-dollar-sign"></i>
+                                </button>
+                            }
+
+                            @* SI ESTA PAGADO *@
+                            else if (i.oEstado.IdEstado == 6)
+                            {
+                                <button class="btn btn-info btn-sm btn-ver"
+                                        data-json='@Html.Raw(json)'
+                                        title="Ver incentivo">
+
+                                    <i class="fas fa-eye"></i>
+                                </button>
+
+
+                                <button class="btn btn-primary btn-sm"
+                                        onclick="verDetallePago(@i.IdIncentivo)"
+                                        title="Ver detalle pago">
+
+                                    <i class="fas fa-receipt"></i>
+                                </button>
+                            }
+
+                        </td>
+
+
+                    </tr>
+                }
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+<!-- ================= MODAL ================= -->
+
+<div class="modal fade" id="modalIncentivo" tabindex="-1" data-bs-backdrop="static">
+
+    <div class="modal-dialog modal-lg">
+
+        <div class="modal-content">
+
+            <div class="modal-header bg-primary text-white">
+                <h5>Incentivo</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <form id="formIncentivo">
+
+                    <input type="hidden" id="txtId" />
+
+                    <div class="row g-3">
+
+                        <div class="col-12">
+                            <label>Nombre</label>
+                            <input id="txtNombre" class="form-control" />
+                        </div>
+
+                        <!-- PROVEEDOR -->
+                        <div class="col-md-6">
+                            <label>Proveedor</label>
+
+                            <div class="input-group">
+
+                                <input type="hidden" id="cboproveedor" />
+
+                                <input id="txtProveedorNombre"
+                                       class="form-control"
+                                       readonly>
+
+                                <button class="btn btn-secondary"
+                                        type="button"
+                                        onclick="abrirModalProveedor()">
+                                    Buscar
+                                </button>
+
+                            </div>
+                        </div>
+
+                        <!-- SUCURSAL -->
+                        <div class="col-md-6">
+                            <label>Sucursal</label>
+
+                            <div class="input-group">
+
+                                <input type="hidden" id="cbosucursal" />
+
+                                <input id="txtSucursalNombre"
+                                       class="form-control"
+                                       readonly>
+
+                                <button class="btn btn-secondary"
+                                        type="button"
+                                        onclick="abrirModalSucursal()">
+                                    Buscar
+                                </button>
+
+                            </div>
+                        </div>
+
+                        <!-- TIPOS -->
+                        <div class="col-md-6">
+                            <label>Periodo</label>
+                            <select id="cboTipoCanje" class="form-select"></select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label>Tipo Incentivo</label>
+                            <select id="cboTipoIncentivo" class="form-select"></select>
+                        </div>
+
+
+
+                        <!-- ARCHIVO -->
+                        <div class="col-md-6">
+                            <label>Documento</label>
+
+                            <input type="file"
+                                   id="archivo"
+                                   class="form-control" />
+
+                            <div id="archivoExistente"></div>
+                        </div>
+
+                        <!-- PREVIEW -->
+                        <div class="col-md-6"
+                             id="contenedorPreview"
+                             style="display:none;">
+
+                            <label>Vista previa</label>
+
+                            <div class="border rounded p-2 text-center">
+
+                                <a id="linkPreview"
+                                   target="_blank"
+                                   class="btn btn-outline-primary btn-sm">
+
+                                    <i class="fas fa-eye"></i> Ver archivo
+                                </a>
+
+                            </div>
+                        </div>
+
+
+                        <div class="col-12">
+                            <label>Comentario</label>
+                            <textarea id="txtComentario"
+                                      class="form-control"></textarea>
+                        </div>
+
+                        <div class="col-12">
+                            <div class="alert alert-danger d-none"
+                                 id="mensajeError"></div>
+                        </div>
+
+                    </div>
+
+                </form>
+
+            </div>
+
+            <div class="modal-footer">
+
+                <button class="btn btn-secondary"
+                        data-bs-dismiss="modal">
+                    Cancelar
+                </button>
+
+                <button class="btn btn-primary"
+                        onclick="guardarIncentivo()">
+                    Guardar
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- ================= MODAL PAGO ================= -->
+<div class="modal fade" id="modalPago" tabindex="-1">
+
+    <div class="modal-dialog modal-xl">
+
+        <div class="modal-content">
+
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">Registrar Pago Incentivo</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <input type="hidden" id="txtIdIncentivoPago" />
+
+                <!-- INFO DOCUMENTO -->
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label>Documento</label>
+                        <input id="txtDocumentoPago"
+                               class="form-control"
+                               readonly />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label>Fecha Pago</label>
+                        <input type="date"
+                               id="txtFechaPago"
+                               class="form-control"
+                               readonly />
+
+                    </div>
+                </div>
+
+                <hr />
+
+                <!-- AGREGAR FORMA DE PAGO -->
+                <div class="row g-3 align-items-end">
+
+                    <div class="col-md-3">
+                        <label>Tipo Documento</label>
+                        <select id="cboTipoDocumentoPago"
+                                class="form-select">
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <label>Monto</label>
+                        <input type="number"
+                               id="txtMontoDetalle"
+                               class="form-control" />
+                    </div>
+
+                    <div class="col-md-2">
+                        <label>N° Confirmación</label>
+                        <input id="txtConfirmacionDetalle"
+                               class="form-control" />
+                    </div>
+
+                    <div class="col-md-3">
+                        <label>Comprobante</label>
+                        <input type="file"
+                               id="txtComprobanteDetalle"
+                               class="form-control"
+                               accept=".jpg,.jpeg,.png,.pdf">
+                    </div>
+
+
+                    <div class="col-md-2">
+                        <button class="btn btn-primary w-100"
+                                onclick="agregarDetallePago()">
+                            Agregar
+                        </button>
+                    </div>
+
+                </div>
+
+                <hr />
+
+                <!-- TABLA DETALLE -->
+                <table class="table table-bordered mt-3"
+                       id="tablaDetallePago">
+
+                    <thead class="table-success">
+                        <tr>
+                            <th>Tipo Documento</th>
+                            <th>Monto</th>
+                            <th>Confirmación</th>
+                            <th>Archivo</th>
+                            <th width="80">Acción</th>
+                        </tr>
+                    </thead>
+
+                    <tbody></tbody>
+
+                </table>
+
+                <div class="text-end">
+                    <h5>
+                        Total Pagado:
+                        <span id="lblTotalPago">0.00</span>
+                    </h5>
+                </div>
+
+                <div class="alert alert-danger d-none mt-2"
+                     id="mensajeErrorPago"></div>
+
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary"
+                        data-bs-dismiss="modal">
+                    Cancelar
+                </button>
+
+                <button class="btn btn-success"
+                        onclick="guardarPagoMultiple()">
+                    Guardar Pago
+                </button>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- MODAL EXITO -->
+<div class="modal fade" id="modalExitoPagoIncentivo" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="tituloExitoIncentivo">
+                    Operación exitosa
+                </h5>
+
+                <button class="btn-close"
+                        data-bs-dismiss="modal">
+                </button>
+            </div>
+
+            <div class="modal-body"
+                 id="lblExitoPagoIncentivo">
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary"
+                        data-bs-dismiss="modal">
+                    Cerrar
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+
+
+<!-- MODAL ERROR -->
+<div class="modal fade" id="modalErrorPagoIncentivo" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+
+            <div class="modal-header bg-danger text-white">
+
+                <h5 class="modal-title">
+                    Error en la operación
+                </h5>
+
+                <button class="btn-close"
+                        data-bs-dismiss="modal">
+                </button>
+
+            </div>
+
+            <div class="modal-body"
+                 id="lblErrorPagoIncentivo">
+            </div>
+
+            <div class="modal-footer">
+
+                <button class="btn btn-secondary"
+                        data-bs-dismiss="modal">
+                    Cerrar
+                </button>
+
+            </div>
+
+        </div>
+    </div>
+</div>
+
+
+<!-- ================= MODAL PROVEEDOR ================= -->
+<div class="modal fade" id="modalProveedor" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-md">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Seleccionar Proveedor</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <div class="mb-3">
+                    <input type="text" id="txtFiltrarProveedor" class="form-control" placeholder="Filtrar proveedor por nombre o RUC">
+                </div>
+                <table class="table table-striped table-hover" id="tablaProveedores">
+                    <thead>
+                        <tr>
+                            <th>RUC</th>
+                            <th>Nombre</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Se llena dinámicamente -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================= MODAL SUCURSAL ================= -->
+<div class="modal fade" id="modalsucursal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-md">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Seleccionar Sucursal</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <div class="mb-3">
+                    <input type="text" id="txtFiltrarsucusal" class="form-control" placeholder="Filtrar sucursal por nombre o codigo ">
+                </div>
+                <table class="table table-striped table-hover" id="tablasucursal">
+                    <thead>
+                        <tr>
+                            <th>Codigo</th>
+                            <th>Nombre</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Se llena dinámicamente -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+
+    <script>
+
+        $(document).ready(function(){
+
+            $('#tablaIncentivos').DataTable({
+                searching:false,
+                ordering: false,
+                lengthChange:false
+            });
+
+            cargarTipoCanje();
+            cargarTipoIncentivo();
+           cargarTipoDocumentoPago();
+
+
+            $('#btnNuevo').click(()=>abrirModal());
+
+            // BOTON VER
+            $(document).on('click', '.btn-ver', function(){
+
+                let data = $(this).data('json');
+
+                abrirModal(data, true);
+
+            });
+
+        });
+
+        let listaPagos = [];
+
+        // ================= FILTRO =================
+
+        function filtrarColumna(){
+
+            let campo = $('#filtroCampo').val();
+            let valor = $('#filtroValor').val().toLowerCase();
+
+            $('#tablaIncentivos tbody tr').each(function(){
+
+                if(!campo){
+                    $(this).show();
+                    return;
+                }
+
+                let texto = $(this).find('td')
+                                  .eq(campo)
+                                  .text()
+                                  .toLowerCase();
+
+                $(this).toggle(texto.includes(valor));
+            });
+        }
+
+
+        //funcion de los modales 
+        function mostrarExito(mensaje, titulo="Operación exitosa"){
+
+            $('#tituloExitoIncentivo').text(titulo);
+
+            $('#lblExitoPagoIncentivo').html(mensaje);
+
+            new bootstrap.Modal(
+                document.getElementById('modalExitoPagoIncentivo')
+            ).show();
+        }
+
+
+        function mostrarError(mensaje){
+
+            $('#lblErrorPagoIncentivo').html(mensaje);
+
+            new bootstrap.Modal(
+                document.getElementById('modalErrorPagoIncentivo')
+            ).show();
+        }
+
+
+
+
+        // ================= MODAL =================
+
+         function abrirModal(c=null, modoVer=false){
+
+            $('#formIncentivo')[0].reset();
+
+            $('#mensajeError').addClass('d-none');
+
+            $('#archivoExistente').data('nombre','');
+
+             $('#contenedorPreview').hide();
+
+
+            $('#txtId').val(c?c.IdIncentivo:0);
+
+            if(c){
+
+                $('#txtNombre').val(c.Nombre);
+
+                $('#cboproveedor').val(c.IdProveedor);
+                $('#txtProveedorNombre').val(c.NombreProveedor);
+
+                $('#cbosucursal').val(c.IdSucursal);
+                $('#txtSucursalNombre').val(c.NombreSucursal);
+
+                $('#cboTipoCanje').val(c.IdTipoCanje);
+                $('#cboTipoIncentivo').val(c.IdTipoIncentivo);
+
+                $('#txtComentario').val(c.Comentario);
+
+                if(c.DocumentoAdjunto){
+
+                    let url = `/archivo/incentivo/${c.DocumentoAdjunto}`;
+
+                    $('#linkPreview').attr('href',url);
+
+                    $('#contenedorPreview').show();
+
+                    $('#archivoExistente')
+                        .data('nombre',c.DocumentoAdjunto);
+                }
+            }
+
+            $('#archivo').off('change').on('change',previewArchivo);
+
+            // HABILITAR TODO PRIMERO
+            $('#modalIncentivo input').prop('disabled', false);
+            $('#modalIncentivo select').prop('disabled', false);
+            $('#modalIncentivo textarea').prop('disabled', false);
+
+            $('#modalIncentivo .btn-primary').show();
+
+            // SI ES MODO VER
+            if(modoVer){
+
+                $('#modalIncentivo input').prop('disabled', true);
+                $('#modalIncentivo select').prop('disabled', true);
+                $('#modalIncentivo textarea').prop('disabled', true);
+
+                $('#modalIncentivo .btn-primary').hide();
+            }
+
+            new bootstrap.Modal(
+                document.getElementById('modalIncentivo')
+            ).show();
+        }
+
+        function verIncentivo(data){
+
+            abrirModal(data, true);
+
+        }
+
+
+        function verDetallePago(idIncentivo){
+
+            $.get('/Incentivo/ObtenerDetallePago?id=' + idIncentivo, function(data){
+
+                listaPagos = [];
+
+                data.forEach(p=>{
+
+                    listaPagos.push({
+                        tipoDocumento: p.tipoDocumento,
+                        monto: p.monto,
+                        confirmacion: p.confirmacion,
+                        file: { name: p.comprobante }
+                    });
+
+                });
+
+                renderTablaPagos();
+
+                new bootstrap.Modal('#modalPago').show();
+
+                // deshabilitar edición
+                $('#modalPago input').prop('disabled', true);
+                $('#modalPago select').prop('disabled', true);
+
+                // ocultar botones
+                $('#modalPago .btn-success').hide();
+                $('#modalPago .btn-primary').hide();
+
+            });
+
+        }
+
+
+        // ================= PREVIEW =================
+
+       function previewArchivo(){
+
+    if(this.files.length === 0){
+        $('#contenedorPreview').hide();
+        return;
+    }
+
+    let url = URL.createObjectURL(this.files[0]);
+
+    $('#linkPreview').attr('href', url);
+
+    $('#contenedorPreview').show();
+}
+
+
+
+        // ================= PROVEEDOR =================
+
+        function abrirModalProveedor() {
+            cargarProveedoresModal();
+            $('#txtFiltrarProveedor').val('');
+            new bootstrap.Modal('#modalProveedor').show();
+        }
+
+        function cargarProveedoresModal() {
+            $.get('/Proveedores/Listar', function (data) {
+                let tbody = $('#tablaProveedores tbody');
+                tbody.empty();
+                data.forEach(p => {
+                    tbody.append(`
+                        <tr data-id="${p.idProveedor}" data-nombre="${p.nombre}">
+                            <td>${p.ruc}</td>
+                            <td>${p.nombre}</td>
+                        </tr>
+                    `);
+                });
+
+                // Click en la fila selecciona proveedor automáticamente
+                $('#tablaProveedores tbody tr').click(function () {
+                    let id = $(this).data('id');
+                    let nombre = $(this).data('nombre');
+                    $('#cboproveedor').val(id);
+                    $('#txtProveedorNombre').val(nombre);
+                    bootstrap.Modal.getInstance(document.getElementById('modalProveedor')).hide();
+                });
+            });
+        }
+
+        function seleccionarProveedor(id, nombre) {
+            $('#cboproveedor').val(id);
+            $('#txtProveedorNombre').val(nombre);
+            bootstrap.Modal.getInstance(document.getElementById('modalProveedor')).hide();
+        }
+
+        // Filtro dinámico
+        $('#txtFiltrarProveedor').on('keyup', function () {
+            let valor = $(this).val().toLowerCase();
+            $('#tablaProveedores tbody tr').filter(function () {
+                $(this).toggle($(this).text().toLowerCase().indexOf(valor) > -1);
+            });
+        });
+
+
+        // ================= SUCURSAL =================
+
+        function abrirModalSucursal() {
+            cargarSucursalModal(); 
+            $('#txtFiltrarsucusal').val('');
+            new bootstrap.Modal('#modalsucursal').show();
+        }
+
+
+        function cargarSucursalModal() {
+            $.get('/Cuentas_X_PagarAlejandra/Listar', function (data) {
+                let tbody = $('#tablasucursal tbody');
+                tbody.empty();
+                data.forEach(p => {
+                    tbody.append(`
+                        <tr data-id="${p.idsucursal}" data-nombre="${p.nombre}">
+                            <td>${p.codigo}</td>
+                            <td>${p.nombre}</td>
+                        </tr>
+                    `);
+                });
+
+                // Click en la fila selecciona proveedor automáticamente
+                $('#tablasucursal tbody tr').click(function () {
+                    let id = $(this).data('id');
+                    let nombre = $(this).data('nombre');
+                    $('#cbosucursal').val(id);
+                    $('#txtSucursalNombre').val(nombre);
+                    bootstrap.Modal.getInstance(document.getElementById('modalsucursal')).hide();
+                });
+            });
+        }
+
+        function seleccionarSucursal(id, nombre) { 
+            $('#cbosucursal').val(id);
+            $('#txtSucursalNombre').val(nombre);
+            bootstrap.Modal.getInstance(document.getElementById('modalsucursal')).hide();
+        }
+
+        // Filtro dinámico
+        $('#txtFiltrarsucusal').on('keyup', function () {
+            let valor = $(this).val().toLowerCase();
+            $('#tablasucursal tbody tr').filter(function () {
+                $(this).toggle($(this).text().toLowerCase().indexOf(valor) > -1);
+            });
+        });
+
+
+        // ================= COMBOS =================
+
+        function cargarTipoCanje(){
+
+            $.get('/TipoCanje/Listar',d=>{
+
+                $('#cboTipoCanje').empty();
+
+                d.forEach(t=>{
+
+                    $('#cboTipoCanje').append(`
+                      <option value="${t.id}">
+                        ${t.nombre}
+                      </option>
+                    `);
+                });
+            });
+        }
+
+        function cargarTipoDocumentoPago(){
+            $.get('/TipoDocumentoPago/ListarTipos', function(data){
+                $('#cboTipoDocumentoPago').empty();
+                data.forEach(t=>{
+                    $('#cboTipoDocumentoPago').append(`
+                        <option value="${t.id}">
+                            ${t.nombre}
+                        </option>
+                    `);
+                });
+            });
+        }
+
+        function cargarTipoIncentivo(){
+
+            $.get('/TipoIncentivo/Listar',d=>{
+
+                $('#cboTipoIncentivo').empty();
+
+                d.forEach(t=>{
+
+                    $('#cboTipoIncentivo').append(`
+                      <option value="${t.id}">
+                        ${t.nombre}
+                      </option>
+                    `);
+                });
+            });
+        }
+
+
+        // ================= GUARDAR =================
+
+        function guardarIncentivo(){
+
+            let errores=[];
+
+            if(!$('#txtNombre').val())
+                errores.push("Nombre requerido");
+
+            if(!$('#cboproveedor').val())
+                errores.push("Proveedor requerido");
+
+            if(!$('#cbosucursal').val())
+                errores.push("Sucursal requerida");
+
+            if(errores.length){
+
+                mostrarError(
+                    errores.join('<br>')
+                );
+
+                return;
+            }
+
+
+            let fd=new FormData();
+
+            fd.append("IdIncentivo",$('#txtId').val());
+            fd.append("Nombre",$('#txtNombre').val());
+            fd.append("IdProveedor",$('#cboproveedor').val());
+            fd.append("IdSucursal",$('#cbosucursal').val());
+            fd.append("IdTipoCanje",$('#cboTipoCanje').val());
+            fd.append("IdTipoIncentivo",$('#cboTipoIncentivo').val());
+            fd.append("Comentario",$('#txtComentario').val());
+
+            let file=$('#archivo')[0].files[0];
+            let exist=$('#archivoExistente').data('nombre');
+
+            if(file) fd.append("archivo",file);
+            else if(exist) fd.append("DOCUMENTO_EXISTENTE",exist);
+
+            $.ajax({
+
+                type:'POST',
+
+                url:$('#txtId').val()==0
+                    ?'/Incentivo/Crear'
+                    :'/Incentivo/Editar',
+
+                data:fd,
+                processData:false,
+                contentType:false,
+
+                success:r=>{
+
+                     if(r.success){
+
+                        bootstrap.Modal
+                          .getInstance(document.getElementById('modalIncentivo'))
+                          .hide();
+
+                        mostrarExito(
+                            $('#txtId').val()==0
+                            ? "Incentivo creado correctamente"
+                            : "Incentivo actualizado correctamente",
+                            "Incentivo"
+                        );
+
+                        setTimeout(()=>location.reload(),2000);
+                    }
+                    else{
+
+                        $('#mensajeError')
+                          .removeClass('d-none')
+                          .html(r.mensajes.join('<br>'));
+                    }
+                }
+            });
+        }
+
+        // ================= ABRIR MODAL PAGO =================
+        function agregarDetallePago(){
+
+            let idTipo = $('#cboTipoDocumentoPago').val();
+            let textoTipo = $('#cboTipoDocumentoPago option:selected').text();
+            let montoTexto = $('#txtMontoDetalle').val();
+            let monto = parseFloat(montoTexto);
+            let confirmacion = $('#txtConfirmacionDetalle').val();
+            let fileInput = document.getElementById('txtComprobanteDetalle');
+
+            let errores = [];
+
+            if(!idTipo){
+                errores.push("• Debe seleccionar el tipo de documento");
+            }
+
+            if(!montoTexto || isNaN(monto) || monto <= 0){
+                errores.push("• Debe ingresar un monto válido");
+            }
+
+            if(!confirmacion){
+                errores.push("• Debe ingresar el número de confirmación");
+            }
+
+            if(!fileInput.files || fileInput.files.length === 0){
+                errores.push("• Debe adjuntar el comprobante");
+            }
+
+            if(errores.length > 0){
+                mostrarError(
+                    errores.join("<br>")
+                );
+                return;
+            }
+
+            listaPagos.push({
+                idTipoDocumento: idTipo,
+                tipoDocumento: textoTipo,
+                monto: monto,
+                confirmacion: confirmacion,
+                file: fileInput.files[0]
+            });
+
+            renderTablaPagos();
+
+            $('#txtMontoDetalle').val('');
+            $('#txtConfirmacionDetalle').val('');
+            $('#txtComprobanteDetalle').val('');
+        }
+
+
+
+        function renderTablaPagos(){
+
+            let tbody = $('#tablaDetallePago tbody');
+            tbody.empty();
+
+            let total = 0;
+
+            listaPagos.forEach((p, index)=>{
+
+                total += p.monto;
+
+                tbody.append(`
+                    <tr>
+                        <td>${p.tipoDocumento}</td>
+                        <td>${p.monto.toFixed(2)}</td>
+                        <td>${p.confirmacion}</td>
+                         <td>${p.file ? p.file.name : ''}</td>
+                        <td>
+                            <button class="btn btn-danger btn-sm"
+                                onclick="eliminarPago(${index})">
+                                X
+                            </button>
+                        </td>
+                    </tr>
+                `);
+            });
+
+            $('#lblTotalPago').text(total.toFixed(2));
+        }
+
+                function eliminarPago(index){
+            listaPagos.splice(index,1);
+            renderTablaPagos();
+        }
+
+
+
+        function abrirModalPago(idIncentivo, numeroDocumento){
+
+            $('#txtIdIncentivoPago').val(idIncentivo);
+            $('#txtDocumentoPago').val(numeroDocumento);
+
+            // FECHA HOY AUTOMATICA
+            let hoy = new Date().toISOString().split('T')[0];
+            $('#txtFechaPago').val(hoy);
+
+            $('#mensajeErrorPago').addClass('d-none');
+
+            listaPagos = [];
+            renderTablaPagos();
+
+            new bootstrap.Modal('#modalPago').show();
+        }
+
+
+
+        // ================= GUARDAR PAGO =================
+
+        function guardarPagoMultiple(){
+
+            if(listaPagos.length === 0){
+                mostrarError("Debe agregar al menos un pago");
+                return;
+            }
+
+            let formData = new FormData();
+
+            formData.append("IdIncentivo",
+                $('#txtIdIncentivoPago').val());
+
+            formData.append("FechaPago",
+                $('#txtFechaPago').val());
+
+            formData.append("Detalles",
+                JSON.stringify(listaPagos.map(p=>({
+                    IdTipoDocumento:p.idTipoDocumento,
+                    MontoPagado:p.monto,
+                    NumeroConfirmacion:p.confirmacion
+                })))
+            );
+
+            listaPagos.forEach((p,i)=>{
+                if(p.file)
+                    formData.append(
+                        `Pagos[${i}].Comprobante`, p.file);
+            });
+
+            $.ajax({
+
+                url:'/Incentivo/RegistrarPagoMultiple',
+                type:'POST',
+                data: formData,
+                processData:false,
+                contentType:false,
+
+                success:function(r){
+
+                    if(r.success){
+
+                        mostrarExito(
+                            "Pago registrado correctamente<br>Documento: <b>"
+                            + r.numeroDocumento +
+                            "</b>",
+                            "Pago Incentivo"
+                        );
+
+
+                        setTimeout(()=>{
+                            location.reload();
+                        },3000);
+
+                    }else{
+
+                        mostrarError(
+                            r.mensaje || "Error al registrar pago"
+                        );
+
+                    }
+                },
+
+                error:function(){
+                    mostrarError(
+                        "Error interno del servidor"
+                    );
+
+                }
+            });
+        }
+
+    </script>
+}

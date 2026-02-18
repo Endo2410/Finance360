@@ -67,6 +67,7 @@
                     <th>Nº Documento</th>
                     <th>Nombre</th>
                     <th>Proveedor</th>
+                    <th>Departamento</th>
                     <th>Tipo Publicidad</th>
                     <th>Modalidad</th>
                     <th>País</th>
@@ -94,6 +95,8 @@
                         u.NombreCampania,
                         IdProveedor = u.oProveedor?.IdProveedor ?? 0,
                         NombreProveedor = u.oProveedor?.NombreProveedor ?? "",
+                        IdDepartamento = u.ODepartamento?.IdDepartamento ?? 0,
+                        NombreDepartamento = u.ODepartamento?.NombreDepartamento ?? "",
                         IdTipoPublicidad = u.oTipoPublicidad?.IdTipoPublicidad ?? 0,
                         IdModalidad = u.oModalidad?.IdModalidad ?? 0,
                         IdPais = u.oPais?.IdPais ?? 0,
@@ -112,6 +115,7 @@
                         <td>@u.NumeroCampania</td>
                         <td>@u.NombreCampania</td>
                         <td>@u.oProveedor?.NombreProveedor</td>
+                        <td>@u.ODepartamento?.NombreDepartamento</td>
                         <td>@u.oTipoPublicidad?.Nombre</td>
                         <td>@u.oModalidad?.Nombre</td>
                         <td>@u.oPais?.Nombre</td>
@@ -200,12 +204,11 @@
 
                     <div class="row g-3">
                         <!-- Fila 1: Nombre campaña -->
-                        <div class="col-12">
+                        <div class="col-6">
                             <label class="form-label">Nombre Campaña</label>
                             <input id="txtnombre" name="NombreCampania" class="form-control" required />
                         </div>
 
-                        <!-- Fila 2: Proveedor y Tipo Publicidad -->
                         <div class="col-md-6">
                             <label class="form-label">Proveedor</label>
                             <div class="input-group">
@@ -214,6 +217,16 @@
                                 <button class="btn btn-secondary" type="button" onclick="abrirModalProveedor()">Buscar</button>
                             </div>
                         </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Departamento</label>
+                            <div class="input-group">
+                                <input type="hidden" id="cboDepartamento" name="IdDepartamento" />
+                                <input type="text" id="txtDepartamentoNombre" class="form-control" placeholder="Seleccionar Departamento" readonly>
+                                <button class="btn btn-secondary" type="button" onclick="abrirModalDepartamento()">Buscar</button>
+                            </div>
+                        </div>
+
                         <div class="col-md-6">
                             <label class="form-label">Tipo Publicidad</label>
                             <select id="cbotipo" name="IdTipoPublicidad" class="form-select"></select>
@@ -326,6 +339,39 @@
     </div>
 </div>
 
+
+
+<!-- Modal Selección de Departamento -->
+<div class="modal fade" id="modalDepartamento" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+
+            <div class="modal-header bg-primary text-white">
+                <h6 class="modal-title">Seleccionar Departamento</h6>
+            </div>
+
+            <div class="modal-body">
+
+                <input type="text"
+                       id="txtFiltrarDepartamento"
+                       class="form-control mb-3"
+                       placeholder="Buscar departamento..." />
+
+                <table class="table table-hover" id="tablaDepartamentosModal">
+                    <thead>
+                        <tr>
+                            <th>Departamento</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+
+            </div>
+
+        </div>
+    </div>
+</div>
+
 <!-- Modal global para errores inesperados -->
 <div class="modal fade" id="modalMensaje" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
@@ -388,7 +434,7 @@
             filtrarColumna();
         });
 
-                // Delegación de eventos para botones de editar
+       // Delegación de eventos para botones de editar
         $('#tablaUsuarios').on('click', '.btn-editar', function() {
             let data = $(this).attr('data-json');
             let c = JSON.parse(data);
@@ -403,7 +449,7 @@
 
 
 
-                function abrirModal(c = null, modo = "crear") {
+         function abrirModal(c = null, modo = "crear") {
 
             $('#mensajeError, #mensajeOk').addClass('d-none').text('');
             $('#formUsuario')[0].reset();
@@ -429,6 +475,11 @@
                 $('#txtnombre').val(c.NombreCampania);
                 $('#cboproveedor').val(c.IdProveedor);
                 $('#txtProveedorNombre').val(c.NombreProveedor);
+
+                $('#cboDepartamento').val(c.IdDepartamento || 0);
+                $('#txtDepartamentoNombre').val(c.NombreDepartamento || '');
+
+
 
                 setTimeout(() => {
                     $('#cbotipo').val(c.IdTipoPublicidad);
@@ -511,6 +562,7 @@
             contenedor.classList.remove('d-none');
         }
 
+        //proveedores
 
         function abrirModalProveedor() {
             cargarProveedoresModal();
@@ -518,7 +570,7 @@
             new bootstrap.Modal('#modalProveedor').show();
         }
 
-               function cargarProveedoresModal() {
+        function cargarProveedoresModal() {
             $.get('/Proveedores/Listar', function (data) {
                 let tbody = $('#tablaProveedores tbody');
                 tbody.empty();
@@ -553,6 +605,65 @@
             let valor = $(this).val().toLowerCase();
             $('#tablaProveedores tbody tr').filter(function () {
                 $(this).toggle($(this).text().toLowerCase().indexOf(valor) > -1);
+            });
+        });
+
+         //Departamento
+
+        function abrirModalDepartamento() {
+            cargarDepartamentosModal();
+            $('#txtFiltrarDepartamento').val('');
+            new bootstrap.Modal('#modalDepartamento').show();
+        }
+
+        function cargarDepartamentosModal() {
+              $.get('/Proveedores/ListarDepartamento', function (data) {
+
+                let tbody = $('#tablaDepartamentosModal tbody');
+                tbody.empty();
+
+                data.forEach(d => {
+                    tbody.append(`
+                        <tr data-id="${d.idDepartamento}" data-nombre="${d.nombre}">
+                            <td>${d.nombre}</td>
+                        </tr>
+                    `);
+                });
+
+                // Click en fila selecciona automáticamente
+                $('#tablaDepartamentosModal tbody tr').click(function () {
+
+                    let id = $(this).data('id');
+                    let nombre = $(this).data('nombre');
+
+                     $('#cboDepartamento').val(id);
+                    $('#txtDepartamentoNombre').val(nombre);
+
+                    bootstrap.Modal
+                        .getInstance(document.getElementById('modalDepartamento'))
+                        .hide();
+                });
+
+            });
+        }
+
+        function seleccionarDepartamento(id, nombre) {
+             $('#cboDepartamento').val(id);
+            $('#txtDepartamentoNombre').val(nombre);
+
+            bootstrap.Modal
+                .getInstance(document.getElementById('modalDepartamento'))
+                .hide();
+        }
+
+        // Filtro dinámico
+        $('#txtFiltrarDepartamento').on('keyup', function () {
+            let valor = $(this).val().toLowerCase();
+
+            $('#tablaDepartamentosModal tbody tr').filter(function () {
+                $(this).toggle(
+                    $(this).text().toLowerCase().indexOf(valor) > -1
+                );
             });
         });
 
@@ -681,6 +792,8 @@
             let idCampania = parseInt($('#txtid').val()) || 0;
             let nombre = $('#txtnombre').val()?.trim() || '';
             let idProveedor = parseInt($('#cboproveedor').val()) || 0;
+            let idDepartamento = parseInt($('#cboDepartamento').val()) || 0;
+
             let idTipoPublicidad = parseInt($('#cbotipo').val()) || 0;
             let idModalidad = parseInt($('#cbomodalidad').val()) || 0;
             let idPais = parseInt($('#cbopais').val()) || 0;
@@ -721,6 +834,8 @@
             formData.append("IdCampania", idCampania);
             formData.append("NombreCampania", nombre);
             formData.append("IdProveedor", idProveedor);
+            formData.append("IdDepartamento", idDepartamento === 0 ? "" : idDepartamento);
+
             formData.append("IdTipoPublicidad", idTipoPublicidad);
             formData.append("IdModalidad", idModalidad);
             formData.append("IdPais", idPais);

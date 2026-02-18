@@ -7,7 +7,7 @@ using System.Collections.Generic;
 
 namespace Capa_Presentacion.Controllers
 {
-    [FiltroSesion]
+    //[FiltroSesion]
     public class ProveedoresController : Controller
     {
         private readonly CN_Proveedor objcn = new CN_Proveedor();
@@ -35,6 +35,32 @@ namespace Capa_Presentacion.Controllers
         {
             var resultado = objcn.SincronizarProveedores();
             return Json(resultado);
-        }     
+        }
+
+        //DEPARTAMENTO 
+
+        public IActionResult Departamento()
+        {
+            List<Departamento> lista = objcn.ObtenerDepartamentos();
+            return View(lista);
+        }
+
+        [HttpGet]
+        public IActionResult ListarDepartamento()
+        {
+            var lista = objcn.ObtenerDepartamentos();
+            return Json(lista.Select(d => new {
+                idDepartamento = d.IdDepartamento,
+                nombre = d.NombreDepartamento
+            }));
+        }
+
+
+        [HttpPost]
+        public IActionResult SincronizarDepartamento()
+        {
+            var resultado = objcn.SincronizarDepartamentos();
+            return Json(resultado);
+        }
     }
 }

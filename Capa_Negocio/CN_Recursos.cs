@@ -101,6 +101,7 @@ namespace Capa_Negocio
             }
         }
 
-
+        ///enviar alertas
+        
     }
 }

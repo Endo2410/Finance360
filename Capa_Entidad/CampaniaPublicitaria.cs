@@ -14,6 +14,7 @@ namespace Capa_Entidad
         public string DocumentoAdjunto { get; set; }
         public string UsuarioRegistro { get; set; }
         public int IdProveedor { get; set; }
+        public int? IdDepartamento { get; set; }
         public int IdTipoPublicidad { get; set; }
         public int IdModalidad { get; set; }
         public DateTime FechaInicio { get; set; }
@@ -26,6 +27,7 @@ namespace Capa_Entidad
         public DateTime FechaRegistro { get; set; }
 
         public Proveedor oProveedor { get; set; }
+        public Departamento ODepartamento { get; set; }
         public TipoPublicidad oTipoPublicidad { get; set; }
         public Modalidad oModalidad { get; set; }
         public Pais oPais { get; set; }

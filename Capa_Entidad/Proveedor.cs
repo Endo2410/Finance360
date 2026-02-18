@@ -23,4 +23,13 @@ namespace Capa_Entidad
         public string Fax { get; set; }
         public string Terminos { get; set; }
     }
+
+
+    public class Departamento
+    {
+        public int IdDepartamento { get; set; }
+        public int IdOrigen { get; set; }
+        public DateTime FechaActualizacion { get; set; }
+        public string NombreDepartamento { get; set; }
+    }
 }
