@@ -56,6 +56,86 @@ namespace Capa_Presentacion.Controllers
                 actualizados = resultado.actualizados
             });
         }
+        [HttpPost]
+        public IActionResult SubirArchivoSucursal(IFormFile archivo, int idSucursal)
+        {
+            if (archivo == null || archivo.Length == 0)
+                return BadRequest();
+
+            string rutaCarpeta = Path.Combine(
+                Directory.GetCurrentDirectory(),
+                "wwwroot",
+                "uploads",
+                "SUCURSALES"
+            );
+
+            if (!Directory.Exists(rutaCarpeta))
+                Directory.CreateDirectory(rutaCarpeta);
+
+            string extension = Path.GetExtension(archivo.FileName);
+            string nombreSistema = $"{Guid.NewGuid()}{extension}";
+            string rutaCompleta = Path.Combine(rutaCarpeta, nombreSistema);
+
+            using (var stream = new FileStream(rutaCompleta, FileMode.Create))
+            {
+                archivo.CopyTo(stream);
+            }
+
+            objArchivoAdj.Guardar(new E_ArchivoAdjunto
+            {
+                TablaReferencia = "SUCURSALES",
+                IdReferencia = idSucursal,
+                NombreArchivo = archivo.FileName,
+                NombreSistema = nombreSistema,
+                Extension = extension,
+                RutaServidor = "/uploads/SUCURSALES/" + nombreSistema,
+                TipoArchivo = "DOCUMENTO_SUCURSAL"
+            });
+
+            return Ok();
+        }
+        [HttpGet]
+        public IActionResult ListarArchivosSucursal(int idSucursal)
+        {
+            var lista = objArchivoAdj.Listar("SUCURSALES", idSucursal);
+
+            return Json(lista.Select(a => new
+            {
+                idArchivo = a.IdArchivo,
+                nombreArchivo = a.NombreArchivo,
+                rutaServidor = a.RutaServidor   // <- minúscula inicial
+            }));
+        }
+
+        [HttpPost]
+        public IActionResult EliminarArchivoSucursal(int idArchivo)
+        {
+            objArchivoAdj.Eliminar(idArchivo);
+            return Ok();
+        }
+        public IActionResult DescargarArchivo(int id)
+        {
+            var archivo = objArchivoAdj
+                .Listar("SUCURSALES", 0)
+                .FirstOrDefault(a => a.IdArchivo == id);
+
+            if (archivo == null)
+                return NotFound();
+
+            string rutaFisica = Path.Combine(
+                Directory.GetCurrentDirectory(),
+                "wwwroot",
+                archivo.RutaServidor.TrimStart('/')
+            );
+
+            byte[] bytes = System.IO.File.ReadAllBytes(rutaFisica);
+
+            return File(bytes, "application/octet-stream", archivo.NombreArchivo);
+        }
+
+
+
+
         #endregion
 
         #region TIPO SERVICIOS BASICOS
@@ -139,7 +219,7 @@ namespace Capa_Presentacion.Controllers
         {
             obj.IdUsuario = HttpContext.Session.GetInt32("IdUsuario") ?? 0;
 
-            // 1️⃣ Guardar CXP primero
+            // 1️ Guardar CXP primero
             bool respuesta = objCP.Guardar(obj, out string mensaje);
 
             if (!respuesta)
@@ -147,7 +227,7 @@ namespace Capa_Presentacion.Controllers
 
             int idGenerado = obj.IdCxP; // Debe venir del SP
 
-            // 2️⃣ Ruta física
+            // 2️ Ruta física
             string rutaCarpeta = Path.Combine(
                 Directory.GetCurrentDirectory(),
                 "wwwroot",
@@ -188,7 +268,7 @@ namespace Capa_Presentacion.Controllers
 
             }
 
-            // 3️⃣ Guardar ambos archivos
+            // 3️ Guardar ambos archivos
             GuardarArchivo(fileReciboPendiente, "RECIBO_A_PAGAR");
             GuardarArchivo(fileReciboPagado, "RECIBO_PAGADO");
 

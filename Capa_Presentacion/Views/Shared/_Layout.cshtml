@@ -393,7 +393,10 @@
                             </a>
                             <div class="collapse" id="collapseCuentasxPagar" data-bs-parent="#sidenavAccordion">
                                 <nav class="sb-sidenav-menu-nested nav">
-
+                                    @if (permisos.Any(p => p.oSubMenu != null && p.oSubMenu.NombreSubMenu == "Sucursales"))
+                                    {
+                                        <a class="nav-link" asp-controller="Cuentas_X_PagarAlejandra" asp-action="Sucursales">Sucursales </a>
+                                    }
 
                                     @if (permisos.Any(p => p.oSubMenu != null && p.oSubMenu.NombreSubMenu == "Aplicacion_Credito"))
                                     {

@@ -5,9 +5,8 @@
     ViewData["Title"] = "Sucursales";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
-<br/>
 <br />
-
+<br />
 
 <div class="card shadow border-0">
     <div class="card-header text-white d-flex justify-content-between align-items-center"
@@ -22,9 +21,6 @@
         </button>
     </div>
 
-
-
-    <!-- TABLA -->
     <div class="card-body">
         <table class="table table-striped align-middle" id="tablaSucursales">
             <thead class="text-white" style="background-color:#274DF5;">
@@ -32,7 +28,7 @@
                     <th>ID</th>
                     <th>NOMBRE SUCURSAL</th>
                     <th>NUMERO SUCURSAL</th>
-
+                    <th class="text-center">ARCHIVOS</th>
                 </tr>
             </thead>
             <tbody>
@@ -42,11 +38,46 @@
                         <td>@p.IdSucursal</td>
                         <td>@p.NombreSucursal</td>
                         <td>@p.Codigo</td>
-
+                        <td class="text-center">
+                            <button class="btn btn-sm btn-primary"
+                                    onclick="abrirModalArchivos(@p.IdSucursal)">
+                                <i class="fas fa-paperclip"></i>
+                            </button>
+                        </td>
                     </tr>
                 }
             </tbody>
         </table>
+    </div>
+</div>
+
+<!-- ================= MODAL ARCHIVOS ================= -->
+<div class="modal fade" id="modalArchivos" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+
+            <div class="modal-header bg-primary text-white">
+                <h6 class="modal-title">Archivos Sucursal</h6>
+                <button type="button" class="btn-close btn-close-white"
+                        data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <input type="hidden" id="idSucursalArchivo" />
+
+                <input type="file" id="fileSucursal"
+                       class="form-control mb-3" />
+
+                <button class="btn btn-success btn-sm mb-3"
+                        onclick="subirArchivoSucursal()">
+                    Subir Archivo
+                </button>
+
+                <div id="listaArchivosSucursal"></div>
+
+            </div>
+        </div>
     </div>
 </div>
 
@@ -92,16 +123,16 @@
 </div>
 
 @section scripts {
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
 
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 
     <script>
-        let tablaSucursales;
+
+        let tabla;
 
         $(document).ready(function () {
 
-            // Clonar encabezado para filtros
             $('#tablaSucursales thead tr').clone(true).appendTo('#tablaSucursales thead');
 
             $('#tablaSucursales thead tr:eq(1) th').each(function (i) {
@@ -114,17 +145,117 @@
                 });
             });
 
-            // Inicializar DataTable
-            var tabla = $('#tablaSucursales').DataTable({
+            tabla = $('#tablaSucursales').DataTable({
                 orderCellsTop: true,
                 fixedHeader: true,
                 language: {
                     url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json"
                 }
             });
-
         });
 
+
+        // =========================
+        // ARCHIVOS
+        // =========================
+
+        function abrirModalArchivos(idSucursal) {
+
+            $("#idSucursalArchivo").val(idSucursal);
+            cargarArchivosSucursal(idSucursal);
+
+            new bootstrap.Modal(
+                document.getElementById('modalArchivos')
+            ).show();
+        }
+
+        function subirArchivoSucursal() {
+
+            let file = $("#fileSucursal")[0].files[0];
+            let idSucursal = $("#idSucursalArchivo").val();
+
+            if (!file) {
+                alert("Seleccione un archivo");
+                return;
+            }
+
+            let formData = new FormData();
+            formData.append("archivo", file);
+            formData.append("idSucursal", idSucursal);
+
+            $.ajax({
+                url: '@Url.Action("SubirArchivoSucursal", "Cuentas_X_PagarAlejandra")',
+                type: "POST",
+                data: formData,
+                contentType: false,
+                processData: false,
+                success: function () {
+                    cargarArchivosSucursal(idSucursal);
+                    $("#fileSucursal").val("");
+                }
+            });
+        }
+
+        function cargarArchivosSucursal(idSucursal) {
+
+            $.get('@Url.Action("ListarArchivosSucursal", "Cuentas_X_PagarAlejandra")',
+                { idSucursal: idSucursal },
+                function (data) {
+
+                    let html = "";
+
+                    if (data.length === 0) {
+                        html = "<small class='text-muted'>No hay archivos</small>";
+                    }
+
+                    data.forEach(a => {
+
+                        let extension = a.nombreArchivo.split('.').pop().toLowerCase();
+                        let icono = "fa-file";
+
+                        if (extension === "pdf") {
+                            icono = "fa-file-pdf text-danger";
+                        }
+                        else if (extension === "jpg" || extension === "jpeg" || extension === "png") {
+                            icono = "fa-file-image text-primary";
+                        }
+
+                        html += `
+                            <div class="d-flex justify-content-between align-items-center mb-2 border-bottom pb-1">
+                                <div>
+                                    <a href="${a.rutaServidor}"
+                                       target="_blank"
+                                       style="text-decoration:none;">
+                                        <i class="fas ${icono} me-2"></i>
+                                        ${a.nombreArchivo}
+                                    </a>
+                                </div>
+
+                                <button class="btn btn-sm btn-danger"
+                                        onclick="eliminarArchivo(${a.idArchivo}, ${idSucursal})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        `;
+                    });
+
+                    $("#listaArchivosSucursal").html(html);
+                });
+        }
+
+        function eliminarArchivo(idArchivo, idSucursal) {
+
+            $.post('@Url.Action("EliminarArchivoSucursal", "Cuentas_X_PagarAlejandra")',
+                { idArchivo: idArchivo },
+                function () {
+                    cargarArchivosSucursal(idSucursal);
+                });
+        }
+
+
+        // =========================
+        // SINCRONIZAR
+        // =========================
 
         function abrirConfirmacion() {
             new bootstrap.Modal(
@@ -139,8 +270,7 @@
                 .hide();
 
             $.ajax({
-            url: '@Url.Action("Sincronizar", "Cuentas_X_PagarAlejandra")',
-
+                url: '@Url.Action("Sincronizar", "Cuentas_X_PagarAlejandra")',
                 type: 'POST',
                 success: function (data) {
 
@@ -148,7 +278,6 @@
                         `<strong>Actualizados:</strong> ${data.actualizados}<br>
                          <strong>Insertados:</strong> ${data.insertados}`
                     );
-
 
                     let modal = new bootstrap.Modal(
                         document.getElementById('modalSync')
@@ -161,13 +290,13 @@
                     }, 2000);
                 },
                 error: function () {
-                    $("#mensajeSync").text("Error al sincronizar proveedores");
+                    $("#mensajeSync").text("Error al sincronizar sucursales");
                     new bootstrap.Modal(
                         document.getElementById('modalSync')
                     ).show();
                 }
             });
         }
+
     </script>
 }
-
