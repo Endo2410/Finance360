@@ -1,0 +1,375 @@
+﻿@model List<Capa_Entidad.Contabilidad_Alejandra.E_CxP_Contabilidad_Alejandra>
+
+@{
+    ViewData["Title"] = "CXP";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<br />
+<br />
+
+<div class="card shadow border-0">
+    <div class="card-header text-white d-flex justify-content-between align-items-center"
+         style="background-color:#274DF5;">
+        <div>
+            <i class="fas fa-file-invoice-dollar me-2"></i> Cuentas por Pagar
+        </div>
+        <button class="btn btn-light btn-sm" onclick="abrirModal()">
+            <i class="fas fa-plus"></i> Nuevo
+        </button>
+    </div>
+
+
+    <div class="card-body">
+        <table class="table table-striped align-middle" id="tablaCxP">
+            <thead class="text-white" style="background-color:#274DF5;">
+                <tr>
+                    <th>ID</th>
+                    <th># de contrato</th>
+                    <th>Cliente</th>
+                    <th>Servicio</th>
+                    <th>Sucursal</th>
+                    <th>Mes</th>
+                    <th>Monto</th>
+                    <th>Vencimiento</th>
+                    <th>Estado</th>
+                    <th>Recibos</th>
+                    <th>Creador</th>
+                    <th>Creacion</th>
+                    <th>Modificador</th>
+                    <th>Modificacion</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var p in Model)
+                {
+                    <tr>
+                        <td>@p.IdCxP</td>
+                        <td>@p.NumeroCliente</td>
+                        <td>@p.NombreCliente</td>
+                        <td>@p.TipoServicio</td>
+                        <td>@p.Sucursal</td>
+                        <td>@p.MesDescripcion</td>
+                        <td>@p.MontoxPagar.ToString("C")</td>
+                        <td>@p.FechaVencimiento.ToString("dd/MM/yyyy")</td>
+
+                        <td>
+                            @if (p.IdEstado == 5)
+                            {
+                                <span class="badge bg-warning">Pendiente</span>
+                            }
+                            else if (p.IdEstado == 6)
+                            {
+                                <span class="badge bg-success">Pagado</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">Desconocido</span>
+                            }
+                        </td>
+
+                        <td>
+                            @if (p.TieneReciboPendiente)
+                            {
+                                <a href="@p.RutaReciboPendiente" target="_blank"
+                                   class="btn btn-sm btn-warning mb-1">
+                                    <i class="fas fa-file-invoice"></i>
+                                </a>
+                            }
+
+                            @if (p.TieneReciboPagado)
+                            {
+                                <a href="@p.RutaReciboPagado" target="_blank"
+                                   class="btn btn-sm btn-success">
+                                    <i class="fas fa-check-circle"></i>
+                                </a>
+                            }
+                        </td>
+                        <td>@p.UsuarioCreador</td>
+                        <td>@p.FechaCreacion</td>
+                        <td>@p.UsuarioModificador</td>
+                        <td>@p.FechaModificacion</td>
+                        <td>
+                            <button class="btn btn-primary btn-sm"
+                                    onclick="editar(
+                                        @p.IdCxP,
+                                        @p.IdCliente,
+                                        @p.IdMesxPagar,
+                                        '@p.FechaVencimiento.ToString("yyyy-MM-dd")',
+                                        @p.MontoxPagar,
+                                        '@p.Observaciones',
+                                        @p.IdEstado,
+                                        @p.TieneReciboPendiente.ToString().ToLower(),
+                                        @p.TieneReciboPagado.ToString().ToLower(),
+                                        '@p.RutaReciboPendiente',
+                                        '@p.RutaReciboPagado'
+                                    )">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ======================= MODAL ======================= -->
+<div class="modal fade" id="modalCxP" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="tituloModal">Nueva Cuenta por Pagar</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <input type="hidden" id="txtIdCxP" value="0" />
+
+                <div class="mb-3">
+                    <label>Cliente</label>
+                    <select id="ddlCliente" class="form-select" style="width:100%">
+                        <option value="">Seleccione</option>
+                        @foreach (var item in ViewBag.Clientes)
+                        {
+                            <option value="@item.IdCliente">
+                                @item.NumeroCliente - @item.NombreCliente
+                            </option>
+                        }
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label>Mes a Pagar</label>
+                    <select id="ddlMes" class="form-select">
+                        <option value="">Seleccione</option>
+                        @foreach (var item in ViewBag.Meses)
+                        {
+                            <option value="@item.IdTipoCanje">@item.Nombre</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label>Fecha Vencimiento</label>
+                    <input type="date" id="txtFechaVencimiento" class="form-control" />
+                </div>
+
+                <div class="mb-3">
+                    <label>Monto</label>
+                    <input type="number" id="txtMonto" class="form-control" step="0.01" />
+                </div>
+
+                <div class="mb-3">
+                    <label>Observaciones</label>
+                    <textarea id="txtObservaciones" class="form-control"></textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label>Estado</label>
+                    <select id="ddlEstado" class="form-select">
+                        @foreach (var item in ViewBag.Estados)
+                        {
+                            if (item.IdEstado == 5 || item.IdEstado == 6)
+                            {
+                                <option value="@item.IdEstado">@item.Nombre</option>
+                            }
+                        }
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label>Recibo a Pagar</label>
+                    <input type="file" id="fileReciboPendiente" class="form-control" />
+                    <div id="previewPendiente" class="mt-2"></div>
+                </div>
+
+                <div class="mb-3">
+                    <label>Recibo Pagado</label>
+                    <input type="file" id="fileReciboPagado" class="form-control" />
+                    <div id="previewPagado" class="mt-2"></div>
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button class="btn btn-primary" onclick="guardar()">Guardar</button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@section scripts {
+
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- Buttons -->
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+
+    <!-- Export dependencies -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+    <script>
+
+        let tabla;
+
+        $(document).ready(function () {
+
+            //tabla = $('#tablaCxP').DataTable({
+            //    language: {
+            //        url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json"
+            //    }
+            //});
+            // Clonar encabezado para filtros
+            $('#tablaCxP thead tr').clone(true).appendTo('#tablaCxP thead');
+
+            $('#tablaCxP thead tr:eq(1) th').each(function (i) {
+                $(this).html('<input type="text" placeholder="Buscar" style="width:100%;" />');
+
+                $('input', this).on('keyup change', function () {
+                    if (tabla.column(i).search() !== this.value) {
+                        tabla.column(i).search(this.value).draw();
+                    }
+                });
+            });
+
+
+            tabla = $('#tablaCxP').DataTable({
+                orderCellsTop: true,
+                fixedHeader: true,
+                dom: 'Bfrtip',
+                buttons: [
+                    {
+                        extend: 'excelHtml5',
+                        text: '<i class="fas fa-file-excel"></i> Excel',
+                        className: 'btn btn-success btn-sm',
+                        title: 'Lista_CxP'
+                    },
+                    {
+                        extend: 'pdfHtml5',
+                        text: '<i class="fas fa-file-pdf"></i> PDF',
+                        className: 'btn btn-danger btn-sm',
+                        title: 'Lista_CxP',
+                        orientation: 'landscape',
+                        pageSize: 'A4'
+                    }
+                ],
+                language: {
+                    url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json"
+                }
+            });
+
+            $('#ddlCliente').select2({
+                dropdownParent: $('#modalCxP'),
+                width: '100%'
+            });
+        });
+
+        function abrirModal() {
+            limpiar();
+            $("#tituloModal").text("Nueva Cuenta por Pagar");
+            $("#modalCxP").modal("show");
+        }
+
+        function editar(id, cliente, mes, fecha, monto, obs, estado,
+                        tienePendiente, tienePagado,
+                        rutaPendiente, rutaPagado) {
+
+            $("#tituloModal").text("Editar Cuenta por Pagar");
+
+            $("#txtIdCxP").val(id);
+            $("#ddlCliente").val(cliente).trigger("change");
+            $("#ddlMes").val(mes);
+            $("#txtFechaVencimiento").val(fecha);
+            $("#txtMonto").val(monto);
+            $("#txtObservaciones").val(obs);
+            $("#ddlEstado").val(estado);
+
+            $("#previewPendiente").html("");
+            $("#previewPagado").html("");
+
+            if (tienePendiente === "true" && rutaPendiente) {
+                $("#previewPendiente").html(`
+                    <a href="${rutaPendiente}" target="_blank"
+                       class="btn btn-sm btn-warning">
+                       Ver Recibo Pendiente
+                    </a>
+                `);
+            }
+
+            if (tienePagado === "true" && rutaPagado) {
+                $("#previewPagado").html(`
+                    <a href="${rutaPagado}" target="_blank"
+                       class="btn btn-sm btn-success">
+                       Ver Recibo Pagado
+                    </a>
+                `);
+            }
+
+            $("#modalCxP").modal("show");
+        }
+
+        function limpiar() {
+            $("#txtIdCxP").val(0);
+            $("#ddlCliente").val('').trigger("change");
+            $("#ddlMes").val('');
+            $("#txtFechaVencimiento").val('');
+            $("#txtMonto").val('');
+            $("#txtObservaciones").val('');
+            $("#ddlEstado").val('');
+            $("#previewPendiente").html("");
+            $("#previewPagado").html("");
+        }
+
+        function guardar() {
+
+            let formData = new FormData();
+
+            formData.append("IdCxP", $("#txtIdCxP").val());
+            formData.append("IdCliente", $("#ddlCliente").val());
+            formData.append("IdMesxPagar", $("#ddlMes").val());
+            formData.append("FechaVencimiento", $("#txtFechaVencimiento").val());
+            formData.append("MontoxPagar", $("#txtMonto").val());
+            formData.append("Observaciones", $("#txtObservaciones").val());
+            formData.append("IdEstado", $("#ddlEstado").val());
+
+            let file1 = $("#fileReciboPendiente")[0].files[0];
+            let file2 = $("#fileReciboPagado")[0].files[0];
+
+            if (file1) formData.append("fileReciboPendiente", file1);
+            if (file2) formData.append("fileReciboPagado", file2);
+
+            $.ajax({
+                url: '@Url.Action("Guardar", "Cuentas_X_PagarAlejandra")',
+                type: "POST",
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function (data) {
+
+                    if (data.resultado) {
+                        Swal.fire('Éxito', data.mensaje, 'success')
+                            .then(() => location.reload());
+                    } else {
+                        Swal.fire('Error', data.mensaje, 'error');
+                    }
+                }
+            });
+        }
+
+    </script>
+}

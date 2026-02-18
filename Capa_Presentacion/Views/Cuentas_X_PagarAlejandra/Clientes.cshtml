@@ -1,0 +1,291 @@
+﻿@using System.Text.Json
+@model List<Capa_Entidad.Contabilidad_Alejandra.E_Clientes>
+
+@{
+    ViewData["Title"] = "Clientes";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<br />
+<br />
+
+<div class="card shadow border-0">
+    <div class="card-header text-white d-flex justify-content-between align-items-center"
+         style="background-color:#274DF5;">
+        <div>
+            <i class="fas fa-users me-2"></i> Lista de Clientes
+        </div>
+
+        <button class="btn btn-light btn-sm" onclick="abrirModal()">
+            <i class="fas fa-plus"></i> Nuevo
+        </button>
+    </div>
+
+    <div class="card-body">
+        <table class="table table-striped align-middle" id="tablaClientes">
+            <thead class="text-white" style="background-color:#274DF5;">
+                <tr>
+                    <th>ID</th>
+                    <th># CLIENTE</th>
+                    <th>NOMBRE</th>
+                    <th>SERVICIO</th>
+                    <th>SUCURSAL</th>
+                    <th>ESTADO</th>
+                    <th>USUARIO CREADOR</th>
+                    <th>USUARIO MODIFICADOR</th>
+                    <th>FECHA CREACIÓN</th>
+                    <th>FECHA MODIFICACIÓN</th>
+                    <th>ACCIONES</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var p in Model)
+                {
+                    <tr>
+                        <td>@p.IdCliente</td>
+                        <td>@p.NumeroCliente</td>
+                        <td>@p.NombreCliente</td>
+                        <td>@p.TipoServicio</td>
+                        <td>@p.Sucursal</td>
+                        @*<td>@p.Estado</td>*@
+                        <td>
+                            @if (p.IdEstado == 1)
+                            {
+                                <span class="badge bg-success">Activo</span>
+                            }
+                            else if (p.IdEstado == 2)
+                            {
+                                <span class="badge bg-danger">Inactivo</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">Desconocido</span>
+                            }
+                        </td>
+
+                        <td>@p.UsuarioCreador</td>
+                        <td>@p.UsuarioModificador</td>
+                        <td>@p.FechaCreacion</td>
+                        <td>@p.FechaModificacion</td>
+                        <td>
+                            <button class="btn btn-primary btn-sm"
+                                    onclick="editarCliente(
+                                        @p.IdCliente,
+                                        @p.NumeroCliente,
+                                        '@p.NombreCliente',
+                                        @p.IdTipoServicio,
+                                        @(p.IdSucursal ?? 0),
+                                        @p.IdEstado
+                                    )">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ======================= MODAL ======================= -->
+<div class="modal fade" id="modalCliente" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="tituloModal">Nuevo Cliente</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <input type="hidden" id="txtIdCliente" value="0" />
+
+                <div class="mb-3">
+                    <label>Número Cliente</label>
+                    <input type="number" id="txtNumero" class="form-control" />
+                </div>
+
+                <div class="mb-3">
+                    <label>Nombre Cliente</label>
+                    <input type="text" id="txtNombre" class="form-control" />
+                </div>
+
+                <div class="mb-3">
+                    <label>Tipo Servicio</label>
+                    <select id="ddlTipoServicio" class="form-select">
+                        <option value="">Seleccione</option>
+                        @foreach (var item in ViewBag.TipoServicios)
+                        {
+                            <option value="@item.IdTipoServicio">
+                                @item.DescripcionServicio
+                            </option>
+                        }
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label>Sucursal</label>
+                    <select id="ddlSucursal" class="form-select">
+                        <option value="">Seleccione</option>
+                        @foreach (var item in ViewBag.Sucursales)
+                        {
+                            <option value="@item.IdSucursal">
+                                @item.NombreSucursal
+                            </option>
+                        }
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label>Estado</label>
+                    <select id="ddlEstado" class="form-select">
+                        <option value="">Seleccione</option>
+                        @foreach (var item in ViewBag.Estados)
+                        {
+                            if (item.IdEstado == 1 || item.IdEstado == 2)
+                            {
+                                <option value="@item.IdEstado">
+                                    @item.Nombre
+                                </option>
+                            }
+                        }
+                    </select>
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button class="btn btn-primary" onclick="guardarCliente()">Guardar</button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@section scripts {
+
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+
+    <!-- Buttons -->
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+
+    <!-- Export dependencies -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+
+    <script>
+
+
+        let tabla;
+
+        $(document).ready(function () {
+
+            // Clonar encabezado para filtros
+            $('#tablaClientes thead tr').clone(true).appendTo('#tablaClientes thead');
+
+            $('#tablaClientes thead tr:eq(1) th').each(function (i) {
+                $(this).html('<input type="text" placeholder="Buscar" style="width:100%;" />');
+
+                $('input', this).on('keyup change', function () {
+                    if (tabla.column(i).search() !== this.value) {
+                        tabla.column(i).search(this.value).draw();
+                    }
+                });
+            });
+
+            // Inicializar DataTable (SIN var)
+            tabla = $('#tablaClientes').DataTable({
+                orderCellsTop: true,
+                fixedHeader: true,
+                dom: 'Bfrtip',
+                buttons: [
+                    {
+                        extend: 'excelHtml5',
+                        text: '<i class="fas fa-file-excel"></i> Excel',
+                        className: 'btn btn-success btn-sm',
+                        title: 'Lista_Clientes'
+                    },
+                    {
+                        extend: 'pdfHtml5',
+                        text: '<i class="fas fa-file-pdf"></i> PDF',
+                        className: 'btn btn-danger btn-sm',
+                        title: 'Lista_Clientes',
+                        orientation: 'landscape',
+                        pageSize: 'A4'
+                    }
+                ],
+                language: {
+                    url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json"
+                }
+            });
+
+        
+        });
+
+
+    function abrirModal() {
+        limpiarModal();
+        $("#tituloModal").text("Nuevo Cliente");
+        $("#modalCliente").modal("show");
+    }
+
+    function editarCliente(id, numero, nombre, idTipo, idSucursal, idEstado) {
+
+        $("#tituloModal").text("Editar Cliente");
+
+        $("#txtIdCliente").val(id);
+        $("#txtNumero").val(numero);
+        $("#txtNombre").val(nombre);
+        $("#ddlTipoServicio").val(idTipo);
+        $("#ddlSucursal").val(idSucursal);
+        $("#ddlEstado").val(idEstado);
+
+        $("#modalCliente").modal("show");
+    }
+
+    function limpiarModal() {
+        $("#txtIdCliente").val(0);
+        $("#txtNumero").val('');
+        $("#txtNombre").val('');
+        $("#ddlTipoServicio").val('');
+        $("#ddlSucursal").val('');
+        $("#ddlEstado").val('');
+    }
+
+    function guardarCliente() {
+
+        let obj = {
+            IdCliente: $("#txtIdCliente").val(),
+            NumeroCliente: $("#txtNumero").val(),
+            NombreCliente: $("#txtNombre").val(),
+            IdTipoServicio: $("#ddlTipoServicio").val(),
+            IdSucursal: $("#ddlSucursal").val(),
+            IdEstado: $("#ddlEstado").val()
+        };
+
+        $.post('@Url.Action("GuardarClientes","Cuentas_X_PagarAlejandra")',
+            obj,
+            function (data) {
+
+                if (data.resultado) {
+                    Swal.fire('Éxito', data.mensaje, 'success')
+                        .then(() => location.reload());
+                } else {
+                    Swal.fire('Error', data.mensaje, 'error');
+                }
+            }
+        );
+    }
+
+    </script>
+}

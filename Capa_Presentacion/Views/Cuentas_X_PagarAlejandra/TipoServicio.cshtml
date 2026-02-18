@@ -1,0 +1,219 @@
+﻿@using System.Text.Json
+@model List<Capa_Entidad.Contabilidad_Alejandra.E_TipoServicio>
+@{
+    ViewData["Title"] = "TipoServicio";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<br />
+<br />
+
+<div class="card shadow border-0">
+    <div class="card-header text-white d-flex justify-content-between align-items-center"
+         style="background-color:#274DF5;">
+        <div>
+            <i class="fas fa-truck me-2"></i> Lista de Tipos de Servicios
+        </div>
+        <button class="btn btn-light btn-sm" onclick="abrirModal(0)">
+            <i class="fas fa-plus"></i> Nuevo
+        </button>
+
+    </div>
+
+
+
+    <!-- TABLA -->
+    <div class="card-body">
+        <table class="table table-striped align-middle" id="tablaServicios">
+            <thead class="text-white" style="background-color:#274DF5;">
+                <tr>
+                    <th>ID</th>
+                    <th>DESCRIPCION SERVICIO</th>
+                    <th>USUARIO CREADOR</th>
+                    <th>USUARIO MODIFICADOR</th>
+                    <th>FECHA CREACION</th>
+                    <th>FECHA MODIFICACION</th>
+                    <th>ACCIONES</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var p in Model)
+                {
+                    <tr>
+                        <td>@p.IdTipoServicio</td>
+                        <td>@p.DescripcionServicio</td>
+                        <td>@p.UsuarioCreador</td>
+                        <td>@p.UsuarioModificador</td>
+                        <td>@p.FechaCreacion</td>
+                        <td>@p.FechaModificacion</td>
+                        <td>
+                            <button class="btn btn-primary btn-sm"
+                                    onclick="abrirModal(@p.IdTipoServicio, '@p.DescripcionServicio')">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                        </td>
+
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ========================= MODAL ========================= -->
+
+<div class="modal fade" id="modalTipoServicio" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Tipo de Servicio</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <input type="hidden" id="txtIdTipoServicio" value="0" />
+
+                <div class="mb-3">
+                    <label class="form-label">Descripción</label>
+                    <input type="text"
+                           id="txtDescripcion"
+                           class="form-control"
+                           placeholder="Ingrese descripción" />
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary"
+                        data-bs-dismiss="modal">
+                    Cancelar
+                </button>
+
+                <button class="btn btn-primary"
+                        onclick="guardar()">
+                    Guardar
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@section scripts {
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
+
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        let tablaServicios;
+
+        $(document).ready(function () {
+
+            // Clonar encabezado para filtros
+            $('#tablaServicios thead tr').clone(true).appendTo('#tablaServicios thead');
+
+            $('#tablaServicios thead tr:eq(1) th').each(function (i) {
+                $(this).html('<input type="text" placeholder="Buscar" style="width:100%;" />');
+
+                $('input', this).on('keyup change', function () {
+                    if (tabla.column(i).search() !== this.value) {
+                        tabla.column(i).search(this.value).draw();
+                    }
+                });
+            });
+
+            // Inicializar DataTable
+            var tabla = $('#tablaServicios').DataTable({
+                orderCellsTop: true,
+                fixedHeader: true,
+                language: {
+                    url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json"
+                }
+            });
+
+        });
+
+           // ==========================
+    // ABRIR MODAL
+    // ==========================
+    function abrirModal(id, descripcion = "") {
+
+        $("#txtIdTipoServicio").val(id);
+        $("#txtDescripcion").val(descripcion);
+
+        $("#modalTipoServicio").modal("show");
+    }
+
+    // ==========================
+    // GUARDAR / EDITAR
+    // ==========================
+    function guardar() {
+
+        let descripcion = $("#txtDescripcion").val().trim();
+
+        if (descripcion === "") {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Atención',
+                text: 'Debe ingresar una descripción'
+            });
+            return;
+        }
+
+        let obj = {
+            IdTipoServicio: $("#txtIdTipoServicio").val(),
+            DescripcionServicio: descripcion
+        };
+
+        $.ajax({
+            url: '@Url.Action("GuardarTipoServicio","Cuentas_X_PagarAlejandra")',
+            type: "POST",
+            data: obj,
+            beforeSend: function () {
+                $(".btn-primary").prop("disabled", true);
+            },
+            success: function (data) {
+
+                $(".btn-primary").prop("disabled", false);
+
+                if (data.resultado) {
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Éxito',
+                        text: data.mensaje
+                    }).then(() => {
+                        location.reload();
+                    });
+
+                } else {
+
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: data.mensaje
+                    });
+
+                }
+            },
+            error: function () {
+
+                $(".btn-primary").prop("disabled", false);
+
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Ocurrió un error al procesar la solicitud'
+                });
+            }
+        });
+    }
+
+
+    </script>
+}
+
+
+
