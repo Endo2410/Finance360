@@ -40,8 +40,28 @@
             </div>
         </form>
 
-        <!-- Usuario -->
+    
         <ul class="navbar-nav ms-auto ms-md-0 me-3 me-lg-4">
+
+            <!-- Campana de Notificaciones -->
+            <li class="nav-item dropdown me-3">
+                <a class="nav-link dropdown-toggle position-relative" href="#" id="dropdownNotificaciones" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-bell fa-fw"></i>
+
+                    <!-- Badge contador -->
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                        3
+                    </span>
+                </a>
+
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownNotificaciones">
+         
+                    <li><a class="dropdown-item text-center" href="#">Ver todas</a></li>
+                </ul>
+            </li>
+
+
+            <!-- Usuario -->
             <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle d-flex align-items-center" id="navbarDropdown" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="fas fa-user fa-fw me-1"></i>
@@ -49,17 +69,15 @@
                 </a>
 
                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
-                    @* Opciones extra si quieres *@
-                    @* <li><a class="dropdown-item" href="#">Configuración</a></li>
-                  <li><a class="dropdown-item" href="#">Registro de Actividad</a></li> *@
                     <li><hr class="dropdown-divider" /></li>
-                    <li><a class="dropdown-item" asp-controller="Acceso" asp-action="Logout">Cerrar Sesión</a></li>
+                    <li>
+                        <a class="dropdown-item" asp-controller="Acceso" asp-action="Logout">
+                            Cerrar Sesión
+                        </a>
+                    </li>
                 </ul>
             </li>
         </ul>
-
-
-
     </nav>
 
     <!-- Layout principal -->
@@ -140,15 +158,7 @@
                                     }
                                     @if (permisos.Any(p => p.oSubMenu != null && p.oSubMenu.NombreSubMenu == "Tipo_Publicidad"))
                                     {
-                                        <a class="nav-link" asp-controller="TipoPublicidad" asp-action="Index">Tipo Publicidad</a>
-                                    }
-                                    @if (permisos.Any(p => p.oSubMenu != null && p.oSubMenu.NombreSubMenu == "Tipo_Rebate"))
-                                    {
-                                        <a class="nav-link" asp-controller="TipoRebate" asp-action="Index">Tipo Rebate</a>
-                                    }
-                                    @if (permisos.Any(p => p.oSubMenu != null && p.oSubMenu.NombreSubMenu == "Tipo-Pago"))
-                                    {
-                                        <a class="nav-link" asp-controller="TipoDocumentoPago" asp-action="Index">Tipo Pago</a>
+                                        <a class="nav-link" asp-controller="TipoPublicidad" asp-action="Tipos">Gestion de Tipos</a>
                                     }
                                     @if (permisos.Any(p => p.oSubMenu != null && p.oSubMenu.NombreSubMenu == "Operaciones"))
                                     {
@@ -246,7 +256,7 @@
                         {
                             <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseVencidos" aria-expanded="false">
                                 <div class="sb-nav-link-icon"><i class="fas fa-exclamation-triangle me-2"></i></div>
-                                Productos Vencidos
+                                Departamento de Vencidos
                                 <div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div>
                             </a>
                             <div class="collapse" id="collapseVencidos" data-bs-parent="#sidenavAccordion">
@@ -315,6 +325,64 @@
                                 </nav>
                             </div>
                         }
+
+
+                        <!-- ALERTA -->
+                        <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseAlerta" aria-expanded="false">
+                            <div class="sb-nav-link-icon">
+                                <i class="fas fa-bell me-2"></i>
+                            </div>
+                            Alertas
+                            <div class="sb-sidenav-collapse-arrow">
+                                <i class="fas fa-angle-down"></i>
+                            </div>
+                        </a>
+
+                        <div class="collapse" id="collapseAlerta" data-bs-parent="#sidenavAccordion">
+                            <nav class="sb-sidenav-menu-nested nav">
+
+                                <a class="nav-link" asp-controller="Alerta" asp-action="Index">
+                                    Bandeja de Alertas
+                                </a>
+
+                                <a class="nav-link" asp-controller="Alerta" asp-action="Index">
+                                    Configuración
+                                </a>
+
+                            </nav>
+                        </div>
+
+
+                      
+                        <!-- INCENTIVO -->
+                        @if (permisos.Any(p => p.oModulo.NombreModulo == "Incentivo"))
+                        {
+                            <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseIncentivo" aria-expanded="false">
+                                <div class="sb-nav-link-icon"> <i class="fas fa-gift me-2"></i>  </div>
+                                Incentivos
+                                <div class="sb-sidenav-collapse-arrow"> <i class="fas fa-angle-down"></i>  </div>
+                            </a>
+
+                            <div class="collapse" id="collapseIncentivo" data-bs-parent="#sidenavAccordion">
+                                <nav class="sb-sidenav-menu-nested nav">
+
+                                    @if (permisos.Any(p => p.oSubMenu != null && p.oSubMenu.NombreSubMenu == "Gestion_Incentivo"))
+                                    {
+                                        <a class="nav-link" asp-controller="Incentivo" asp-action="Index">
+                                            Gestión de Incentivos
+                                        </a>
+                                    }
+
+                                    @if (permisos.Any(p => p.oSubMenu != null && p.oSubMenu.NombreSubMenu == "Movimiento_Incentivo"))
+                                    {
+                                        <a class="nav-link" asp-controller="IncentivoSaldo" asp-action="Index">
+                                            Movimientos
+                                        </a>
+                                    }
+                                </nav>
+                            </div>
+                        }
+
                         <!--Cuentas por pagar Alejandra -->
                         @if (permisos.Any(p => p.oModulo.NombreModulo == "CuentasXPagar_Alejandra"))
                         {

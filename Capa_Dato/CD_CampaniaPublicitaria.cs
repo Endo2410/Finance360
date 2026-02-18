@@ -37,6 +37,10 @@ namespace Capa_Dato
                         DocumentoAdjunto = dr["DOCUMENTO_ADJUNTO"]?.ToString(),
 
                         IdProveedor = Convert.ToInt32(dr["ID_PROVEEDOR"]),
+                        IdDepartamento = dr["ID_DEPARTAMENTO"] == DBNull.Value
+                        ? (int?)null
+                        : Convert.ToInt32(dr["ID_DEPARTAMENTO"]),
+
                         IdTipoPublicidad = Convert.ToInt32(dr["ID_TIPO_PUBLICIDAD"]),
                         IdModalidad = Convert.ToInt32(dr["ID_MODALIDAD"]),
                         IdPais = Convert.ToInt32(dr["ID_PAIS"]),
@@ -53,6 +57,15 @@ namespace Capa_Dato
                             IdProveedor = Convert.ToInt32(dr["ID_PROVEEDOR"]),
                             NombreProveedor = dr["NOMBRE_PROVEEDOR"].ToString()
                         },
+
+                        ODepartamento = dr["ID_DEPARTAMENTO"] == DBNull.Value
+                        ? null
+                        : new Departamento
+                        {
+                            IdDepartamento = Convert.ToInt32(dr["ID_DEPARTAMENTO"]),
+                            NombreDepartamento = dr["DEPARTAMENTO"]?.ToString()
+                        },
+
 
                         oTipoPublicidad = new TipoPublicidad
                         {
@@ -115,6 +128,7 @@ namespace Capa_Dato
 
                     cmd.Parameters.AddWithValue("@NOMBRE_CAMPANIA", obj.NombreCampania);
                     cmd.Parameters.AddWithValue("@ID_PROVEEDOR", obj.IdProveedor);
+                    cmd.Parameters.AddWithValue("@ID_DEPARTAMENTO", obj.IdDepartamento);
                     cmd.Parameters.AddWithValue("@ID_TIPO_PUBLICIDAD", obj.IdTipoPublicidad);
                     cmd.Parameters.AddWithValue("@ID_MODALIDAD", obj.IdModalidad);
                     cmd.Parameters.AddWithValue("@FECHA_INICIO", obj.FechaInicio);
@@ -157,6 +171,7 @@ namespace Capa_Dato
                     cmd.Parameters.AddWithValue("@ID_CAMPANIA", obj.IdCampania);
                     cmd.Parameters.AddWithValue("@NOMBRE_CAMPANIA", obj.NombreCampania);
                     cmd.Parameters.AddWithValue("@ID_PROVEEDOR", obj.IdProveedor);
+                    cmd.Parameters.AddWithValue("@ID_DEPARTAMENTO", obj.IdDepartamento);
                     cmd.Parameters.AddWithValue("@ID_TIPO_PUBLICIDAD", obj.IdTipoPublicidad);
                     cmd.Parameters.AddWithValue("@ID_MODALIDAD", obj.IdModalidad);
                     cmd.Parameters.AddWithValue("@FECHA_INICIO", obj.FechaInicio);

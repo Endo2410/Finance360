@@ -18,5 +18,15 @@ namespace Capa_Negocio
             return objcd.SincronizarProveedores();
         }
 
+        //DEPARTAMENTO
+        public List<Departamento> ObtenerDepartamentos()
+        {
+            return objcd.ObtenerDepartamentos();
+        }
+
+        public object SincronizarDepartamentos()
+        {
+            return objcd.SincronizarDepartamentos();
+        }
     }
 }

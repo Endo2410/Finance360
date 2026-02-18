@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Capa_Presentacion.Controllers
 {
-    [FiltroSesion]
+    //[FiltroSesion]
     public class Cuentas_X_PagarAlejandraController : Controller
     {
         private readonly CN_Sucursales objCN = new CN_Sucursales();
@@ -14,6 +14,17 @@ namespace Capa_Presentacion.Controllers
         {
             var lista = objCN.ObtenerSucursales();
             return View(lista);
+        }
+
+        [HttpGet]
+        public IActionResult Listar()
+        {
+            var lista = objCN.ObtenerSucursales();
+            return Json(lista.Select(p => new {
+                idsucursal = p.IdSucursal,
+                nombre = p.NombreSucursal,
+                codigo = p.Codigo
+            }));
         }
 
         [HttpPost]
@@ -27,8 +38,5 @@ namespace Capa_Presentacion.Controllers
                 actualizados = resultado.actualizados
             });
         }
-
-
-
     }
 }
