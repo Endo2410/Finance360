@@ -69,6 +69,7 @@
                     <th>Nº Acuerdo</th>
                     <th>Nombre</th>
                     <th>Proveedor</th>
+                    <th>Departamento</th>
                     <th>Modalidad</th>
                     <th>Tipo Rebate</th>
                     <th>Criterio</th>
@@ -93,6 +94,8 @@
                         a.NombreAcuerdo,
                         IdProveedor = a.oProveedor?.IdProveedor ?? 0,
                         NombreProveedor = a.oProveedor?.NombreProveedor ?? "",
+                        IdDepartamento = a.ODepartamento?.IdDepartamento ?? 0,
+                        NombreDepartamento = a.ODepartamento?.NombreDepartamento ?? "",
                         IdModalidadOp = a.oModalidadOperacion?.IdModalidadOp ?? 0,
                         IdTipoRebate = a.oTipoRebate?.IdTipoRebate ?? 0,
                         IdCriterio = a.oCriterio?.IdCriterio ?? 0,
@@ -113,6 +116,7 @@
                         <td>@a.NumeroAcuerdo</td>
                         <td>@a.NombreAcuerdo</td>
                         <td>@a.oProveedor?.NombreProveedor</td>
+                        <td>@a.ODepartamento?.NombreDepartamento</td>
                         <td>@a.oModalidadOperacion?.Nombre</td>
                         <td>@a.oTipoRebate?.Nombre</td>
                         <td>@a.oCriterio?.Nombre</td>
@@ -207,6 +211,16 @@
                             <button class="btn btn-secondary" type="button" onclick="abrirModalProveedor()">Buscar</button>
                         </div>
                     </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Departamento</label>
+                        <div class="input-group">
+                            <input type="hidden" id="cboDepartamento" name="IdDepartamento" />
+                            <input type="text" id="txtDepartamentoNombre" class="form-control" placeholder="Seleccionar Departamento" readonly>
+                            <button class="btn btn-secondary" type="button" onclick="abrirModalDepartamento()">Buscar</button>
+                        </div>
+                    </div>
+
 
                     <div class="col-md-6">
                         <label class="form-label">Modalidad Operación</label>
@@ -320,6 +334,41 @@
         </div>
     </div>
 </div>
+
+
+
+
+<!-- Modal Selección de Departamento -->
+<div class="modal fade" id="modalDepartamento" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+
+            <div class="modal-header bg-primary text-white">
+                <h6 class="modal-title">Seleccionar Departamento</h6>
+            </div>
+
+            <div class="modal-body">
+
+                <input type="text"
+                       id="txtFiltrarDepartamento"
+                       class="form-control mb-3"
+                       placeholder="Buscar departamento..." />
+
+                <table class="table table-hover" id="tablaDepartamentosModal">
+                    <thead>
+                        <tr>
+                            <th>Departamento</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+
+            </div>
+
+        </div>
+    </div>
+</div>
+
 
 <!-- Modal global para mensajes de éxito -->
 <div class="modal fade" id="modalExito" tabindex="-1">
@@ -446,6 +495,7 @@
             $('#txtUsuarioRegistro').val(c ? c.UsuarioCreacion : '@User.Identity.Name');
             $('#txtnombre').val(c?.NombreAcuerdo ?? '');
             $('#txtProveedorNombre').val(c?.NombreProveedor ?? '');
+            $('#txtDepartamentoNombre').val(c?.NombreDepartamento ?? '');
             $('#txtvalor').val(c?.ValorCriterio ?? '');
             $('#txtganancia').val(c?.Ganancia ?? '');
             $('#txtinicio').val(c?.FechaInicio ?? '');
@@ -640,8 +690,67 @@
             });
         });
 
+         //Departamento
+
+        function abrirModalDepartamento() {
+            cargarDepartamentosModal();
+            $('#txtFiltrarDepartamento').val('');
+            new bootstrap.Modal('#modalDepartamento').show();
+        }
+
+        function cargarDepartamentosModal() {
+              $.get('/Proveedores/ListarDepartamento', function (data) {
+
+                let tbody = $('#tablaDepartamentosModal tbody');
+                tbody.empty();
+
+                data.forEach(d => {
+                    tbody.append(`
+                        <tr data-id="${d.idDepartamento}" data-nombre="${d.nombre}">
+                            <td>${d.nombre}</td>
+                        </tr>
+                    `);
+                });
+
+                // Click en fila selecciona automáticamente
+                $('#tablaDepartamentosModal tbody tr').click(function () {
+
+                    let id = $(this).data('id');
+                    let nombre = $(this).data('nombre');
+
+                     $('#cboDepartamento').val(id);
+                    $('#txtDepartamentoNombre').val(nombre);
+
+                    bootstrap.Modal
+                        .getInstance(document.getElementById('modalDepartamento'))
+                        .hide();
+                });
+
+            });
+        }
+
+        function seleccionarDepartamento(id, nombre) {
+             $('#cboDepartamento').val(id);
+            $('#txtDepartamentoNombre').val(nombre);
+
+            bootstrap.Modal
+                .getInstance(document.getElementById('modalDepartamento'))
+                .hide();
+        }
+
+        // Filtro dinámico
+        $('#txtFiltrarDepartamento').on('keyup', function () {
+            let valor = $(this).val().toLowerCase();
+
+            $('#tablaDepartamentosModal tbody tr').filter(function () {
+                $(this).toggle(
+                    $(this).text().toLowerCase().indexOf(valor) > -1
+                );
+            });
+        });
+
         // Guardar Acuerdo
-                    function guardarAcuerdo() {
+        function guardarAcuerdo() {
             $('#mensajeError, #mensajeOk').addClass('d-none').text('');
 
             let idAcuerdo = parseInt($('#txtid').val()) || 0;
@@ -652,6 +761,7 @@
             formData.append("IdAcuerdo", idAcuerdo);
             formData.append("NombreAcuerdo", $('#txtnombre').val());
             formData.append("IdProveedor", $('#cboproveedor').val());
+            formData.append("IdDepartamento", $('#cboDepartamento').val());
             formData.append("IdModalidadOp", $('#cbomodalidad').val());
             formData.append("IdTipoRebate", $('#cbotiporebate').val());
             formData.append("IdCriterio", $('#cbocriterio').val());

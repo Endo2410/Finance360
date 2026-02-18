@@ -28,6 +28,9 @@ namespace Capa_Entidad
 
         public Estado oEstado { get; set; }
         public int IdEstado { get; set; }
+        public int? IdDepartamento { get; set; }
+        public Departamento ODepartamento { get; set; }
+
         public DateTime FechaRegistro { get; set; }
         public DateTime? FechaVencimiento { get; set; }
         public string NombreProveedor { get; set; }

@@ -62,5 +62,11 @@ namespace Capa_Presentacion.Controllers
             var resultado = objcn.SincronizarDepartamentos();
             return Json(resultado);
         }
+
+        //catalogo
+        public IActionResult Gestión()
+        {
+            return View();
+        }
     }
 }

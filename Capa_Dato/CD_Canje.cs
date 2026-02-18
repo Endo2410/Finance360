@@ -47,6 +47,13 @@ namespace Capa_Dato
                             IdProveedor = Convert.ToInt32(dr["ID_PROVEEDOR"]),
                             NombreProveedor = dr["NOMBRE_PROVEEDOR"].ToString()
                         },
+                        ODepartamento = dr["ID_DEPARTAMENTO"] == DBNull.Value
+                        ? null
+                        : new Departamento
+                        {
+                            IdDepartamento = Convert.ToInt32(dr["ID_DEPARTAMENTO"]),
+                            NombreDepartamento = dr["DEPARTAMENTO"]?.ToString()
+                        },
                         oTipoCanje = new TipoCanje
                         {
                             IdTipoCanje = Convert.ToInt32(dr["ID_TIPO_CANJE"]),
@@ -74,6 +81,7 @@ namespace Capa_Dato
                     cmd.CommandType = CommandType.StoredProcedure;
 
                     cmd.Parameters.AddWithValue("@ID_PROVEEDOR", obj.IdProveedor);
+                    cmd.Parameters.AddWithValue("@ID_DEPARTAMENTO", obj.IdDepartamento);
                     cmd.Parameters.AddWithValue("@ID_TIPO_CANJE", obj.IdTipoCanje);
                     cmd.Parameters.AddWithValue("@VOLUMEN", obj.Volumen);
                     cmd.Parameters.AddWithValue("@MONTO", obj.Monto);
@@ -108,6 +116,9 @@ namespace Capa_Dato
 
                     cmd.Parameters.AddWithValue("@ID_CANJE", obj.IdCanje);
                     cmd.Parameters.AddWithValue("@ID_PROVEEDOR", obj.IdProveedor);
+                    cmd.Parameters.AddWithValue("@ID_DEPARTAMENTO",
+                    (object?)obj.IdDepartamento ?? DBNull.Value);
+
                     cmd.Parameters.AddWithValue("@ID_TIPO_CANJE", obj.IdTipoCanje);
                     cmd.Parameters.AddWithValue("@VOLUMEN", obj.Volumen);
                     cmd.Parameters.AddWithValue("@MONTO", obj.Monto);

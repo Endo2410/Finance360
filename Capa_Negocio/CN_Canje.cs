@@ -29,6 +29,10 @@ namespace Capa_Negocio
             if (obj.IdProveedor <= 0)
                 mensajes.Add("Debe seleccionar un proveedor.");
 
+            if (obj.IdDepartamento == null || obj.IdDepartamento <= 0)
+                mensajes.Add("Debe seleccionar un Departamento.");
+
+
             if (obj.IdTipoCanje <= 0)
                 mensajes.Add("Debe seleccionar un tipo de canje.");
 

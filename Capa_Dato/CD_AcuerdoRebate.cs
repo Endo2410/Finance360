@@ -46,6 +46,13 @@ namespace Capa_Dato
                             IdProveedor = Convert.ToInt32(dr["ID_PROVEEDOR"]),
                             NombreProveedor = dr["NOMBRE_PROVEEDOR"].ToString()
                         },
+                        ODepartamento = dr["ID_DEPARTAMENTO"] == DBNull.Value
+                        ? null
+                        : new Departamento
+                        {
+                            IdDepartamento = Convert.ToInt32(dr["ID_DEPARTAMENTO"]),
+                            NombreDepartamento = dr["DEPARTAMENTO"]?.ToString()
+                        },
                         oModalidadOperacion = new ModalidadOperacion
                         {
                             IdModalidadOp = Convert.ToInt32(dr["ID_MODALIDAD_OP"]),
@@ -100,6 +107,7 @@ namespace Capa_Dato
 
                     cmd.Parameters.AddWithValue("@NOMBRE_ACUERDO", obj.NombreAcuerdo);
                     cmd.Parameters.AddWithValue("@ID_PROVEEDOR", obj.IdProveedor);
+                    cmd.Parameters.AddWithValue("@ID_DEPARTAMENTO", obj.IdDepartamento);
                     cmd.Parameters.AddWithValue("@ID_MODALIDAD_OP", obj.IdModalidadOp);
                     cmd.Parameters.AddWithValue("@ID_TIPO_REBATE", obj.IdTipoRebate);
                     cmd.Parameters.AddWithValue("@ID_CRITERIO", obj.IdCriterio);
@@ -144,6 +152,7 @@ namespace Capa_Dato
                     cmd.Parameters.AddWithValue("@ID_ACUERDO", obj.IdAcuerdo);
                     cmd.Parameters.AddWithValue("@NOMBRE_ACUERDO", obj.NombreAcuerdo);
                     cmd.Parameters.AddWithValue("@ID_PROVEEDOR", obj.IdProveedor);
+                    cmd.Parameters.AddWithValue("@ID_DEPARTAMENTO", obj.IdDepartamento);
                     cmd.Parameters.AddWithValue("@ID_MODALIDAD_OP", obj.IdModalidadOp);
                     cmd.Parameters.AddWithValue("@ID_TIPO_REBATE", obj.IdTipoRebate);
                     cmd.Parameters.AddWithValue("@ID_CRITERIO", obj.IdCriterio);

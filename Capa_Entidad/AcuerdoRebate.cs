@@ -15,6 +15,7 @@ namespace Capa_Entidad
         public string Documento { get; set; }
 
         public int IdProveedor { get; set; }
+        public int? IdDepartamento { get; set; }
         public int IdModalidadOp { get; set; }
         public int IdTipoRebate { get; set; }
         public int IdCriterio { get; set; }
@@ -32,6 +33,7 @@ namespace Capa_Entidad
         public string Comentario { get; set; }
 
         public Proveedor oProveedor { get; set; }
+        public Departamento ODepartamento { get; set; }
         public ModalidadOperacion oModalidadOperacion { get; set; }
         public TipoRebate oTipoRebate { get; set; }
         public CriterioRebate oCriterio { get; set; }

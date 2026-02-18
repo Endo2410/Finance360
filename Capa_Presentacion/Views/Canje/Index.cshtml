@@ -64,6 +64,7 @@
                     <th style="display:none;">ID</th>
                     <th>N° Canje</th>
                     <th>Proveedor</th>
+                    <th>Departamento</th>
                     <th>Periodo</th>
                     <th>Volumen</th>
                     <th>Monto</th>
@@ -89,6 +90,8 @@
                         c.IdCanje,
                         IdProveedor = c.oProveedor?.IdProveedor ?? 0,
                         NombreProveedor = c.oProveedor?.NombreProveedor ?? "",
+                        IdDepartamento = c.ODepartamento?.IdDepartamento ?? 0,
+                        NombreDepartamento = c.ODepartamento?.NombreDepartamento ?? "",
                         IdTipoCanje = c.oTipoCanje?.IdTipoCanje ?? 0,
                         c.Volumen,
                         Monto = c.Monto,
@@ -103,6 +106,7 @@
                         <td style="display:none;">@c.IdCanje</td>
                         <td>@c.NumeroCanje</td>
                         <td>@c.oProveedor?.NombreProveedor</td>
+                        <td>@c.ODepartamento?.NombreDepartamento</td>
                         <td>@c.oTipoCanje?.Nombre</td>
                         <td>@c.Volumen.ToString("N2")</td>
                         <td>@("C$ " + c.Monto.ToString("N2"))</td>
@@ -199,11 +203,16 @@
                         <select id="cbotipocanje" class="form-select"></select>
                     </div>
 
-                    <div class="col-md-6">
-                        <label class="form-label">Fecha de Vencimiento</label>
-                        <input id="txtVencimiento" type="date" class="form-control" />
+                     <div class="col-md-6">
+                        <label class="form-label">Departamento</label>
+                        <div class="input-group">
+                            <input type="hidden" id="cboDepartamento" name="IdDepartamento" />
+                            <input type="text" id="txtDepartamentoNombre" class="form-control" placeholder="Seleccionar Departamento" readonly>
+                            <button class="btn btn-secondary" type="button" onclick="abrirModalDepartamento()">Buscar</button>
+                        </div>
                     </div>
 
+                 
                     <div class="col-md-3">
                         <label class="form-label">Volumen</label>
                         <input id="txtvolumen" type="number" step="0.01" class="form-control" />
@@ -215,6 +224,11 @@
                             <span class="input-group-text">C$</span>
                             <input id="txtmonto" type="number" step="0.01" class="form-control" />
                         </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Fecha de Vencimiento</label>
+                        <input id="txtVencimiento" type="date" class="form-control" />
                     </div>
 
                     <div class="col-12">
@@ -251,6 +265,7 @@
     </div>
 </div>
 
+
 <!-- ============ MODAL PROVEEDOR ============ -->
 <div class="modal fade" id="modalProveedor" tabindex="-1" data-bs-backdrop="static">
     <div class="modal-dialog modal-md">
@@ -275,6 +290,41 @@
         </div>
     </div>
 </div>
+
+
+
+<!-- Modal Selección de Departamento -->
+<div class="modal fade" id="modalDepartamento" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+
+            <div class="modal-header bg-primary text-white">
+                <h6 class="modal-title">Seleccionar Departamento</h6>
+            </div>
+
+            <div class="modal-body">
+
+                <input type="text"
+                       id="txtFiltrarDepartamento"
+                       class="form-control mb-3"
+                       placeholder="Buscar departamento..." />
+
+                <table class="table table-hover" id="tablaDepartamentosModal">
+                    <thead>
+                        <tr>
+                            <th>Departamento</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+
+            </div>
+
+        </div>
+    </div>
+</div>
+
+
 
 
 <!-- Modal global para mensajes de éxito -->
@@ -354,6 +404,66 @@
         });
 
 
+          //Departamento
+
+        function abrirModalDepartamento() {
+            cargarDepartamentosModal();
+            $('#txtFiltrarDepartamento').val('');
+            new bootstrap.Modal('#modalDepartamento').show();
+        }
+
+        function cargarDepartamentosModal() {
+              $.get('/Proveedores/ListarDepartamento', function (data) {
+
+                let tbody = $('#tablaDepartamentosModal tbody');
+                tbody.empty();
+
+                data.forEach(d => {
+                    tbody.append(`
+                        <tr data-id="${d.idDepartamento}" data-nombre="${d.nombre}">
+                            <td>${d.nombre}</td>
+                        </tr>
+                    `);
+                });
+
+                // Click en fila selecciona automáticamente
+                $('#tablaDepartamentosModal tbody tr').click(function () {
+
+                    let id = $(this).data('id');
+                    let nombre = $(this).data('nombre');
+
+                     $('#cboDepartamento').val(id);
+                    $('#txtDepartamentoNombre').val(nombre);
+
+                    bootstrap.Modal
+                        .getInstance(document.getElementById('modalDepartamento'))
+                        .hide();
+                });
+
+            });
+        }
+
+        function seleccionarDepartamento(id, nombre) {
+             $('#cboDepartamento').val(id);
+            $('#txtDepartamentoNombre').val(nombre);
+
+            bootstrap.Modal
+                .getInstance(document.getElementById('modalDepartamento'))
+                .hide();
+        }
+
+        // Filtro dinámico
+        $('#txtFiltrarDepartamento').on('keyup', function () {
+            let valor = $(this).val().toLowerCase();
+
+            $('#tablaDepartamentosModal tbody tr').filter(function () {
+                $(this).toggle(
+                    $(this).text().toLowerCase().indexOf(valor) > -1
+                );
+            });
+        });
+
+
         /* ===== MODAL ===== */
         function abrirModal(c = null, modo = "crear"){
             $('#archivo').val('');
@@ -361,6 +471,9 @@
             $('#mensajeError').addClass('d-none');
             $('#txtid').val(c?.IdCanje ?? 0);
             $('#txtProveedorNombre').val(c?.NombreProveedor ?? '');
+                    $('#txtDepartamentoNombre').val(c?.NombreDepartamento ?? '');
+            $('#cboDepartamento').val(c?.IdDepartamento ?? 0);
+
             $('#cboproveedor').val(c?.IdProveedor ?? 0);
             $('#txtvolumen').val(c?.Volumen ?? '');
             $('#txtmonto').val(c?.Monto ?? '');
@@ -478,24 +591,39 @@
 
         /* ===== GUARDAR ===== */
         function guardarCanje() {
+
             let fd = new FormData();
+
             fd.append("IdCanje", $('#txtid').val());
-            fd.append("IdProveedor", $('#cboproveedor').val());
-            fd.append("IdTipoCanje", $('#cbotipocanje').val());
-            fd.append("Volumen", $('#txtvolumen').val());
-            fd.append("Monto", $('#txtmonto').val());
+
+            let idProveedor = $('#cboproveedor').val();
+            fd.append("IdProveedor", idProveedor ? idProveedor : 0);
+
+                   let idDepartamento = $('#cboDepartamento').val();
+
+                if (idDepartamento && idDepartamento != "0") {
+                    fd.append("IdDepartamento", idDepartamento);
+                } else {
+                    fd.append("IdDepartamento", "");
+                }
+
+
+            let idTipoCanje = $('#cbotipocanje').val();
+            fd.append("IdTipoCanje", idTipoCanje ? idTipoCanje : 0);
+
+            fd.append("Volumen", $('#txtvolumen').val() || 0);
+            fd.append("Monto", $('#txtmonto').val() || 0);
             fd.append("FechaVencimiento", $('#txtVencimiento').val());
             fd.append("Comentario", $('#txtcomentario').val());
 
-                let file = $('#archivo')[0].files[0];
-                let documentoExistente = $('#txtDocumentoExistente').val();
+            let file = $('#archivo')[0].files[0];
+            let documentoExistente = $('#txtDocumentoExistente').val();
 
-                if (file) {
-                    fd.append("archivo", file);
-                } else {
-                    fd.append("DOCUMENTO_EXISTENTE", documentoExistente);
-                }
-
+            if (file) {
+                fd.append("archivo", file);
+            } else {
+                fd.append("DOCUMENTO_EXISTENTE", documentoExistente);
+            }
 
             $.ajax({
                 url: $('#txtid').val() == 0 ? '/Canje/Crear' : '/Canje/Editar',
@@ -504,30 +632,37 @@
                 processData: false,
                 contentType: false,
                 success: function (r) {
+
                     if (r.success) {
-                        // Mostrar modal de éxito
+
                         $('#cuerpoExito').html(r.mensaje || "Operación realizada con éxito");
+
                         let modal = new bootstrap.Modal(document.getElementById('modalExito'));
                         modal.show();
 
-                        // Recargar automáticamente después de 2 segundos (2000 ms)
                         setTimeout(() => {
                             location.reload();
                         }, 2000);
 
                     } else {
-                        // Mostrar modal de error
-                        $('#cuerpoMensaje').html(r.mensajes ? r.mensajes.join('<br/>') : "Ocurrió un error inesperado");
+
+                        $('#cuerpoMensaje').html(
+                            r.mensajes ? r.mensajes.join('<br/>') : "Ocurrió un error inesperado"
+                        );
+
                         let modal = new bootstrap.Modal(document.getElementById('modalMensaje'));
                         modal.show();
                     }
                 },
                 error: function () {
+
                     $('#cuerpoMensaje').html("Error al conectar con el servidor.");
+
                     let modal = new bootstrap.Modal(document.getElementById('modalMensaje'));
                     modal.show();
                 }
             });
         }
+
     </script>
 }

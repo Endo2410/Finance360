@@ -54,7 +54,7 @@ namespace Capa_Presentacion.Controllers
 
         public IActionResult Tipos()
         {
-            return View(cn.Obtener());
+            return View();
         }
     }
 }

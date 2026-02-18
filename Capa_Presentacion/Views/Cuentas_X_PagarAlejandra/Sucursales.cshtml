@@ -5,8 +5,60 @@
     ViewData["Title"] = "Sucursales";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
-<br/>
-<br />
+
+<ol class="breadcrumb mb-4 mt-4">
+    <li class="breadcrumb-item active">Gestion General</li>
+</ol>
+
+<div class="row">
+    <!-- Sucursales -->
+    <div class="col-md-3 mb-2">
+        <a asp-controller="Cuentas_X_PagarAlejandra" asp-action="Sucursales" class="text-decoration-none">
+            <div class="card shadow h-100 border-0">
+                <div class="card-body text-center">
+                    <i class="fas fa-store fa-2x text-primary"></i>
+                    <h6 class="mt-2">Sucursales</h6>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <!-- Proveedores -->
+    <div class="col-md-3 mb-2">
+        <a asp-controller="Proveedores" asp-action="Index" class="text-decoration-none">
+            <div class="card shadow h-100 border-0">
+                <div class="card-body text-center">
+                    <i class="fas fa-truck fa-2x text-success"></i>
+                    <h6 class="mt-2">Proveedores</h6>
+                </div>
+            </div>
+        </a>
+    </div>
+
+
+    <!-- Departamento -->
+    <div class="col-md-3 mb-2">
+        <a asp-controller="Proveedores" asp-action="Departamento" class="text-decoration-none">
+            <div class="card shadow h-100 border-0">
+                <div class="card-body text-center">
+                    <i class="fas fa-building fa-2x text-warning"></i>
+                    <h6 class="mt-2">Departamento</h6>
+                </div>
+            </div>
+        </a>
+    </div>
+
+</div>
+
+
+
+<ol class="breadcrumb mb-4 mt-4">
+    <li class="breadcrumb-item">
+        <a asp-controller="Home" asp-action="Index">Inicio</a>
+    </li>
+    <li class="breadcrumb-item active">Sucursales</li>
+</ol>
+
 
 
 <div class="card shadow border-0">
