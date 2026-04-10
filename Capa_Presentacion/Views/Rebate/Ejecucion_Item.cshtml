@@ -1,0 +1,878 @@
+﻿
+
+@using System.Text.Json
+@model List<Capa_Entidad.CE_Rebate.EjecucionRebate>
+
+@{
+    ViewData["Title"] = "Gestión de Ejecuciones Rebate";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@await Html.PartialAsync("_MenuEjecuciones")
+
+@{
+    var jsonAcciones = Context.Session.GetString("AccionesUsuario");
+    var acciones = !string.IsNullOrEmpty(jsonAcciones)
+        ? JsonSerializer.Deserialize<List<string>>(jsonAcciones)
+        : new List<string>();
+
+    bool puedeCrear = acciones.Contains("Crear_Ejecucion_Rebate");
+    bool puedeEditar = acciones.Contains("Editar_Ejecucion_Rebate");
+}
+
+
+<!-- Breadcrumb -->
+<ol class="breadcrumb mb-4 mt-4">
+    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Bienvenido">Inicio</a></li>
+    <li class="breadcrumb-item active">Ejecuciones Rebate</li>
+</ol>
+
+<div class="card shadow border-0">
+    <div class="card-header text-white d-flex justify-content-between"
+         style="background-color:#274DF5;">
+        <span><i class="fas fa-file-invoice-dollar me-2"></i> Ejecuciones Rebate</span>
+
+        @if (puedeCrear)
+        {
+            <button id="btnNuevo" class="btn btn-light btn-sm">
+                <i class="fas fa-plus"></i> Nuevo Ejecución
+            </button>
+        }
+    </div>
+
+    <div class="card-body">
+
+        <!-- Filtro por columna -->
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <select id="filtroCampo" class="form-control">
+                    <option value="">-- Filtrar por --</option>
+                    <option value="0">N° Acuerdo</option>
+                    <option value="1">N° Ejecucion</option>
+                    <option value="2">Proveedor</option>
+                    <option value="3">Laboratorio</option>
+                    <option value="7">Fecha</option>
+                    <option value="8">Estado</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <input id="filtroValor" class="form-control" placeholder="Buscar..." autocomplete="off" onkeyup="filtrarColumna()" />
+            </div>
+        </div>
+
+        <table class="table table-striped" id="tablaEjecuciones">
+            <thead class="text-white" style="background-color:#274DF5;">
+                <tr>
+                    <th>N° Acuerdo</th>
+                    <th>N° Ejecucion</th>
+                    <th>Proveedor</th>
+                    <th>Departamento</th>
+                    <th>Monto Calculado</th>
+                    <th>Monto Rebate</th>
+                    <th>Cumple</th>
+                    <th>Fecha</th>
+                    <th>Usuario Registro</th>
+                    <th>Estado</th>
+                    <th class="text-center">Acciones</th>
+                </tr>
+            </thead>
+            @{
+                var ejecucionesOrdenadas = Model
+                .OrderBy(e =>
+                e.IdEstado == 1 ? 1 :
+                e.IdEstado == 4 ? 2 :
+                e.IdEstado == 6 ? 3 : 4
+                )
+                .ThenByDescending(e => e.FechaPago)
+                .ToList();
+            }
+
+            <tbody>
+                @foreach (var e in ejecucionesOrdenadas)
+                {
+                    var json = JsonSerializer.Serialize(new
+                    {
+                        e.IdEjecucion,
+                        e.IdAcuerdo,
+                        e.IdEstado,
+                        e.NumeroAcuerdo,
+                        e.NombreAcuerdo,
+                        e.NombreProveedor,
+                        Departamento = e.NombreDepartamento,
+                        e.NumeroDocumentoSoporte,
+                        e.MontoCalculado,
+                        e.MontoRebate,
+                        e.CumpleCondicion,
+                        e.ArchivoSoporte,
+                        e.Ganancia,
+                        e.Criterio,
+                        FechaPago = e.FechaPago.ToString("yyyy-MM-dd"),
+                        e.UsuarioRegistro,
+                        FechaRegistro = e.FechaRegistro.ToString("dd/MM/yyyy HH:mm"),
+
+                        UsuarioModificacion = e.UsuarioModificacion,
+                        FechaModificacion = e.FechaModificacion?.ToString("dd/MM/yyyy HH:mm"),
+                        e.EstadoNombre,
+                        e.Comentario,
+                        e.Forzado
+                    });
+
+                    <tr>
+                        <td>@e.NumeroAcuerdo</td>
+                        <td>@e.NumeroDocumentoSoporte</td>
+                        <td>@e.NombreProveedor</td>
+                        <td>@(string.IsNullOrEmpty(e.NombreDepartamento) ? "" : e.NombreDepartamento)</td>
+                        <td>@e.MontoCalculado.ToString("N2")</td>
+                        <td class="fw-bold text-success">@e.MontoRebate.ToString("N2")</td>
+                        <td>
+                            @if (e.CumpleCondicion)
+                            {
+                                <span class="badge bg-success">SI</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-danger">NO</span>
+                            }
+                        </td>
+                        <td>@e.FechaPago.ToString("yyyy-MM-dd")</td>
+                        <td>@e.UsuarioRegistro</td>
+                        <td>
+                            @switch (e.IdEstado)
+                            {
+                                case 1:
+                                    <span class="badge bg-warning text-dark">@e.EstadoNombre</span>
+                                    break;
+
+                                case 4:
+                                    <span class="badge bg-danger">@e.EstadoNombre</span>
+                                    break;
+
+                                case 6:
+                                    <span class="badge bg-success">@e.EstadoNombre</span>
+                                    break;
+
+                                default:
+                                    <span class="badge bg-secondary">@e.EstadoNombre</span>
+                                    break;
+                            }
+                        </td>
+                        <td class="text-center">
+                            @{
+                                bool esPagado = e.IdEstado == 6;
+                            }
+
+                            @if (esPagado)
+                            {
+                                <!-- Siempre solo ver -->
+                                <button class="btn btn-info btn-sm btn-editar"
+                                        data-json='@Html.Raw(json)'>
+                                    <i class="fas fa-eye"></i> Ver
+                                </button>
+                            }
+                            else if (puedeEditar)
+                            {
+                                <!-- Puede editar -->
+                                <button class="btn btn-warning btn-sm btn-editar"
+                                        data-json='@Html.Raw(json)'>
+                                    <i class="fas fa-edit"></i> Editar
+                                </button>
+                            }
+                            else
+                            {
+                                <!-- No tiene permiso -->
+                                <button class="btn btn-info btn-sm btn-editar"
+                                        data-json='@Html.Raw(json)'>
+                                    <i class="fas fa-eye"></i> Ver
+                                </button>
+                            }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- MODAL EJECUCIÓN -->
+<div class="modal fade" id="modalEjecucion" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Ejecución Rebate</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <input type="hidden" id="txtIdAcuerdo" />
+                <input type="hidden" id="txtIdEjecucion" />
+                <input type="hidden" id="txtArchivoActual" />
+
+                <div class="row g-3">
+
+                    <!-- ACUERDO -->
+                    <div class="col-md-3">
+                        <label class="form-label">Número Acuerdo</label>
+                        <div class="input-group">
+                            <input id="txtNumeroAcuerdo" class="form-control" readonly />
+                            <button id="btnBuscarAcuerdo" class="btn btn-secondary" type="button">Buscar</button>
+                        </div>
+                    </div>
+
+                    <div class="col-md-9">
+                        <label class="form-label">Nombre Acuerdo</label>
+                        <input id="txtNombreAcuerdo" class="form-control" readonly />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Proveedor</label>
+                        <input id="txtProveedor" class="form-control" readonly />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Departamento</label>
+                        <input id="txtDepartamento" class="form-control" readonly />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Porcentaje</label>
+                        <input id="txtValorCriterioMostrar" class="form-control" readonly />
+                    </div>
+
+
+                    <div class="col-12">
+                        <label class="form-label">Productos del Acuerdo</label>
+
+                        <div style="max-height: 300px; overflow-y: auto;">
+                            <table class="table table-bordered" id="tablaItems">
+                                <thead style="position: sticky; top: 0; background: white; z-index: 1;">
+                                    <tr>
+                                        <th>Producto</th>
+                                        <th>Cantidad Base</th>
+                                        <th>Cantidad Ingresada</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="form-check mt-2">
+                        <input class="form-check-input" type="checkbox" id="chkForzar">
+                        <label class="form-check-label">
+                            Forzar cálculo
+                        </label>
+                    </div>
+
+                    <!-- MONTO -->
+                    <div class="col-md-6">
+                        <label class="form-label">Monto Base</label>
+                        <input id="txtMontoCalculado" type="number" step="0.01"
+                               class="form-control"
+                               onkeyup="calcularRebate()" />
+                    </div>
+
+                    <!-- FILA 1 -->
+                    <div class="col-md-6">
+                        <label class="form-label">Total</label>
+                        <input id="txtMontoRebate" type="number" class="form-control" readonly />
+                    </div>
+
+
+                    <!-- FILA 2 -->
+                    <div class="row mt-2">
+                        <!-- ARCHIVO -->
+                        <div class="col-md-6">
+                            <label class="form-label">Archivo Soporte</label>
+                            <input type="file"
+                                   id="fileSoporte"
+                                   class="form-control"
+                                   accept=".pdf,.jpg,.png,.jpeg,.doc,.docx,.xls,.xlsx"
+                                   onchange="previsualizarArchivo()" />
+                        </div>
+
+                        <!-- PREVISUALIZACIÓN -->
+                        <div class="col-md-6" id="contenedorPreview">
+                            <label class="form-label">Vista previa</label>
+                            <div class="border rounded p-2 text-center">
+                                <a id="linkPreview" target="_blank" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-eye"></i> Ver archivo
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 mt-2">
+                        <label class="form-label">Comentario</label>
+                        <textarea id="txtComentario" class="form-control" rows="2"></textarea>
+                    </div>
+
+                    <div id="grupoCreacion" class="row">
+                        <div class="col-md-6">
+                            <label class="form-label">Usuario Creación</label>
+                            <input id="txtUsuarioRegistro" class="form-control" readonly />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Fecha Creación</label>
+                            <input id="txtFechaRegistro" class="form-control" readonly />
+                        </div>
+                    </div>
+
+                    <div id="grupoModificacion" class="row mt-2">
+                        <div class="col-md-6">
+                            <label class="form-label">Usuario Modificación</label>
+                            <input id="txtUsuarioModificacion" class="form-control" readonly />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Fecha Modificación</label>
+                            <input id="txtFechaModificacion" class="form-control" readonly />
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <div id="mensajeError" class="alert alert-danger d-none"></div>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <button id="btnGuardarEjecucion" class="btn btn-primary">Guardar</button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- MODAL ACUERDOS -->
+<div class="modal fade" id="modalAcuerdo" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Seleccionar Acuerdo</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <table class="table table-hover" id="tablaAcuerdos">
+                    <thead>
+                        <tr>
+                            <th>N° Acuerdo</th>
+                            <th>Nombre</th>
+                            <th>Proveedor</th>
+                            <th>Departamento</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+
+<!-- Modal global para mensajes de éxito -->
+<div class="modal fade" id="modalExito" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">Éxito</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="cuerpoExito"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal global para errores inesperados -->
+<div class="modal fade" id="modalMensaje" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Error</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="cuerpoMensaje"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@section Scripts {
+    <script>
+               $(document).ready(function () {
+
+                // Inicializa DataTable con paginación
+                var tabla = $('#tablaEjecuciones').DataTable({
+                    pageLength: 15,
+                    lengthChange: false,
+                    searching: false,
+                    ordering: false,
+                    responsive: true,
+                    language: {
+                        paginate: { previous: "Anterior", next: "Siguiente" },
+                        info: "Mostrando _START_ a _END_ de _TOTAL_ registros",
+                        emptyTable: "No hay ejecuciones registradas"
+                    }
+                });
+
+                $('#btnNuevo').click(() => abrirModalEjecucion());
+                $('#btnBuscarAcuerdo').click(() => abrirModalAcuerdo());
+
+                // Editar ejecución
+                $('#tablaEjecuciones').on('click', '.btn-editar', function () {
+
+                    let data = $(this).attr('data-json');
+                    let ejec = JSON.parse(data);
+
+                    let soloLectura = (ejec.IdEstado === 6) || !@puedeEditar.ToString().ToLower();
+
+                    abrirModalEjecucion(ejec, soloLectura);
+                });
+            });
+
+            // FILTRO MANUAL POR COLUMNA
+            function filtrarColumna() {
+                let campoIndex = $('#filtroCampo').val();
+                let valor = $('#filtroValor').val().toLowerCase();
+                $('#tablaEjecuciones tbody tr').each(function () {
+                    if (campoIndex === "") { $(this).show(); return; }
+                    let textoCelda = $(this).find('td').eq(campoIndex).text().toLowerCase();
+                    $(this).toggle(textoCelda.includes(valor));
+                });
+            }
+
+            $('#filtroCampo').change(function () {
+                $('#filtroValor').val('');
+                filtrarColumna();
+            });
+
+        function validarCantidades() {
+
+            let forzar = $('#chkForzar').is(':checked');
+
+            $('#tablaItems tbody tr').each(function () {
+
+                let cantidadBase = parseFloat($(this).find('td').eq(1).text()) || 0;
+                let input = $(this).find('.cantidad-ingresada');
+                let cantidadIngresada = parseFloat(input.val()) || 0;
+
+                if (!forzar && cantidadIngresada < cantidadBase) {
+                    input.addClass('is-invalid');
+                } else {
+                    input.removeClass('is-invalid');
+                }
+            });
+
+            // 🔥 SOLO recalcula SI hay monto
+            calcularRebate();
+        }
+
+        $('#chkForzar').change(function () {
+            validarCantidades();
+        });
+
+
+        function abrirModalEjecucion(ejec = null, soloLectura = false) {
+
+            // LIMPIAR
+
+            $('#chkForzar').prop('checked', false);
+
+            let tbody = $('#tablaItems tbody');
+            tbody.empty();
+
+            if (ejec && ejec.IdEjecucion) {
+
+                // LLAMAR DETALLE DE EJECUCIÓN
+                $.get('/Rebate/ObtenerDetalleEjecucion', { idEjecucion: ejec.IdEjecucion }, function (data) {
+
+                    if (data && data.length > 0) {
+
+                        data.forEach(d => {
+
+                            tbody.append(`
+                                <tr>
+                                    <td>${d.descripcion}</td>
+                                    <td>${d.cantidad}</td>
+                                    <td>
+                                        <input type="number"
+                                            class="form-control cantidad-ingresada"
+                                            data-iddetalle="${d.idDetalle}"
+                                            value="${d.cantidadIngresada}"
+                                            min="0" step="0.01"
+                                            ${soloLectura ? 'readonly' : ''}
+                                           oninput="validarCantidades(); calcularRebate();" />
+                                    </td>
+                                </tr>
+                            `);
+                        });
+
+                        validarCantidades(); // recalcula estado
+                    }
+                });
+            }
+
+            // CONTROL VISUAL DE CAMPOS
+
+            if (!ejec || !ejec.IdEjecucion) {
+                $('#grupoCreacion').addClass('d-none');
+                $('#grupoModificacion').addClass('d-none');
+            } else {
+
+                // EDITAR / VER
+                $('#grupoCreacion').removeClass('d-none');
+
+                // MODIFICACIÓN SOLO SI EXISTE
+                if (ejec.UsuarioModificacion && ejec.FechaModificacion) {
+                    $('#grupoModificacion').removeClass('d-none');
+                } else {
+                    $('#grupoModificacion').addClass('d-none');
+                }
+            }
+
+            // LIMPIAR ARCHIVO
+            $('#fileSoporte').val('');
+            $('#linkPreview').attr('href', '#');
+            $('#contenedorPreview').addClass('d-none');
+
+            $('#mensajeError').addClass('d-none').text('');
+
+            $('#txtIdAcuerdo').val(ejec?.IdAcuerdo ?? '');
+            $('#txtIdEjecucion').val(ejec?.IdEjecucion ?? '');
+            $('#txtNumeroAcuerdo').val(ejec?.NumeroAcuerdo ?? '');
+            $('#txtNombreAcuerdo').val(ejec?.NombreAcuerdo ?? '');
+            $('#txtProveedor').val(ejec?.NombreProveedor ?? '');
+            $('#txtDepartamento').val(ejec?.Departamento ?? '');
+            $('#txtValorCriterioMostrar').val(ejec?.Ganancia ?? '');
+            $('#txtMontoCalculado').val(ejec?.MontoCalculado ?? '');
+            $('#txtMontoRebate').val(ejec?.MontoRebate ?? '');
+            $('#txtComentario').val(ejec?.Comentario ?? '');
+            $('#chkForzar').prop('checked', ejec?.Forzado ?? false);
+
+            $('#txtUsuarioRegistro').val(ejec?.UsuarioRegistro ?? '');
+            $('#txtFechaRegistro').val(ejec?.FechaRegistro ?? '');
+
+            $('#txtUsuarioModificacion').val(ejec?.UsuarioModificacion ?? '');
+            $('#txtFechaModificacion').val(ejec?.FechaModificacion ?? '');
+
+            if (ejec?.ArchivoSoporte) {
+                const url = `/archivo/rebate/${ejec.ArchivoSoporte}`;
+                $('#linkPreview').attr('href', url);
+                $('#contenedorPreview').removeClass('d-none');
+
+                // GUARDAR NOMBRE ACTUAL
+                $('#txtArchivoActual').val(ejec.ArchivoSoporte);
+            } else {
+                $('#txtArchivoActual').val('');
+            }
+
+            $('#txtMontoRebate').prop('readonly', true);
+            $('#btnGuardarEjecucion').toggle(!soloLectura);
+
+            new bootstrap.Modal('#modalEjecucion').show();
+        }
+
+        function abrirModalAcuerdo() {
+            $.get('/Rebate/Listar', data => {
+                let tbody = $('#tablaAcuerdos tbody');
+                tbody.empty();
+
+                data.forEach(a => {
+
+                    if (
+                        a.oEstado && a.oEstado.idEstado === 3 &&
+                        a.oTipoRebate && a.oTipoRebate.idTipoRebate === 4
+                    ) {
+                        tbody.append(`
+                    <tr onclick='seleccionarAcuerdo(${JSON.stringify(a)})'>
+                        <td>${a.numeroAcuerdo}</td>
+                        <td>${a.nombreAcuerdo}</td>
+                        <td>${a.oProveedor.nombreProveedor}</td>
+                        <td>${a.oDepartamento ? a.oDepartamento.nombreDepartamento : ''}</td>
+                    </tr>
+                `);
+                    }
+
+                });
+
+                new bootstrap.Modal('#modalAcuerdo').show();
+            });
+        }
+
+        function cumpleCondiciones() {
+
+            let cumple = true;
+
+            $('#tablaItems tbody tr').each(function () {
+
+                let base = parseFloat($(this).find('td').eq(1).text()) || 0;
+                let ingresada = parseFloat($(this).find('.cantidad-ingresada').val()) || 0;
+
+                if (ingresada < base) {
+                    cumple = false;
+                }
+            });
+
+            return cumple;
+        }
+
+
+        function seleccionarAcuerdo(a) {
+
+            $('#txtIdAcuerdo').val(a.idAcuerdo);
+            $('#txtNumeroAcuerdo').val(a.numeroAcuerdo);
+            $('#txtNombreAcuerdo').val(a.nombreAcuerdo);
+            $('#txtProveedor').val(a.oProveedor.nombreProveedor);
+            $('#txtDepartamento').val(
+                a.oDepartamento ? a.oDepartamento.nombreDepartamento : ''
+            );
+            $('#txtValorCriterioMostrar').val(a.ganancia);
+
+            // LIMPIAR TABLA
+            let tbody = $('#tablaItems tbody');
+            tbody.empty();
+
+            // LLAMAR A DETALLES
+            $.get('/Rebate/ObtenerDetalles', { idAcuerdo: a.idAcuerdo }, function (data) {
+
+                if (data && data.length > 0) {
+
+                    data.forEach(d => {
+
+                        tbody.append(`
+                    <tr>
+                        <td>${d.descripcion}</td>
+                        <td>${d.cantidad}</td>
+                         <td>
+                           <input type="number"
+                               class="form-control cantidad-ingresada"
+                               data-iddetalle="${d.idDetalle}"
+                               min="0" step="0.01"
+                               oninput="validarCantidades()" />
+                        </td>
+                    </tr>
+                `);
+
+                    });
+
+                } else {
+                    tbody.append(`
+                <tr>
+                    <td colspan="3" class="text-center">No hay productos</td>
+                </tr>
+            `);
+                }
+
+            });
+
+            $('#modalAcuerdo').modal('hide');
+
+            $('#txtMontoRebate').val('');
+            $('#txtMontoRebate').prop('readonly', true);
+
+        }
+
+        function previsualizarArchivo() {
+            let input = document.getElementById('fileSoporte');
+            let contenedor = document.getElementById('contenedorPreview');
+            let link = document.getElementById('linkPreview');
+
+            if (input.files.length === 0) {
+                contenedor.classList.add('d-none');
+                return;
+            }
+
+            let file = input.files[0];
+            let url = URL.createObjectURL(file);
+
+            link.href = url;
+            contenedor.classList.remove('d-none');
+        }
+
+        function obtenerDetallesJSON() {
+
+            let detalles = [];
+
+            $('#tablaItems tbody tr').each(function () {
+
+                let idDetalle = $(this).find('.cantidad-ingresada').data('iddetalle');
+                let cantidad = parseFloat($(this).find('.cantidad-ingresada').val()) || 0;
+
+                if (idDetalle) {
+                    detalles.push({
+                        ID_DETALLE: idDetalle,
+                        CANTIDAD: cantidad
+                    });
+                }
+            });
+
+            return JSON.stringify(detalles);
+        }
+
+        function hayCantidadesIngresadas() {
+
+            let hay = false;
+
+            $('#tablaItems tbody tr').each(function () {
+                let val = parseFloat($(this).find('.cantidad-ingresada').val()) || 0;
+                if (val > 0) {
+                    hay = true;
+                }
+            });
+
+            return hay;
+        }
+
+        function calcularRebate() {
+
+            let montoBase = parseFloat($('#txtMontoCalculado').val()) || 0;
+            let porcentaje = parseFloat($('#txtValorCriterioMostrar').val()) || 0;
+            let forzar = $('#chkForzar').is(':checked');
+
+            let hayCantidades = hayCantidadesIngresadas();
+            let cumple = cumpleCondiciones();
+
+            if (
+                montoBase > 0 &&
+                porcentaje > 0 &&
+                hayCantidades &&
+                (cumple || forzar)
+            ) {
+
+                let total = montoBase * (porcentaje / 100);
+                $('#txtMontoRebate').val(total.toFixed(2));
+
+            } else {
+                $('#txtMontoRebate').val('');
+            }
+        }
+
+
+        $('#btnGuardarEjecucion').click(function () {
+
+            let btn = $(this);
+
+            // EVITAR DOBLE CLICK
+            if (btn.prop('disabled')) return;
+
+            let errores = [];
+
+            if ($('#txtIdAcuerdo').val() === '') {
+                errores.push('Debe seleccionar un acuerdo.');
+            }
+
+
+            if ($('#txtMontoCalculado').val() === '') {
+                errores.push('Debe digitar el monto.');
+            } else if (parseFloat($('#txtMontoCalculado').val()) <= 0) {
+                errores.push('El monto debe ser mayor a cero.');
+            }
+
+            let forzar = $('#chkForzar').is(':checked');
+            let comentario = $('#txtComentario').val().trim();
+
+            if (forzar && comentario === '') {
+                errores.push('Debe ingresar un comentario cuando se fuerza el cálculo.');
+            }
+
+            let detallesJson = obtenerDetallesJSON();
+
+            if (!detallesJson || detallesJson === "[]") {
+                errores.push('Debe ingresar cantidades.');
+            }
+
+            let fileInput = document.getElementById('fileSoporte');
+            let archivoPrevio = $('#linkPreview').attr('href') && $('#linkPreview').attr('href') !== '#';
+
+            if (fileInput.files.length === 0 && !archivoPrevio) {
+                errores.push('Debe adjuntar un archivo.');
+            }
+
+            if (errores.length > 0) {
+                let html = '<ul>';
+                errores.forEach(e => html += `<li>${e}</li>`);
+                html += '</ul>';
+
+                $('#cuerpoMensaje').html(html);
+                new bootstrap.Modal('#modalMensaje').show();
+                return;
+            }
+
+            //  BLOQUEAR BOTÓN
+            btn.prop('disabled', true).text('Guardando...');
+
+            let formData = new FormData();
+
+            formData.append('IdAcuerdo', $('#txtIdAcuerdo').val());
+            formData.append('IdEjecucion', $('#txtIdEjecucion').val());
+            formData.append('MontoCalculado', $('#txtMontoCalculado').val());
+            formData.append('MontoRebate', $('#txtMontoRebate').val());
+
+            let cumpleReal = cumpleCondiciones();
+            let cumpleFinal = forzar ? true : cumpleReal;
+
+            formData.append('CumpleCondicion', cumpleFinal);
+            formData.append('Forzado', forzar);
+            formData.append('Comentario', comentario);
+            formData.append('detalles', detallesJson);
+            formData.append('ArchivoSoporte', $('#txtArchivoActual').val());
+
+            if (fileInput.files.length > 0) {
+                formData.append('fileSoporte', fileInput.files[0]);
+            }
+
+            let url = $('#txtIdEjecucion').val()
+                ? '/Rebate/EditarEjecucionItem'
+                : '/Rebate/GuardarEjecucionItem';
+
+            $.ajax({
+                url: url,
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function (resp) {
+
+                    if (resp.resultado) {
+
+                        bootstrap.Modal.getInstance(
+                            document.getElementById('modalEjecucion')
+                        ).hide();
+
+                        $('#cuerpoExito').html('Guardado correctamente');
+                        new bootstrap.Modal('#modalExito').show();
+
+                        setTimeout(() => location.reload(), 1500);
+
+                    } else {
+                        $('#cuerpoMensaje').html(resp.mensaje);
+                        new bootstrap.Modal('#modalMensaje').show();
+
+                        // REACTIVAR SI FALLA
+                        btn.prop('disabled', false).text('Guardar');
+                    }
+                },
+                error: function () {
+                    $('#cuerpoMensaje').html('Error de servidor');
+                    new bootstrap.Modal('#modalMensaje').show();
+
+                    // REACTIVAR SI ERROR
+                    btn.prop('disabled', false).text('Guardar');
+                }
+            });
+
+        });
+
+    </script>
+}

@@ -1,0 +1,422 @@
+﻿@using System.Text.Json
+@model List<Capa_Entidad.CE_Rebate.EjecucionRebate>
+
+@{
+    ViewData["Title"] = "Lista de Pagos de Ejecuciones Rebate";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@{
+    var accionesJson = Context.Session.GetString("AccionesUsuario");
+    var acciones = string.IsNullOrEmpty(accionesJson)
+        ? new List<string>()
+        : JsonSerializer.Deserialize<List<string>>(accionesJson);
+
+    bool puedeAnularRebate = acciones.Contains("Anular_Rebate");
+}
+
+
+<ol class="breadcrumb mb-4 mt-4">
+    <li class="breadcrumb-item">
+        <a asp-controller="Home" asp-action="Bienvenido">Inicio</a>
+    </li>
+    <li class="breadcrumb-item active">
+        Lista de Pagos de Ejecuciones Rebate
+    </li>
+</ol>
+
+<div class="card shadow border-0">
+    <div class="card-header text-white d-flex justify-content-between align-items-center"
+         style="background-color:#274DF5;">
+        <span>
+            <i class="fas fa-file-invoice-dollar me-2"></i>
+            Lista de Pagos de Ejecuciones Rebate
+        </span>
+    </div>
+
+    <div class="card-body">
+
+        <!-- FILTRO POR COLUMNA -->
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <select id="filtroCampo" class="form-control">
+                    <option value="">-- Filtrar por --</option>
+                    <option value="0">Nº Documento Soporte</option>
+                    <option value="1">Número Acuerdo</option>
+                    <option value="2">Proveedor</option>
+                    <option value="3">Tipo Rebate</option>
+                    <option value="11">Estado</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <input id="filtroValor"
+                       class="form-control"
+                       placeholder="Buscar..."
+                       autocomplete="off"
+                       onkeyup="filtrarColumna()" />
+            </div>
+        </div>
+
+        <table class="table table-striped align-middle table-nowrap"
+               id="tablaEjecuciones">
+            <thead class="text-white" style="background-color:#274DF5;">
+                <tr>
+                    <th>Nº Documento Soporte</th>
+                    <th>Número Acuerdo</th>
+                    <th>Proveedor</th>
+                    <th>Tipo Rebate</th>
+                    <th>Criterio</th>
+                    <th>Saldo Vencido</th>
+                    <th>Monto Rebate</th>
+                    <th>Monto Pagado</th>
+                    <th>Retenciones</th>
+                    <th>Neto Pagado</th>
+                    <th>Saldo Pendiente</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var c in Model
+                               .OrderBy(x => x.IdEstado == 1 ? 1 : 2)
+                               .ThenBy(x => x.FechaRegistro))
+                {
+                    <tr>
+                        <td>@c.NumeroDocumentoSoporte</td>
+                        <td>@c.NumeroAcuerdo</td>
+                        <td>@c.NombreProveedor</td>
+                        <td>@c.TipoRebate</td>
+                        <td>@c.Criterio</td>
+                        <td>@c.Saldovencido.ToString("C")</td>
+                        <td>@c.MontoRebate.ToString("C")</td>
+                        <td>
+                            <span class="fw-bold text-primary">
+                                @c.MontoPagado.ToString("C")
+                            </span>
+                        </td>
+
+                        <td>
+                            <span class="text-danger">
+                                @c.TotalRetenciones.ToString("C")
+                            </span>
+                        </td>
+
+                        <td>
+                            <span class="text-success">
+                                @c.TotalNeto.ToString("C")
+                            </span>
+                        </td>
+                        <td>
+                            @if (c.MontoPagado >= c.MontoRebate)
+                            {
+                                <span class="badge bg-success">
+                                    @((c.MontoPagado - c.MontoRebate).ToString("C"))
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-danger">
+                                    @((c.MontoRebate - c.MontoPagado).ToString("C"))
+                                </span>
+                            }
+                        </td>
+                        <td>
+                            @if (c.IdEstado == 1)
+                            {
+                                <span class="badge bg-danger">PENDIENTE</span>
+                            }
+                            else if (c.IdEstado == 6)
+                            {
+                                <span class="badge bg-success">PAGADO</span>
+                            }
+                        </td>
+                        <td>
+                            <button class="btn btn-info btn-sm"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#detallePagoModal"
+                                    onclick="cargarDetallePago(@c.IdEjecucion)">
+                                <i class="fas fa-eye"></i> Ver Pagos
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ================= MODAL DETALLE ================= -->
+<div class="modal fade" id="detallePagoModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header text-white" style="background-color:#274DF5;">
+                <h5 class="modal-title">Detalle de Pagos Rebate</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Tipo Documento</th>
+                            <th>Número</th>
+                            <th>Confirmación</th>
+                            <th>Monto</th>
+                            <th>Comprobante</th>
+                            <th>Usuario</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="detallePagosBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================= MODALES GENERALES ================= -->
+<div class="modal fade" id="modalConfirmacion" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title">Confirmación</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="cuerpoConfirmacion"></div>
+            <div class="modal-footer" id="footerConfirmacion"></div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalExito" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">Éxito</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="cuerpoExito"></div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalError" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Error</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="cuerpoError"></div>
+        </div>
+    </div>
+</div>
+
+
+@section scripts {
+    <script>
+        $(document).ready(function () {
+                tablaEjecuciones = $('#tablaEjecuciones').DataTable({
+                pageLength: 15,
+                lengthChange: false,
+                searching: true,
+                ordering: false,
+                responsive: true,
+                language: {
+                    paginate: { previous: "Anterior", next: "Siguiente" },
+                    info: "Mostrando _START_ a _END_ de _TOTAL_ registros",
+                    emptyTable: "No hay ejecuciones registradas"
+                }
+            });
+
+            // ocultar buscador nativo
+            $('#tablaEjecuciones_filter').hide();
+
+             // Aplicar filtro si viene desde Notas de Crédito
+                var filtroDoc = '@ViewBag.FiltroDocumento';
+
+            if (filtroDoc) {
+                $('#filtroCampo').val(0);          // columna: Nº Documento Soporte
+                $('#filtroValor').val(filtroDoc); // valor recibido
+                filtrarColumna();
+            }
+        });
+
+        // FILTRO POR COLUMNA
+         function filtrarColumna() {
+            let col = $('#filtroCampo').val();
+            let val = $('#filtroValor').val();
+
+            // limpiar filtros anteriores
+            tablaEjecuciones.columns().search('');
+
+            if (col !== "") {
+                tablaEjecuciones.column(col).search(val).draw();
+            } else {
+                tablaEjecuciones.search(val).draw();
+            }
+        }
+
+
+        $('#filtroCampo').change(function () {
+            $('#filtroValor').val('');
+            filtrarColumna();
+        });
+
+
+          // AJAX DETALLE DE PAGOS
+        function cargarDetallePago(idEjecucion) {
+            $('#detallePagosBody').html(
+                '<tr><td colspan="7" class="text-center">Cargando...</td></tr>'
+            );
+
+            $.ajax({
+                url: '@Url.Action("DetallePagoEjecucion", "Rebate")',
+                type: 'GET',
+                data: { id: idEjecucion },
+                success: function (detalles) {
+
+                    $('#detallePagosBody').html('');
+
+                    if (!detalles || detalles.length === 0) {
+                        $('#detallePagosBody').html(
+                            '<tr><td colspan="7" class="text-center">No hay pagos registrados</td></tr>'
+                        );
+                        return;
+                    }
+
+                    let pagosMostrados = new Set();
+
+
+                    detalles.forEach(function (d) {
+
+                        var monto = d.montoPagado ? parseFloat(d.montoPagado) : 0;
+                        var fecha = d.fechaRegistro
+                            ? new Date(d.fechaRegistro).toLocaleDateString('es-NI')
+                            : 'No disponible';
+
+                        var comp = d.comprobante
+                            ? '<a href="/ComprobantesRebate/' + d.comprobante + '" target="_blank">Ver</a>'
+                            : 'No disponible';
+
+                        // ===== ACCIÓN (MISMA LÓGICA QUE PUBLICIDAD) =====
+                        var accion = '';
+
+                        if (d.idEstado === 10) {
+                            accion = '<span class="badge bg-secondary">ANULADO</span>';
+                        }
+                        else if (d.notaCreditoAplicada) {
+                            accion = '<span class="badge bg-info">NC APLICADA</span>';
+                        }
+                        else {
+
+                            if (@puedeAnularRebate.ToString().ToLower()) {
+
+                                accion =
+                                    '<button class="btn btn-danger btn-sm" ' +
+                                    'onclick="anularPago(' + d.idDetallePago + ')">' +
+                                    '<i class="fas fa-ban me-1"></i> Anular' +
+                                    '</button>';
+                            }
+                            else {
+                                accion = '';
+                            }
+                        }
+
+
+
+                        $('#detallePagosBody').append(
+                            '<tr>' +
+                                '<td>' + fecha + '</td>' +
+                                '<td>' + (d.tipoDocumento || '') + '</td>' +
+                                '<td>' + (d.documentoPago || '') + '</td>' +
+                                '<td>' + (d.numeroConfirmacion || 'No disponible') + '</td>' +
+                                '<td>' + monto.toLocaleString("es-NI", { style: "currency", currency: "NIO" }) + '</td>' +
+                                '<td>' + comp + '</td>' +
+                                '<td>' + (d.usuarioPago || '') + '</td>' +
+                                '<td>' + accion + '</td>' +
+                            '</tr>'
+                        );
+
+
+                        if (!pagosMostrados.has(d.documentoPago) && d.observacion) {
+
+                            pagosMostrados.add(d.documentoPago);
+
+                            $('#detallePagosBody').append(`
+                            <tr style="background:#f8f9fa;">
+                                <td colspan="8" style="padding:10px 20px;">
+                                    <i class="fas fa-comment-alt text-primary me-2"></i>
+                                    <strong>Observación:</strong> ${d.observacion}
+                                </td>
+                            </tr>
+                        `);
+                        }
+                    });
+                },
+                error: function (xhr) {
+                    $('#cuerpoMensaje').html(
+                        'Error al cargar los pagos: ' + xhr.responseText
+                    );
+                    new bootstrap.Modal(
+                        document.getElementById('modalMensaje')
+                    ).show();
+                }
+            });
+        }
+
+
+         // ================= ANULAR =================
+              function anularPago(idDetallePago) {
+
+            $('#cuerpoConfirmacion').html('¿Desea anular este pago?');
+
+            $('#footerConfirmacion').html(`
+                <button class="btn btn-secondary" data-bs-dismiss="modal">No</button>
+                <button class="btn btn-danger" id="btnConfirmar">Sí</button>
+            `);
+
+            let modal = new bootstrap.Modal(
+                document.getElementById('modalConfirmacion')
+            );
+            modal.show();
+
+            $('#btnConfirmar').off().on('click', function () {
+
+                $.post('@Url.Action("AnularPagoEjecucionRebate", "Rebate")',
+                    { idDetallePago: idDetallePago }
+                )
+                .done(function (r) {
+
+                    modal.hide();
+
+                    $('#cuerpoExito').html(r.mensaje);
+
+                    new bootstrap.Modal(
+                        document.getElementById('modalExito')
+                    ).show();
+
+                    setTimeout(() => location.reload(), 1500);
+                })
+                .fail(function (xhr) {
+
+                    modal.hide();
+
+                    let msg = 'No se pudo anular el pago.';
+
+                    if (xhr.responseJSON && xhr.responseJSON.mensaje) {
+                        msg = xhr.responseJSON.mensaje;
+                    }
+
+                    $('#cuerpoError').html(msg);
+
+                    new bootstrap.Modal(
+                        document.getElementById('modalError')
+                    ).show();
+                });
+            });
+        }
+
+    </script>
+}

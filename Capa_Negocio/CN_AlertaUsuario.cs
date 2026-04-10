@@ -18,23 +18,26 @@ namespace Capa_Negocio
             return objcd.ObtenerAlertaUsuario();
         }
 
-        public bool CrearAlertaUsuario(AlertaUsuario obj, out List<string> mensajes)
+        public bool GuardarAlertas(AlertaUsuario obj, out List<string> mensajes)
         {
             mensajes = new List<string>();
 
             if (obj.IdUsuario == 0)
                 mensajes.Add("Debe seleccionar un usuario.");
 
-            if (obj.IdTipoAlerta == 0)
-                mensajes.Add("Debe seleccionar un tipo de alerta.");
-
             if (obj.IdEstado == 0)
                 mensajes.Add("Debe seleccionar un estado.");
+
+            // 🔥 SOLO VALIDAR SI VIENE CON DATOS (nuevo)
+            if ((obj.TiposAlerta == null || !obj.TiposAlerta.Any()) && obj.IdUsuario != 0)
+            {
+                // 👉 NO bloquear → permitir borrar
+            }
 
             if (mensajes.Any())
                 return false;
 
-            bool resultado = objcd.CrearAlertaUsuario(obj, out string msg);
+            bool resultado = objcd.GuardarAlertas(obj, out string msg);
 
             if (!resultado)
                 mensajes.Add(msg);
@@ -42,33 +45,26 @@ namespace Capa_Negocio
             return resultado;
         }
 
-        public bool EditarAlertaUsuario(AlertaUsuario obj, out List<string> mensajes)
-        {
-            mensajes = new List<string>();
 
-            if (obj.IdUsuario == 0)
-                mensajes.Add("Debe seleccionar un usuario.");
-
-            if (obj.IdTipoAlerta == 0)
-                mensajes.Add("Debe seleccionar un tipo de alerta.");
-
-            if (obj.IdEstado == 0)
-                mensajes.Add("Debe seleccionar un estado.");
-
-            if (mensajes.Any())
-                return false;
-
-            bool resultado = objcd.EditarAlertaUsuario(obj, out string msg);
-
-            if (!resultado)
-                mensajes.Add(msg);
-
-            return resultado;
-        }
 
         public List<TipoAlerta> ListarTipoAlerta()
         {
             return objcd.ListarTipoAlerta();
+        }
+
+        public List<Alerta> ObtenerAlertasUsuario(int idUsuario)
+        {
+            return objcd.ObtenerAlertasUsuario(idUsuario);
+        }
+
+        public int ContarAlertas(int idUsuario)
+        {
+            return objcd.ContarAlertas(idUsuario);
+        }
+
+        public void MarcarTodasComoVistas(int idUsuario)
+        {
+            objcd.MarcarTodasComoVistas(idUsuario);
         }
     }
 }

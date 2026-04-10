@@ -8,7 +8,7 @@
 
 <ol class="breadcrumb mb-4 mt-4">
     <li class="breadcrumb-item">
-        <a asp-controller="Home" asp-action="Index">Inicio</a>
+        <a asp-controller="Home" asp-action="Bienvenido">Inicio</a>
     </li>
     <li class="breadcrumb-item active">Alertas por Usuario</li>
 </ol>
@@ -23,12 +23,29 @@
     </div>
 
     <div class="card-body">
-        <table class="table table-striped align-middle">
+
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <select id="filtroCampo" class="form-control">
+                    <option value="">-- Filtrar por --</option>
+                    <option value="1">Usuario</option>
+                    <option value="2">Alertas</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <input id="filtroValor" class="form-control"
+                       placeholder="Buscar..."
+                       onkeyup="filtrarColumna()" />
+            </div>
+        </div>
+
+
+        <table class="table table-striped align-middle" id="tablaAlertas">
             <thead class="text-white" style="background-color:#274DF5;">
                 <tr>
                     <th>ID</th>
                     <th>Usuario</th>
-                    <th>Tipo Alerta</th>
+                    <th>Alertas</th>
                     <th>Estado</th>
                     <th class="text-center">Acciones</th>
                 </tr>
@@ -36,24 +53,24 @@
             <tbody>
                 @if (Model != null && Model.Count > 0)
                 {
-                    foreach (var a in Model)
+                    @foreach (var grupo in Model.GroupBy(x => x.IdUsuario))
                     {
-                        var json = JsonSerializer.Serialize(new
-                        {
-                            a.IdAlertaUsuario,
-                            a.IdUsuario,
-                            a.IdTipoAlerta,
-                            a.IdEstado
-                        });
+                        var usuario = grupo.First();
+                        var tipos = string.Join(", ", grupo.Select(x => x.oTipoAlerta?.Codigo));
 
                         <tr>
-                            <td>@a.IdAlertaUsuario</td>
-                            <td>@a.oUsuario?.NombreUsuario</td>
-                            <td>@a.oTipoAlerta?.Codigo</td>
-                            <td>@a.oEstado?.Nombre</td>
+                            <td>@usuario.IdUsuario</td>
+                            <td>@usuario.oUsuario?.NombreUsuario</td>
+                            <td>
+                                <button class="btn btn-info btn-sm"
+                                        onclick="verAlertas(@usuario.IdUsuario)">
+                                    Ver
+                                </button>
+                            </td>
+                            <td>@usuario.oEstado?.Nombre</td>
                             <td class="text-center">
                                 <button class="btn btn-warning btn-sm"
-                                        onclick='abrirModal(@Html.Raw(json))'>
+                                        onclick="editarUsuario(@usuario.IdUsuario)">
                                     Editar
                                 </button>
                             </td>
@@ -79,7 +96,7 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title">Asignar Alerta</h5>
+                <h5 class="modal-title">Asignar Alertas</h5>
                 <button type="button" class="btn-close btn-close-white"
                         data-bs-dismiss="modal"></button>
             </div>
@@ -88,16 +105,18 @@
 
                 <input type="hidden" id="txtid" value="0" />
 
+                <!-- USUARIO -->
                 <div class="mb-3">
                     <label class="form-label">Usuario</label>
                     <select id="cbousuario" class="form-select"></select>
                 </div>
 
-                <div class="mb-3">
-                    <label class="form-label">Tipo de Alerta</label>
-                    <select id="cbotipoalerta" class="form-select"></select>
+                <!-- MULTI ALERTAS -->
+                <div id="contenedorTipoAlerta" class="border rounded p-2" style="max-height:200px; overflow-y:auto;">
                 </div>
+                <small class="text-muted">Seleccione uno o varios tipos de alerta</small>
 
+                <!-- ESTADO -->
                 <div class="mb-3">
                     <label class="form-label">Estado</label>
                     <select id="cboestado" class="form-select"></select>
@@ -124,14 +143,68 @@
     </div>
 </div>
 
+
+<!-- ===================== MODAL ÉXITO ===================== -->
+
+<div class="modal fade" id="modalExito" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">Éxito</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="cuerpoExito"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ===================== MODAL ERROR===================== -->
+<div class="modal fade" id="modalError" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Error</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="cuerpoError"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
 @section Scripts {
     <script>
 
+        let listaGlobal = [];
+
         $(document).ready(function () {
+            $('#tablaAlertas').DataTable({
+                pageLength: 10,
+                lengthChange: false,
+                searching: false,
+                ordering: false,
+                responsive: true,
+                language: {
+                    paginate: { previous: "Anterior", next: "Siguiente" },
+                    info: "Mostrando _START_ a _END_ de _TOTAL_ registros",
+                    emptyTable: "No hay registros disponibles"
+                }
+            });
+
 
             cargarUsuarios();
             cargarTipoAlerta();
             cargarEstados();
+
+            listaGlobal = @Html.Raw(JsonSerializer.Serialize(Model));
 
             $('#btnNuevo').click(function () {
                 abrirModal();
@@ -139,49 +212,126 @@
 
         });
 
-        function abrirModal(a = null) {
+        function filtrarColumna() {
+
+            let idx = $('#filtroCampo').val();
+            let val = $('#filtroValor').val().toLowerCase();
+
+            $('#tablaAlertas tbody tr').each(function () {
+
+                if (idx === "") {
+                    $(this).show();
+                    return;
+                }
+
+                let texto = $(this).find('td').eq(idx).text().toLowerCase();
+
+                $(this).toggle(texto.includes(val));
+            });
+        }
+
+
+        function abrirModal() {
 
             $('#mensajeError').addClass('d-none').html('');
             $('#txtid').val(0);
 
-            if (a != null) {
-                $('#txtid').val(a.IdAlertaUsuario);
-                $('#cbousuario').val(a.IdUsuario);
-                $('#cbotipoalerta').val(a.IdTipoAlerta);
-                $('#cboestado').val(a.IdEstado);
-            }
+            $('.tipo-alerta').prop('checked', false).prop('disabled', false);
+
+            $('#cbousuario').prop('disabled', false);
+            $('#cboestado').prop('disabled', false);
+
+            $('button[onclick="guardar()"]').show();
+
+            // 🔥 cargar sin filtro especial
+            cargarUsuarios();
 
             new bootstrap.Modal(document.getElementById('modalAlerta')).show();
         }
 
-        function cargarUsuarios() {
+        function verAlertas(idUsuario) {
+
+            $.get('/Alerta/ObtenerPorUsuario?idUsuario=' + idUsuario, function (data) {
+
+                abrirModal();
+
+                // CARGAR USUARIOS incluyendo el actual
+                cargarUsuarios(idUsuario);
+
+                // ESPERAR A QUE CARGUE
+                setTimeout(() => {
+                    $('#cbousuario').val(idUsuario).prop('disabled', true);
+                }, 200);
+
+                // Desmarcar todo
+                $('.tipo-alerta').prop('checked', false).prop('disabled', true);
+
+                // Marcar los que tiene
+                let tipos = data.map(x => x.idTipoAlerta);
+
+                tipos.forEach(function (id) {
+                    $('#alerta_' + id).prop('checked', true);
+                });
+
+                // Estado
+                if (data.length > 0) {
+                    $('#cboestado').val(data[0].idEstado).prop('disabled', true);
+                }
+
+                // Ocultar botón guardar
+                $('button[onclick="guardar()"]').hide();
+
+            });
+        }
+
+
+        function cargarUsuarios(idSeleccionado = 0) {
 
             $.get('/Alerta/ListarUsuarios', function (data) {
 
                 $('#cbousuario').empty();
 
+                let usuariosConAlertas = [...new Set(listaGlobal.map(x => x.IdUsuario))];
+
                 $.each(data, function (index, item) {
-                    $('#cbousuario').append(
-                        `<option value="${item.idUsuario}">
-                            ${item.nombre}
-                        </option>`
-                    );
+
+                    // MOSTRAR si:
+                    // - NO tiene alertas
+                    // - o ES el que estás editando
+                    if (!usuariosConAlertas.includes(item.idUsuario) || item.idUsuario == idSeleccionado) {
+
+                        $('#cbousuario').append(
+                            `<option value="${item.idUsuario}">
+                                ${item.nombre}
+                            </option>`
+                        );
+                    }
                 });
             });
         }
+
 
         function cargarTipoAlerta() {
 
             $.get('/Alerta/ListarTipoAlerta', function (data) {
 
-                $('#cbotipoalerta').empty();
+                $('#contenedorTipoAlerta').empty();
 
                 $.each(data, function (index, item) {
-                    $('#cbotipoalerta').append(
-                        `<option value="${item.idTipoAlerta}">
-                            ${item.codigo}
-                        </option>`
-                    );
+
+                    $('#contenedorTipoAlerta').append(`
+                        <div class="form-check">
+                            <input class="form-check-input tipo-alerta"
+                                   type="checkbox"
+                                   value="${item.idTipoAlerta}"
+                                   id="alerta_${item.idTipoAlerta}">
+
+                            <label class="form-check-label" for="alerta_${item.idTipoAlerta}">
+                                ${item.codigo}
+                            </label>
+                        </div>
+                    `);
+
                 });
             });
         }
@@ -196,9 +346,7 @@
 
                     $.each(data.estados, function (index, item) {
                         $('#cboestado').append(
-                            `<option value="${item.idEstado}">
-                                ${item.nombre}
-                            </option>`
+                            `<option value="${item.idEstado}">${item.nombre}</option>`
                         );
                     });
 
@@ -208,30 +356,105 @@
 
         function guardar() {
 
-            let alerta = {
-                IdAlertaUsuario: $('#txtid').val(),
-                IdUsuario: $('#cbousuario').val(),
-                IdTipoAlerta: $('#cbotipoalerta').val(),
-                IdEstado: $('#cboestado').val()
+            let tiposSeleccionados = [];
+
+            $('.tipo-alerta:checked').each(function () {
+                tiposSeleccionados.push($(this).val());
+            });
+
+            let idUsuario = $('#cbousuario').val();
+
+            let esEdicion = $('#cbousuario').prop('disabled');
+
+            // VALIDACIÓN NUEVO
+            if (tiposSeleccionados.length === 0 && !esEdicion) {
+                $('#mensajeError')
+                    .removeClass('d-none')
+                    .html("Debe seleccionar al menos un tipo de alerta");
+                return;
+            }
+
+            let dataEnviar = {
+                IdUsuario: idUsuario,
+                IdEstado: $('#cboestado').val(),
+                TiposAlerta: tiposSeleccionados
             };
 
-            let url = alerta.IdAlertaUsuario == 0
-                ? '/Alerta/Crear'
-                : '/Alerta/Editar';
+            // LLAMADA ÚNICA (sirve para crear, editar y eliminar)
+            $.ajax({
+                url: '/Alerta/GuardarAlertas',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(dataEnviar),
 
-            $.post(url, alerta, function (response) {
+                success: function (response) {
 
-                if (response.success) {
-                    location.reload();
+                    if (response.success) {
+
+                        // MENSAJE ÉXITO
+                        $('#cuerpoExito').html("Operación realizada correctamente");
+
+                        let modal = new bootstrap.Modal(document.getElementById('modalExito'));
+                        modal.show();
+
+                        setTimeout(() => {
+                            location.reload();
+                        }, 2000);
+
+                    } else {
+
+                        //MENSAJE ERROR
+                        $('#cuerpoError').html(
+                            response.mensajes
+                                ? response.mensajes.join('<br/>')
+                                : "Ocurrió un error"
+                        );
+
+                        let modal = new bootstrap.Modal(document.getElementById('modalError'));
+                        modal.show();
+                    }
+                },
+
+                error: function () {
+
+                    $('#cuerpoError').html("Error al guardar la información");
+
+                    let modal = new bootstrap.Modal(document.getElementById('modalError'));
+                    modal.show();
                 }
-                else {
-                    $('#mensajeError')
-                        .removeClass('d-none')
-                        .html(response.mensajes.join('<br/>'));
-                }
-
             });
         }
 
+
+
+        function editarUsuario(idUsuario) {
+
+            $.get('/Alerta/ObtenerPorUsuario?idUsuario=' + idUsuario, function (data) {
+
+                abrirModal();
+
+                // RECARGAR USUARIOS incluyendo el actual
+                cargarUsuarios(idUsuario);
+
+                //  Esperar un poco para que cargue el select
+                setTimeout(() => {
+                    $('#cbousuario').val(idUsuario).prop('disabled', true);
+                }, 200);
+
+                let tipos = data.map(x => x.idTipoAlerta);
+
+                $('.tipo-alerta').prop('checked', false);
+
+                tipos.forEach(function (id) {
+                    $('#alerta_' + id).prop('checked', true);
+                });
+
+                if (data.length > 0) {
+                    $('#cboestado').val(data[0].idEstado);
+                }
+
+                $('#txtid').val(0);
+            });
+        }
     </script>
 }

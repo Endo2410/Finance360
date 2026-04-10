@@ -7,9 +7,12 @@
 }
 
 
+<br />
+<br />
+
 <div class="row">
     <!-- Publcidad -->
-    <div class="col-md-3 mb-2">
+    <div class="col-md-2 mb-2">
         <a asp-controller="TipoPublicidad" asp-action="Index" class="text-decoration-none">
             <div class="card shadow h-100 border-0">
                 <div class="card-body text-center">
@@ -20,9 +23,22 @@
         </a>
     </div>
 
+    <!-- Tipo Retenciones-->
+    <div class="col-md-2 mb-2">
+        <a asp-controller="TipoRetencion" asp-action="Index" class="text-decoration-none">
+            <div class="card shadow h-100 border-0">
+                <div class="card-body text-center">
+                    <i class="fas fa-hand-holding-usd fa-2x text-danger"></i>
+                    <h6 class="mt-2">Tipo Retención</h6>
+                </div>
+            </div>
+        </a>
+    </div>
+
+
     <!-- Rebate -->
     <div class="col-md-2 mb-2">
-        <a asp-controller="TipoRebate" asp-action="Index" class="text-decoration-none">
+        <a asp-controller="Rebate" asp-action="Tipo_Rebate" class="text-decoration-none">
             <div class="card shadow h-100 border-0">
                 <div class="card-body text-center">
                     <i class="fas fa-percentage fa-2x text-info"></i>
@@ -31,6 +47,7 @@
             </div>
         </a>
     </div>
+
 
     <!-- Documento Pago -->
     <div class="col-md-2 mb-2">
@@ -44,25 +61,25 @@
         </a>
     </div>
 
-    <!-- Incentivo -->
+    <!-- Modalidad -->
     <div class="col-md-2 mb-2">
-        <a asp-controller="TipoIncentivo" asp-action="Index" class="text-decoration-none">
+        <a asp-controller="Modalidad" asp-action="Index" class="text-decoration-none">
             <div class="card shadow h-100 border-0">
                 <div class="card-body text-center">
-                    <i class="fas fa-gift fa-2x text-primary"></i>
-                    <h6 class="mt-2">Tipo Incentivo</h6>
+                    <i class="fas fa-cogs fa-2x text-danger"></i>
+                    <h6 class="mt-2">Modalidad</h6>
                 </div>
             </div>
         </a>
     </div>
 
-    <!-- Uso incentivo -->
-    <div class="col-md-3 mb-2">
-        <a asp-controller="TipoIncentivo" asp-action="Tipouso" class="text-decoration-none">
+    <!-- Operaciones -->
+    <div class="col-md-2 mb-2">
+        <a asp-controller="ModalidadOperacion" asp-action="Index" class="text-decoration-none">
             <div class="card shadow h-100 border-0">
                 <div class="card-body text-center">
-                    <i class="fas fa-tags fa-2x text-success"></i>
-                    <h6 class="mt-2">Tipo Uso Incentivo</h6>
+                    <i class="fas fa-exchange-alt fa-2x text-info"></i>
+                    <h6 class="mt-2">Operaciones</h6>
                 </div>
             </div>
         </a>
@@ -70,10 +87,11 @@
 </div>
 
 
+
 <!-- Breadcrumb -->
 <ol class="breadcrumb mb-4 mt-4">
     <li class="breadcrumb-item">
-        <a asp-controller="Home" asp-action="Index">Inicio</a>
+        <a asp-controller="Home" asp-action="Bienevenido">Inicio</a>
     </li>
     <li class="breadcrumb-item active">Tipo Publicidad</li>
 </ol>

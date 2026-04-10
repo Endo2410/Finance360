@@ -1,4 +1,5 @@
-﻿using Capa_Entidad;
+﻿using Capa_Dato;
+using Capa_Entidad;
 using Capa_Negocio;
 using Microsoft.AspNetCore.Mvc;
 
@@ -12,6 +13,24 @@ namespace Capa_Presentacion.Controllers
         {
             var lista = objCN.ObtenerEstados();
             return View(lista);
+        }
+
+        public IActionResult ListarEstado()
+        {
+            var estados = objCN.ObtenerEstado("GENERAL", out string msg);
+
+            if (!string.IsNullOrEmpty(msg))
+                return Json(new { success = false, mensajes = new[] { msg } });
+
+            return Json(new
+            {
+                success = true,
+                estados = estados.Select(e => new
+                {
+                    idEstado = e.IdEstado,
+                    nombre = e.Nombre
+                })
+            });
         }
 
         [HttpPost]

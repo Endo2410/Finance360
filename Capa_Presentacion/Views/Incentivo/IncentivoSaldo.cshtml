@@ -1,0 +1,1199 @@
+﻿@using System.Text.Json
+@{
+    ViewData["Title"] = "Incentivo Saldo";
+}
+
+@{
+    var jsonAcciones = Context.Session.GetString("AccionesUsuario");
+    var acciones = !string.IsNullOrEmpty(jsonAcciones)
+        ? JsonSerializer.Deserialize<List<string>>(jsonAcciones)
+        : new List<string>();
+
+    bool puederegistrar = acciones.Contains("Usar_Saldo");
+
+}
+
+<div class="container-fluid">
+
+    <!-- TITULO -->
+    <div class="row mb-3">
+        <div class="col">
+            <h4 class="fw-bold">Saldo de Incentivos por Sucursal</h4>
+        </div>
+    </div>
+
+    <!-- FILTRO -->
+    <div class="card mb-3">
+        <div class="card-body">
+
+            <div class="row align-items-end">
+
+                <div class="col-md-4">
+                    <label>Sucursal</label>
+
+                    <div class="input-group">
+
+                        <input type="hidden" id="cbosucursal" />
+
+                        <input id="txtSucursalNombre"
+                               class="form-control"
+                               readonly>
+
+                        <button class="btn btn-secondary"
+                                id="btnBuscarSucursal"
+                                type="button"
+                                onclick="abrirModalSucursal()">
+                            Buscar
+                        </button>
+
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    @if (puederegistrar)
+                    {
+                        <button class="btn btn-success w-100"
+                                id="btnUsarSaldo"
+                                onclick="abrirModalUsoSaldo()">
+                            <i class="fas fa-minus-circle"></i> Usar saldo
+                        </button>
+                    }
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <!-- TARJETA SALDO -->
+    <div class="row mb-3">
+        <div class="col-md-4">
+
+            <div class="card border-success">
+                <div class="card-body text-center">
+
+                    <h6 class="text-muted">SALDO DISPONIBLE</h6>
+
+                    <h3 class="text-success fw-bold"
+                        id="lblSaldoDisponible">
+                        C$ 0.00
+                    </h3>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- PANEL DE TABS -->
+    <div class="card">
+
+        <div class="card-header">
+
+            <ul class="nav nav-tabs" id="tabsIncentivos">
+
+                <li class="nav-item">
+                    <a class="nav-link active"
+                       href="#"
+                       onclick="cargarVistaRecibidos()">
+                        Incentivos Recibidos
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link"
+                       href="#"
+                       onclick="cargarVistaUsos()">
+                        Usos del Incentivo
+                    </a>
+                </li>
+
+            </ul>
+
+        </div>
+
+        <div class="card-body" id="contenedorTabs">
+            <!-- aquí se cargará la vista -->
+        </div>
+    </div>
+
+    <!-- MODAL USAR SALDO -->
+    <div class="modal fade" id="modalUsoIncentivo" tabindex="-1">
+
+        <div class="modal-dialog">
+            <div class="modal-content">
+
+                <!-- HEADER -->
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">
+                        Registrar Uso de Incentivo
+                    </h5>
+
+                    <button class="btn-close"
+                            data-bs-dismiss="modal">
+                    </button>
+                </div>
+
+
+                <!-- BODY -->
+                <div class="modal-body">
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Sucursal
+                        </label>
+
+                        <input type="text"
+                               id="txtSucursalUso"
+                               class="form-control"
+                               readonly>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Tipo Uso
+                        </label>
+
+                        <select id="cboTipoUso"
+                                class="form-select">
+                            <option value="">
+                                Seleccione
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3 d-none" id="contenedorBtnColaboradores">
+                        <button class="btn btn-primary w-100"
+                                onclick="abrirModalColaboradores()">
+                            <i class="fas fa-users"></i> Seleccionar Colaboradores
+                        </button>
+                    </div>
+
+                    <div class="mb-3 d-none" id="contenedorResumenColaboradores">
+
+                        <label class="form-label fw-bold">
+                            Distribución de Incentivos
+                        </label>
+
+                        <div class="table-responsive">
+
+                            <table class="table table-sm table-bordered">
+
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Colaborador</th>
+                                        <th class="text-center">Estado</th>
+                                        <th class="text-end">Incentivo</th>
+                                    </tr>
+                                </thead>
+
+                                <tbody id="tbodyResumenColaboradores"></tbody>
+
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Monto
+                        </label>
+
+                        <input type="number"
+                               id="txtMontoUso"
+                               class="form-control">
+                    </div>
+
+                    <div class="mb-3">
+
+                        <label class="form-label">
+                            Comprobante
+                        </label>
+
+                        <input type="file"
+                               id="txtComprobanteUso"
+                               class="form-control"
+                               onchange="previewComprobanteUso()">
+                    </div>
+
+                    <div class="mb-3 d-none"
+                         id="contenedorPreviewUso">
+
+                        <label class="form-label">
+                            Vista previa
+                        </label>
+
+                        <div class="border rounded p-2 text-center">
+
+                            <a id="linkPreviewUso"
+                               target="_blank"
+                               class="btn btn-outline-primary btn-sm">
+
+                                <i class="fas fa-eye"></i> Ver comprobante
+
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Observación
+                        </label>
+
+                        <textarea id="txtObservacionUso"
+                                  class="form-control">
+                    </textarea>
+                    </div>
+
+                    <div id="mensajeErrorUso"
+                         class="alert alert-danger d-none">
+                    </div>
+                </div>
+
+                <!-- FOOTER -->
+                <div class="modal-footer">
+
+                    <button class="btn btn-secondary"
+                            data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+
+                    <button class="btn btn-success" id="btnGuardarUso">
+                        <i class="fas fa-save"></i> Guardar
+                    </button>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <!-- MODAL EXITO -->
+    <div class="modal fade" id="modalExitoPagoIncentivo" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="tituloExitoIncentivo">
+                        Operación exitosa
+                    </h5>
+
+                    <button class="btn-close"
+                            data-bs-dismiss="modal">
+                    </button>
+                </div>
+
+                <div class="modal-body"
+                     id="lblExitoPagoIncentivo">
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn btn-secondary"
+                            data-bs-dismiss="modal">
+                        Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- MODAL ERROR -->
+    <div class="modal fade" id="modalErrorPagoIncentivo" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+
+                <div class="modal-header bg-danger text-white">
+
+                    <h5 class="modal-title">
+                        Error en la operación
+                    </h5>
+
+                    <button class="btn-close"
+                            data-bs-dismiss="modal">
+                    </button>
+
+                </div>
+
+                <div class="modal-body"
+                     id="lblErrorPagoIncentivo">
+                </div>
+
+                <div class="modal-footer">
+
+                    <button class="btn btn-secondary"
+                            data-bs-dismiss="modal">
+                        Cerrar
+                    </button>
+
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DETALLE COLABORADORES -->
+    <div class="modal fade" id="modalDetalleColaboradores" tabindex="-1">
+
+        <div class="modal-dialog modal-lg">
+
+            <div class="modal-content">
+
+                <div class="modal-header bg-primary text-white">
+
+                    <h5 class="modal-title">
+                        Detalle Pago a Colaboradores
+                    </h5>
+
+                    <button class="btn-close" data-bs-dismiss="modal"></button>
+
+                </div>
+
+                <div class="modal-body">
+
+                    <div class="table-responsive">
+
+                        <table class="table table-bordered table-striped">
+
+                            <thead class="table-dark">
+
+                                <tr>
+                                    <th>Colaborador</th>
+                                    <th>Cargo</th>
+                                    <th>Monto Vendido</th>
+                                    <th>Incentivo</th>
+                                </tr>
+
+                            </thead>
+
+                            <tbody id="tbodyDetalleColaboradores">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">
+                        Cerrar
+                    </button>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= MODAL SUCURSAL ================= -->
+    <div class="modal fade" id="modalsucursal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-md modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">Seleccionar Sucursal</h5>
+                    <button class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <input type="text" id="txtFiltrarsucusal" class="form-control" placeholder="Filtrar sucursal por nombre o codigo ">
+                    </div>
+                    <div style="max-height: 400px; overflow-y: auto;">
+                        <table class="table table-striped table-hover" id="tablasucursal">
+                            <thead style="position: sticky; top: 0; background: white;">
+                                <tr>
+                                    <th>Codigo</th>
+                                    <th>Nombre</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Se llena dinámicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- MODAL COLABORADORES -->
+    <div class="modal fade" id="modalColaboradores" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        Seleccionar Colaboradores
+                    </h5>
+                    <button class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body">
+
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th></th>
+                                    <th>Nombre</th>
+                                    <th>Cargo</th>
+                                    <th>Monto Vendido</th>
+                                    <th>Incentivo</th>
+                                </tr>
+                            </thead>
+
+                            <tbody id="tbodyColaboradores">
+                            </tbody>
+
+                        </table>
+                        <div id="mensajeErrorColaboradores"
+                             class="alert alert-danger d-none mt-2">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">
+                        Cerrar
+                    </button>
+
+                    <button class="btn btn-success" onclick="confirmarSeleccionColaboradores()">
+                        Confirmar selección
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <input type="hidden" id="idSucursalSesion" value="@Context.Session.GetInt32("IdSucursal")" />
+    <input type="hidden" id="rolUsuarioSesion" value="@Context.Session.GetString("RolUsuario")" />
+
+    @section Scripts {
+        <script>
+            $(document).ready(function () {
+
+                let idSucursal = $('#idSucursalSesion').val();
+                let rol = $('#rolUsuarioSesion').val();
+
+                // Si el usuario es sucursal
+                if (rol === "SUCURSAL" && idSucursal) {
+
+                    // ocultar botón buscar
+                    $('#btnBuscarSucursal').hide();
+
+                    // poner sucursal automáticamente
+                    $('#cbosucursal').val(idSucursal);
+
+                    // buscar el nombre en la tabla de sucursales
+                    $.get('/Cuentas_X_PagarAlejandra/Listar', function (data) {
+
+                        let sucursal = data.find(s => s.idsucursal == idSucursal);
+
+                        if (sucursal) {
+
+                            $('#txtSucursalNombre').val(sucursal.nombre);
+
+                            // cargar datos automáticamente
+                            cargarSaldoSucursal(idSucursal);
+                        }
+                    });
+                }
+            });
+
+            // ================= SUCURSAL =================
+            function abrirModalSucursal() {
+                cargarSucursalModal();
+                $('#txtFiltrarsucusal').val('');
+                new bootstrap.Modal('#modalsucursal').show();
+            }
+
+            function cargarSucursalModal() {
+                $.get('/Cuentas_X_PagarAlejandra/Listar', function (data) {
+                    let tbody = $('#tablasucursal tbody');
+                    tbody.empty();
+                    data.forEach(p => {
+                        tbody.append(`
+                             <tr data-id="${p.idsucursal}" data-nombre="${p.nombre}">
+                                <td>${p.codigo}</td>
+                                <td>${p.nombre}</td>
+                             </tr>                      
+                        `);
+                    });
+
+                    // Click en la fila selecciona proveedor automáticamente
+                    $('#tablasucursal tbody tr').click(function () {
+
+                        let id = $(this).data('id');
+                        let nombre = $(this).data('nombre');
+
+                        $('#cbosucursal').val(id);
+                        $('#txtSucursalNombre').val(nombre);
+
+                        bootstrap.Modal.getInstance(
+                            document.getElementById('modalsucursal')
+                        ).hide();
+
+                        // CARGAR SALDO
+                        cargarSaldoSucursal(id);
+
+
+                        // Activar tab visualmente
+                        $('#tabsIncentivos .nav-link').removeClass('active');
+                        $('#tabsIncentivos .nav-link').first().addClass('active');
+
+                        // Cargar SOLO la vista activa
+                        cargarVistaRecibidos();
+
+                    });
+                });
+            }
+
+            function cargarVistaRecibidos() {
+
+                let idSucursal = $('#cbosucursal').val();
+
+                $("#contenedorTabs").html('<div class="text-center">Cargando...</div>');
+
+                $("#contenedorTabs").load("/Incentivo/IncentivosRecibidos", function () {
+
+                    if (idSucursal) {
+                        cargarIncentivosRecibidos(idSucursal);
+                    }
+                });
+            }
+
+            function cargarVistaUsos() {
+
+                $("#contenedorTabs").load("/Incentivo/UsoIncentivo", function () {
+
+                    let idSucursal = $('#cbosucursal').val();
+
+                    if (idSucursal) {
+                        cargarUsosIncentivo(idSucursal);
+                    }
+                });
+            }
+
+            function seleccionarSucursal(id, nombre) {
+                $('#cbosucursal').val(id);
+                $('#txtSucursalNombre').val(nombre);
+                bootstrap.Modal.getInstance(document.getElementById('modalsucursal')).hide();
+            }
+
+            // Filtro dinámico
+            $('#txtFiltrarsucusal').on('keyup', function () {
+                let valor = $(this).val().toLowerCase();
+                $('#tablasucursal tbody tr').filter(function () {
+                    $(this).toggle($(this).text().toLowerCase().indexOf(valor) > -1);
+                });
+            });
+
+            function formatearFecha(fecha) {
+                let f = new Date(fecha);
+
+                return f.toLocaleDateString("es-NI");
+            }
+
+            function formatearMoneda(monto) {
+                return "C$ " + parseFloat(monto).toFixed(2);
+            }
+
+            // ================= cargar saldo =================
+            function cargarSaldoSucursal(idSucursal) {
+                $.get('/Incentivo/ObtenerSaldo',
+                    {
+                        idSucursal: idSucursal
+                    },
+
+                    function (data) {
+                        $('#lblSaldoDisponible')
+                            .text('C$ ' +
+                                parseFloat(data.saldoDisponible)
+                            .toFixed(2));
+                    }
+                );
+            }
+
+            $('#cboTipoUso').change(function () {
+
+                let tipoUso = parseInt($(this).val());
+
+                if (tipoUso === 2) {
+
+                    // MOSTRAR BOTÓN
+                    $('#contenedorBtnColaboradores').removeClass('d-none');
+
+                    // 🔥 BLOQUEAR MONTO
+                    $('#txtMontoUso').prop('readonly', true);
+                    $('#txtMontoUso').addClass('bg-light');
+
+                } else {
+
+                    // OCULTAR BOTÓN
+                    $('#contenedorBtnColaboradores').addClass('d-none');
+
+                    // LIMPIAR DISTRIBUCIÓN
+                    $('#contenedorResumenColaboradores').addClass('d-none');
+                    $('#tbodyResumenColaboradores').empty();
+
+                    // 🔓 HABILITAR MONTO
+                    $('#txtMontoUso').prop('readonly', false);
+                    $('#txtMontoUso').removeClass('bg-light');
+
+                    // LIMPIAR MONTO
+                    $('#txtMontoUso').val('');
+
+                    // LIMPIAR OBSERVACIÓN
+                    $('#txtObservacionUso').removeClass("border-danger");
+                    $('#txtObservacionUso').attr("placeholder", "");
+                }
+            });
+
+            // ================= Modal colaboradores =================
+            function abrirModalColaboradores() {
+
+                let idSucursal = $('#cbosucursal').val();
+
+                if (!idSucursal) {
+                    mostrarError("Seleccione sucursal primero");
+                    return;
+                }
+
+                // Abrir el modal inmediatamente
+                new bootstrap.Modal('#modalColaboradores').show();
+
+                // Limpiar tabla antes de cargar
+                let tbody = $("#tbodyColaboradores");
+                tbody.empty();
+                tbody.append('<tr><td colspan="4" class="text-center">Cargando...</td></tr>');
+
+                // Cargar colaboradores de manera asíncrona
+                cargarColaboradores(idSucursal);
+            }
+
+
+            function verDetalleColaboradores(idMovimiento) {
+
+                console.log("ID Movimiento:", idMovimiento); // <-- DEBUG
+
+                let tbody = $("#tbodyDetalleColaboradores");
+                tbody.empty();
+
+                new bootstrap.Modal(document.getElementById('modalDetalleColaboradores')).show();
+
+                $.get('/Incentivo/ObtenerDetalleColaboradores',
+                    { idMovimiento: idMovimiento },
+                    function (response) {
+
+                        console.log(response); // <-- DEBUG
+
+                        if (response.data.length === 0) {
+
+                            tbody.append(`
+                                                <tr>
+                                                    <td colspan="5" class="text-center text-muted">
+                                                        No hay detalle registrado
+                                                    </td>
+                                                </tr>`);
+
+                            return;
+                        }
+
+                        response.data.forEach(c => {
+
+                            tbody.append(`
+                                <tr>
+                                    <td>${c.nombreColaborador}</td>
+                                    <td>${c.cargo}</td>
+                                    <td class="text-end">${formatearMoneda(c.montoVendido)}</td>
+                                    <td class="text-end">${formatearMoneda(c.montoIncentivo)}</td>
+                                    
+                                </tr>
+                            `);
+
+                        });
+                    }
+                );
+            }
+
+            // ================= cargar colaboradores =================
+            function obtenerCargoReal(textoCargo) {
+
+                if (!textoCargo) return "";
+
+                textoCargo = textoCargo.toLowerCase();
+
+                if (textoCargo.includes("cajero"))
+                    return "Cajero";
+
+                if (textoCargo.includes("gerente"))
+                    return "Gerente";
+
+                return "";
+            }
+
+            function cargarColaboradores(idSucursal) {
+
+                $.get('/Incentivo/ObtenerColaboradores',
+                    { idSucursal: idSucursal },
+                    function (response) {
+
+                        let tbody = $("#tbodyColaboradores");
+                        tbody.empty();
+
+                        let saldoTexto = $('#lblSaldoDisponible').text().replace("C$", "").trim();
+                        let saldoDisponible = parseFloat(saldoTexto);
+
+                        let colaboradores = [];
+
+                        // PRIMERO calcular pesos
+                        response.data.forEach(c => {
+
+                            let cargoReal = obtenerCargoReal(c.telefono);
+
+                            colaboradores.push({
+                                id: c.cashierID,
+                                nombre: c.nombre,
+                                cargo: cargoReal,
+                                monto: c.montoTotal
+                            });
+                        });
+;
+                        // CALCULAR INCENTIVOS
+                        colaboradores.forEach(c => {
+
+                            let incentivo = 0;
+
+                            tbody.append(`
+                                <tr>
+
+                                    <td>
+                                       <input type="checkbox"
+                                       class="chkColaborador"
+                                       data-id="${c.id}"
+                                       data-nombre="${c.nombre}">
+                                    </td>
+
+                                    <td>${c.nombre}</td>
+
+                                    <td>${c.cargo}</td>
+
+                                    <td class="text-end">
+                                        ${formatearMoneda(c.monto)}
+                                    </td>
+
+                                    <td>
+                                        <input type="number"
+                                               class="form-control txtIncentivo"
+                                               placeholder="Ingrese monto"
+                                               min="0">
+                                    </td>
+
+                                </tr>
+                            `);
+                        });
+                    }
+                );
+            }
+
+            $(document).on('input', '.txtIncentivo', function () {
+
+                let fila = $(this).closest("tr");
+                let checkbox = fila.find('.chkColaborador');
+
+                let valor = parseFloat($(this).val());
+
+                if (valor && valor > 0) {
+                    checkbox.prop('checked', true);
+                } else {
+                    checkbox.prop('checked', false);
+                }
+            });
+
+            function confirmarSeleccionColaboradores() {
+
+                let tbodyResumen = $("#tbodyResumenColaboradores");
+                tbodyResumen.empty();
+
+                let hayNoSeleccionados = false;
+                let total = 0;
+
+                let totalSeleccionados = $('.chkColaborador:checked').length;
+
+                // 🔴 VALIDAR: al menos uno seleccionado
+                if (totalSeleccionados === 0) {
+
+                    $('#mensajeErrorColaboradores')
+                        .removeClass('d-none')
+                        .html("Debe seleccionar al menos un colaborador");
+
+                    return;
+                }
+
+                $('#mensajeErrorColaboradores').addClass('d-none').html('');
+
+                $('.chkColaborador').each(function () {
+
+                    let nombre = $(this).data("nombre");
+                    let fila = $(this).closest("tr");
+
+                    let incentivo = parseFloat(
+                        fila.find(".txtIncentivo").val()
+                    ) || 0;
+
+                    let seleccionado = $(this).is(":checked");
+
+                    if (!seleccionado) {
+                        incentivo = 0;
+                        hayNoSeleccionados = true;
+                    }
+
+                    total += incentivo;
+
+                    let estado = seleccionado
+                        ? '<span class="badge bg-success">Incluido</span>'
+                        : '<span class="badge bg-danger">No incluido</span>';
+
+                    tbodyResumen.append(`
+                        <tr>
+                            <td>${nombre}</td>
+                            <td class="text-center">${estado}</td>
+                            <td class="text-end fw-bold">${formatearMoneda(incentivo)}</td>
+                        </tr>
+                    `);
+                });
+
+                $("#contenedorResumenColaboradores").removeClass("d-none");
+
+                // ✅ TOTAL
+                $('#txtMontoUso').val(total.toFixed(2));
+
+                bootstrap.Modal.getInstance(
+                    document.getElementById('modalColaboradores')
+                ).hide();
+
+                // RESET visual
+                $('#txtObservacionUso').removeClass("border-danger");
+                $('#txtObservacionUso').attr("placeholder", "");
+
+                // 🟡 SOLO si hay mezcla (algunos sí, otros no)
+                if (hayNoSeleccionados && totalSeleccionados > 0) {
+
+                    $('#txtObservacionUso').attr(
+                        "placeholder",
+                        "Indique por qué algunos colaboradores no fueron incluidos (auditoría)"
+                    );
+
+                    $('#txtObservacionUso').addClass("border-danger");
+                }
+            }
+            // ================= cargar tipos de uso =================
+            function cargarTiposUso() {
+                $.get('/Incentivo/ListarUso', function (data) {
+                    let combo = $('#cboTipoUso');
+
+                    combo.empty();
+
+                    combo.append('<option value="">Seleccione</option>');
+
+                    data.forEach(item => {
+                        combo.append(`
+                             <option value="${item.id}">
+                                 ${item.nombre}
+                             </option>                                       
+                        `);
+                    });
+                });
+            }
+
+            // ================= incentivo recibido =================
+            function cargarIncentivosRecibidos(idSucursal) {
+
+                $.get("/Incentivo/ObtenerIncentivosRecibidos",
+                    { idSucursal: idSucursal },
+                    function (response) {
+
+                        let tbody = $("#tbodyIncentivosRecibidos");
+
+                        tbody.empty();
+
+                        response.data.forEach(item => {
+
+                            let fila = `
+                                                                        <tr>
+                                                                            <td>   ${formatearFecha(item.fecha)}  </td>
+                                                                            <td>   ${item.incentivo}              </td>
+                                                                            <td>   ${item.proveedor}              </td>
+
+                                                                            <td class="text-end fw-bold">
+                                                                                ${formatearMoneda(item.monto)}
+                                                                            </td>
+                                                                        </tr>
+                                                                    `;
+                            tbody.append(fila);
+                        });
+
+                        // Inicializar DataTable
+                        iniciarTablaIncentivos();
+
+                    }
+                );
+            }
+
+            // ================= abrir modal de uso de saldo =================
+            function abrirModalUsoSaldo() {
+                let idSucursal = $('#cbosucursal').val();
+                let nombreSucursal = $('#txtSucursalNombre').val();
+
+                if (!idSucursal) {
+                    mostrarError("Debe seleccionar una sucursal");
+                    return;
+                }
+
+                // obtener saldo actual del label
+                let saldoTexto = $('#lblSaldoDisponible').text().replace("C$", "").trim();
+                let saldo = parseFloat(saldoTexto);
+
+                if (!saldo || saldo <= 0) {
+                    mostrarError(
+                        "La sucursal <b>" + nombreSucursal + "</b> no tiene saldo disponible"
+                    );
+                    return;
+                }
+
+                $('#txtSucursalUso').val(nombreSucursal);
+
+                cargarTiposUso();
+
+                $('#txtMontoUso').val('');
+                $('#txtObservacionUso').val('');
+                $('#txtComprobanteUso').val('');
+                $('#contenedorPreviewUso').addClass('d-none');
+
+                new bootstrap.Modal('#modalUsoIncentivo').show();
+            }
+
+
+            //================== funcione de los modales =========
+            function mostrarExito(mensaje, titulo = "Operación exitosa") {
+                $('#tituloExitoIncentivo').text(titulo);
+
+                $('#lblExitoPagoIncentivo').html(mensaje);
+
+                new bootstrap.Modal(
+                    document.getElementById('modalExitoPagoIncentivo')
+                ).show();
+            }
+
+            function mostrarError(mensaje) {
+                $('#lblErrorPagoIncentivo').html(mensaje);
+
+                new bootstrap.Modal(
+                    document.getElementById('modalErrorPagoIncentivo')
+                ).show();
+            }
+
+            // ================= incentivo usados =================
+            function cargarUsosIncentivo(idSucursal) {
+
+                $.get("/Incentivo/ObtenerUsos",
+                    { idSucursal: idSucursal },
+                    function (response) {
+
+                        let tbody = $("#tbodyMovimientos");
+                        tbody.empty();
+
+                        response.data.forEach(item => {
+
+                            let fila = `
+         <tr>
+             <td>${formatearFecha(item.fechaMovimiento)}</td>
+             <td>${item.tipoUsoNombre}</td>
+             <td class="text-end fw-bold">${formatearMoneda(item.monto)}</td>
+             <td>
+                 ${item.comprobante
+                                    ? `<a href="/comprobantesmovimiento/${item.comprobante}"
+                     target="_blank"
+                     class="btn btn-sm btn-outline-primary">
+                     Ver
+                </a>`
+                                    : ''}
+             </td>
+             <td>${item.usuarioRegistro}</td>
+             <td>${item.observacion}</td>
+             <td class="text-center">
+                ${parseInt(item.idTipoUso) === 2
+                                    ? `<button class="btn btn-sm btn-info"
+                     onclick="verDetalleColaboradores(${item.idMovimiento})">
+                     <i class="fas fa-users"></i> Ver
+                    </button>`
+                                    : ''}
+                     </td>
+                 </tr>`;
+
+                            tbody.append(fila);
+                        });
+
+                        iniciarTablaMovimientos();
+                    }
+                );
+            }
+
+            function previewComprobanteUso() {
+                let file = document.getElementById('txtComprobanteUso').files[0];
+
+                if (!file)
+                    return;
+
+                let url = URL.createObjectURL(file);
+
+                $('#linkPreviewUso').attr('href', url);
+
+                $('#contenedorPreviewUso')
+                    .removeClass('d-none');
+            }
+
+            //==========guardar uso de saldo
+            $('#btnGuardarUso').click(function () {
+
+                let boton = $(this);
+
+                // BLOQUEAR BOTÓN
+                boton.prop("disabled", true);
+                boton.html('<i class="fas fa-spinner fa-spin"></i> Guardando...');
+
+                let idSucursal = $('#cbosucursal').val();
+                let nombreSucursal = $('#txtSucursalNombre').val();
+
+                let tipoUso = $('#cboTipoUso').val();
+                let monto = $('#txtMontoUso').val();
+                let observacion = $('#txtObservacionUso').val();
+
+                let comprobante = $('#txtComprobanteUso')[0].files[0];
+
+                let saldoTexto = $('#lblSaldoDisponible').text().replace("C$", "").trim();
+                let saldo = parseFloat(saldoTexto);
+
+                let errores = [];
+
+                let hayNoSeleccionados = false;
+
+                $('.chkColaborador').each(function () {
+                    if (!$(this).is(':checked')) {
+                        hayNoSeleccionados = true;
+                    }
+                });
+
+                if (hayNoSeleccionados && !observacion) {
+                    errores.push("Debe indicar por qué algunos colaboradores no recibieron incentivo");
+                }
+
+                if (!idSucursal)
+                    errores.push("Debe seleccionar sucursal");
+
+                if (!tipoUso)
+                    errores.push("Debe seleccionar tipo de uso");
+
+                if (!monto || parseFloat(monto) <= 0)
+                    errores.push("Debe ingresar un monto válido");
+
+                if (parseFloat(monto) > saldo)
+                    errores.push("El monto no puede ser mayor al saldo disponible");
+
+                if (!comprobante)
+                    errores.push("Debe adjuntar un comprobante");
+
+                if (errores.length > 0) {
+
+                    boton.prop("disabled", false);
+                    boton.html('<i class="fas fa-save"></i> Guardar');
+
+                    mostrarError(errores.join("<br>"));
+                    return;
+                }
+
+                let colaboradores = [];
+
+                $('.chkColaborador').each(function () {
+
+                    let fila = $(this).closest("tr");
+
+                    let montoVendido = fila.find("td:eq(3)").text()
+                        .replace("C$", "")
+                        .replace(/,/g, "")
+                        .trim();
+
+                    let incentivo = fila.find(".txtIncentivo").val();
+
+                    incentivo = incentivo
+                        ? incentivo.replace("C$", "").replace(/,/g, "").trim()
+                        : 0;
+
+                    let seleccionado = $(this).is(':checked');
+
+                    colaboradores.push({
+
+                        IDCOLABORADOR: $(this).data("id"),
+                        NOMBRECOLABORADOR: $(this).data("nombre"),
+                        CARGO: fila.find("td:eq(2)").text(),
+                        MONTOVENDIDO: parseFloat(montoVendido),
+                        MONTOINCENTIVO: seleccionado ? parseFloat(incentivo || 0) : 0,
+                        SELECCIONADO: seleccionado // 🔥 clave para auditoría
+
+                    });
+                });
+
+                let formData = new FormData();
+
+                formData.append("idsucursal", idSucursal);
+                formData.append("idtipouso", tipoUso);
+                formData.append("monto", monto);
+                formData.append("observacion", observacion);
+                formData.append("comprobante", comprobante);
+                formData.append("colaboradores", JSON.stringify(colaboradores));
+
+                $.ajax({
+                    url: '/Incentivo/GuardarUso',
+                    type: 'POST',
+                    data: formData,
+                    contentType: false,
+                    processData: false,
+
+                    success: function (response) {
+
+                        if (response.success) {
+
+                            bootstrap.Modal.getInstance(
+                                document.getElementById('modalUsoIncentivo')
+                            ).hide();
+
+                            mostrarExito(
+                                "Uso registrado correctamente en la sucursal:<br><b>"
+                                + nombreSucursal +
+                                "</b>",
+                                "Uso de Incentivo"
+                            );
+
+                            cargarSaldoSucursal(idSucursal);
+                            cargarUsosIncentivo(idSucursal);
+                            cargarIncentivosRecibidos(idSucursal);
+
+                        } else {
+
+                            boton.prop("disabled", false);
+                            boton.html('<i class="fas fa-save"></i> Guardar');
+
+                            mostrarError(response.message);
+                        }
+                    },
+
+                    error: function () {
+
+                        boton.prop("disabled", false);
+                        boton.html('<i class="fas fa-save"></i> Guardar');
+
+                        mostrarError("Error interno del servidor");
+                    }
+                });
+
+            });
+        </script>
+    }

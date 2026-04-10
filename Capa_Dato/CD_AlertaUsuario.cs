@@ -13,7 +13,7 @@ namespace Capa_Dato
     {
         private readonly string cadenaConexion = Conexion.cn;
 
-        // 🔹 LISTAR
+        // LISTAR
         public List<AlertaUsuario> ObtenerAlertaUsuario()
         {
             List<AlertaUsuario> lista = new List<AlertaUsuario>();
@@ -44,7 +44,7 @@ namespace Capa_Dato
                         oUsuario = new Usuario
                         {
                             IdUsuario = Convert.ToInt32(dr["ID_USUARIO"]),
-                            NombreUsuario = dr["NombreUsuario"].ToString()
+                            NombreUsuario = dr["NOMBRES"].ToString() + " " + dr["APELLIDOS"].ToString()
                         },
 
                         oEstado = new Estado
@@ -59,61 +59,29 @@ namespace Capa_Dato
             return lista;
         }
 
-        // 🔹 CREAR
-        public bool CrearAlertaUsuario(AlertaUsuario obj, out string mensaje)
+        public bool GuardarAlertas(AlertaUsuario obj, out string mensaje)
         {
-            mensaje = string.Empty;
-            bool resultado = false;
+            mensaje = "";
+            bool resultado = true;
 
             try
             {
                 using (SqlConnection conn = new SqlConnection(cadenaConexion))
                 {
-                    SqlCommand cmd = new SqlCommand("SP_CREAR_ALERTA_USUARIO", conn);
+                    SqlCommand cmd = new SqlCommand("SP_GUARDAR_ALERTAS_POR_USUARIO", conn);
                     cmd.CommandType = CommandType.StoredProcedure;
 
-                    cmd.Parameters.AddWithValue("@ID_TIPO_ALERTA", obj.IdTipoAlerta);
-                    cmd.Parameters.AddWithValue("@ID_USUARIO", obj.IdUsuario);
-                    cmd.Parameters.AddWithValue("@IDESTADO", obj.IdEstado);
+                    cmd.Parameters.AddWithValue("@IdUsuario", obj.IdUsuario);
+                    cmd.Parameters.AddWithValue("@ListaAlertas", string.Join(",", obj.TiposAlerta));
+                    cmd.Parameters.AddWithValue("@IdEstado", obj.IdEstado);
 
                     conn.Open();
                     cmd.ExecuteNonQuery();
-                    resultado = true;
                 }
             }
-            catch (SqlException ex)
+            catch (Exception ex)
             {
-                mensaje = ex.Message;
-            }
-
-            return resultado;
-        }
-
-        // 🔹 EDITAR
-        public bool EditarAlertaUsuario(AlertaUsuario obj, out string mensaje)
-        {
-            mensaje = string.Empty;
-            bool resultado = false;
-
-            try
-            {
-                using (SqlConnection conn = new SqlConnection(cadenaConexion))
-                {
-                    SqlCommand cmd = new SqlCommand("SP_EDITAR_ALERTA_USUARIO", conn);
-                    cmd.CommandType = CommandType.StoredProcedure;
-
-                    cmd.Parameters.AddWithValue("@ID_ALERTA_USUARIO", obj.IdAlertaUsuario);
-                    cmd.Parameters.AddWithValue("@ID_TIPO_ALERTA", obj.IdTipoAlerta);
-                    cmd.Parameters.AddWithValue("@ID_USUARIO", obj.IdUsuario);
-                    cmd.Parameters.AddWithValue("@IDESTADO", obj.IdEstado);
-
-                    conn.Open();
-                    cmd.ExecuteNonQuery();
-                    resultado = true;
-                }
-            }
-            catch (SqlException ex)
-            {
+                resultado = false;
                 mensaje = ex.Message;
             }
 
@@ -145,6 +113,67 @@ namespace Capa_Dato
             }
 
             return lista;
+        }
+
+        // OBTENER ALERTAS POR USUARIO
+        public List<Alerta> ObtenerAlertasUsuario(int idUsuario)
+        {
+            List<Alerta> lista = new List<Alerta>();
+
+            using (SqlConnection conn = new SqlConnection(cadenaConexion))
+            {
+                SqlCommand cmd = new SqlCommand("SP_OBTENER_ALERTAS_USUARIO", conn);
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.AddWithValue("@IDUSUARIO", idUsuario);
+
+                conn.Open();
+                SqlDataReader dr = cmd.ExecuteReader();
+
+                while (dr.Read())
+                {
+                    lista.Add(new Alerta
+                    {
+                        IdAlerta = Convert.ToInt32(dr["ID_ALERTA"]),
+                        Mensaje = dr["MENSAJE"].ToString(),
+                        FechaAlerta = Convert.ToDateTime(dr["FECHA_ALERTA"]),
+                        Vista = Convert.ToBoolean(dr["VISTA"])
+                    });
+                }
+            }
+
+            return lista;
+        }
+
+        //CONTADOR
+        public int ContarAlertas(int idUsuario)
+        {
+            int total = 0;
+
+            using (SqlConnection conn = new SqlConnection(cadenaConexion))
+            {
+                SqlCommand cmd = new SqlCommand("SP_CONTAR_ALERTAS_USUARIO", conn);
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.AddWithValue("@IDUSUARIO", idUsuario);
+
+                conn.Open();
+                total = Convert.ToInt32(cmd.ExecuteScalar());
+            }
+
+            return total;
+        }
+
+        //MARCAR TODAS COMO VISTAS
+        public void MarcarTodasComoVistas(int idUsuario)
+        {
+            using (SqlConnection conn = new SqlConnection(cadenaConexion))
+            {
+                SqlCommand cmd = new SqlCommand("SP_MARCAR_TODAS_ALERTAS_VISTA", conn);
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.AddWithValue("@IDUSUARIO", idUsuario);
+
+                conn.Open();
+                cmd.ExecuteNonQuery();
+            }
         }
     }
 }

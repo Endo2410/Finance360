@@ -19,6 +19,7 @@ namespace Capa_Entidad
         public string NumeroConfirmacion { get; set; }
         public int? IdEstado { get; set; }
         public bool NotaCreditoAplicada { get; set; }
+        public string Observacion { get; set; }
 
     }
 }

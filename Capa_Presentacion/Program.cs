@@ -31,9 +31,31 @@ app.UseSession();
 
 app.UseAuthorization();
 
-// ? Página principal: login
+// Ruta principal del sistema (login)
+app.MapControllerRoute(
+    name: "login",
+    pattern: "",
+    defaults: new { controller = "Acceso", action = "Index" }
+);
+
+// Ruta normal cuando escriben controlador/acción
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Acceso}/{action=Index}/{id?}"); // Inicio en Acceso/Index
+    pattern: "{controller}/{action}/{id?}"
+);
+
+// Si escriben solo el controlador
+app.MapControllerRoute(
+    name: "soloControlador",
+    pattern: "{controller}",
+    defaults: new { controller = "Home", action = "LostInSpace" }
+);
+
+// Cualquier otra ruta inválida
+app.MapControllerRoute(
+    name: "catchAll",
+    pattern: "{*url}",
+    defaults: new { controller = "Home", action = "LostInSpace" }
+);
 
 app.Run();

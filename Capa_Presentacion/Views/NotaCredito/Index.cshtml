@@ -1,14 +1,23 @@
-﻿@model List<Capa_Entidad.NotaCredito>
+﻿@using System.Text.Json
+@model List<Capa_Entidad.NotaCredito>
 
 @{
     ViewData["Title"] = "Notas de Crédito";
     Layout = "~/Views/Shared/_Layout.cshtml";
+}
 
-   
+
+@{
+    var jsonAcciones = Context.Session.GetString("AccionesUsuario");
+    var acciones = !string.IsNullOrEmpty(jsonAcciones)
+        ? JsonSerializer.Deserialize<List<string>>(jsonAcciones)
+        : new List<string>();
+
+    bool redireccionar = acciones.Contains("Redireccion");
 }
 
 <ol class="breadcrumb mb-4 mt-4">
-    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Inicio</a></li>
+    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Bienvenido">Inicio</a></li>
     <li class="breadcrumb-item active">Notas de Crédito</li>
 </ol>
 
@@ -55,8 +64,8 @@
             </thead>
             <tbody>
                 @foreach (var nc in Model
-                                .OrderByDescending(n => n.oEstado.IdEstado == 5) // PENDIENTE primero
-                                .ThenBy(n => n.oEstado.IdEstado == 8))          // luego APLICADA
+                              .OrderByDescending(n => n.oEstado.IdEstado == 5) // PENDIENTE primero
+                              .ThenBy(n => n.oEstado.IdEstado == 8))          // luego APLICADA
 
                 {
                     <tr>
@@ -103,7 +112,7 @@
                             @if (nc.oEstado.IdEstado == 5)
                             {
                                 <span class="badge bg-warning">PENDIENTE</span>
-                                
+
                             }
                             else if (nc.oEstado.IdEstado == 10)
                             {
@@ -125,7 +134,7 @@
                                     <i class="fas fa-eye"></i>
                                 </button>
                             }
-                            @if (!string.IsNullOrEmpty(nc.NumeroDocumentoOrigen))
+                            @if (redireccionar && !string.IsNullOrEmpty(nc.NumeroDocumentoOrigen))
                             {
                                 string controller;
                                 string action;
@@ -163,16 +172,13 @@
                                     <i class="fas fa-external-link-alt"></i>
                                 </a>
                             }
-
-
-
-
-                    </tr>
+</tr>
                 }
             </tbody>
         </table>
     </div>
 </div>
+
 
 <!-- Modal Detalle de Pagos -->
 <div class="modal fade" id="detallePagoModal" tabindex="-1" aria-hidden="true">

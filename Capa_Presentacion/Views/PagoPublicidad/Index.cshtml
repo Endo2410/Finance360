@@ -5,18 +5,29 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
+<!-- =========================================
+ BREADCRUMB / NAVEGACIÓN
+========================================= -->
 <ol class="breadcrumb mb-4 mt-4">
-    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Inicio</a></li>
+    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Bienevenido">Inicio</a></li>
     <li class="breadcrumb-item active">Pago de Cuotas Publicidad</li>
 </ol>
 
+<!-- =========================================
+ CONTENEDOR PRINCIPAL
+========================================= -->
 <div class="card shadow border-0">
+
+    <!-- HEADER -->
     <div class="card-header text-white" style="background-color:#274DF5;">
         <i class="fas fa-credit-card me-2"></i> Registrar Pago de Publicidad
     </div>
 
     <div class="card-body">
-        <!-- PROVEEDOR -->
+
+        <!-- =========================================
+        SELECCIÓN DE PROVEEDOR
+        ========================================= -->
         <div class="row mb-3">
             <div class="col-md-4">
                 <label>Proveedor</label>
@@ -30,7 +41,9 @@
             </div>
         </div>
 
-        <!-- TABLA DE CUOTAS -->
+        <!-- =========================================
+         TABLA DE CUOTAS DISPONIBLES
+        ========================================= -->
         <table class="table table-striped" id="tablaCuotas">
             <thead class="text-white" style="background-color:#274DF5;">
                 <tr>
@@ -46,26 +59,35 @@
             <tbody></tbody>
         </table>
 
+        <!-- BOTÓN PRINCIPAL -->
         <button id="btnPagar" class="btn btn-success mt-2">
             <i class="fas fa-check"></i> Registrar Pago
         </button>
     </div>
 </div>
 
-<!-- MODAL PROVEEDORES -->
+<!-- =========================================
+MODAL DE SELECCIÓN DE PROVEEDOR
+========================================= -->
 <div class="modal fade" id="modalProveedores" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
+
+            <!-- HEADER -->
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title">Seleccionar Proveedor</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
+
+            <!-- BODY -->
             <div class="modal-body">
-                <!-- Input de búsqueda -->
+
+                <!-- BUSCADOR -->
                 <div class="mb-2">
                     <input type="text" id="txtBuscarProveedor" class="form-control" placeholder="Buscar proveedor..." autocomplete="off">
                 </div>
 
+                <!-- TABLA PROVEEDORES -->
                 <table class="table table-hover" id="tablaModalProveedores">
                     <thead>
                         <tr>
@@ -74,7 +96,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach(var p in Model.Select(x => x.NombreProveedor).Distinct())
+                        @foreach (var p in Model.Select(x => x.NombreProveedor).Distinct())
                         {
                             <tr>
                                 <td>@p</td>
@@ -85,23 +107,31 @@
                         }
                     </tbody>
                 </table>
+
             </div>
         </div>
     </div>
 </div>
 
-<!-- MODAL DE PAGO -->
+<!-- =========================================
+MODAL PRINCIPAL DE PAGO
+========================================= -->
 <div class="modal fade" id="modalPago" tabindex="-1">
     <div class="modal-dialog modal-xl">
         <div class="modal-content">
 
+            <!-- HEADER -->
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title">Datos del Pago</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
 
+            <!-- BODY -->
             <div class="modal-body">
 
+                <!-- =========================================
+                CUOTAS SELECCIONADAS
+                ========================================= -->
                 <h6 class="fw-bold text-primary">Cuotas Seleccionadas</h6>
 
                 <div class="table-responsive mb-3">
@@ -116,19 +146,54 @@
                                 <th class="text-end">Monto</th>
                             </tr>
                         </thead>
-                       <tbody class="align-middle"></tbody>
+                        <tbody class="align-middle"></tbody>
                     </table>
                 </div>
 
-                    <div class="alert alert-success d-flex justify-content-between align-items-center">
-                        <strong>Total a Pagar</strong>
-                        <span id="lblTotal" class="fs-4 fw-bold" data-total="0"></span>
-                    </div>
+                <!-- TOTAL -->
+                <div class="alert alert-success d-flex justify-content-between align-items-center">
+                    <strong>Total a Pagar</strong>
+                    <span id="lblTotal" class="fs-4 fw-bold" data-total="0"></span>
+                </div>
 
-               <hr class="my-4">
-                    <h6 class="fw-bold text-secondary">
-                        <i class="fas fa-file-invoice-dollar me-1"></i> Forma de Pago
-                    </h6>
+                <hr>
+
+                <!-- =========================================
+                RETENCIONES
+                ========================================= -->
+                <h6 class="fw-bold text-danger">
+                    <i class="fas fa-percentage me-1"></i> Retenciones
+                </h6>
+
+                <div class="row mb-2">
+                    <div class="col-md-6">
+                        <select id="cmbRetenciones" class="form-control">
+                            <option value="">-- Seleccionar retención --</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="contenedorRetenciones" class="mb-2"></div>
+
+                <div class="alert alert-warning d-flex justify-content-between">
+                    <strong>Total Retenciones</strong>
+                    <span id="lblTotalRetenciones" data-total="0">C$0.00</span>
+                </div>
+
+                <div class="alert alert-primary d-flex justify-content-between">
+                    <strong>Total Neto a Pagar</strong>
+                    <span id="lblTotalNeto" data-total="0">C$0.00</span>
+                </div>
+
+                <hr class="my-4">
+
+                <!-- =========================================
+                 FORMAS DE PAGO
+                ========================================= -->
+                <h6 class="fw-bold text-secondary">
+                    <i class="fas fa-file-invoice-dollar me-1"></i> Forma de Pago
+                </h6>
+
                 <table class="table" id="tablaPagosTipos">
                     <thead>
                         <tr>
@@ -136,12 +201,13 @@
                             <th>Monto</th>
                             <th>N° Confirmación</th>
                             <th>Comprobante</th>
-                            <th>Eliminar</th>
+                            <th>Acciones</th>
                         </tr>
                     </thead>
                     <tbody></tbody>
                 </table>
 
+                <!-- INPUTS PARA AGREGAR PAGOS -->
                 <div class="row mb-3">
                     <div class="col-md-3">
                         <select id="cmbTipoDocAgregar" class="form-control">
@@ -151,7 +217,7 @@
                     <div class="col-md-3">
                         <input type="number" id="txtMontoAgregar" class="form-control" placeholder="Monto">
                     </div>
-                      <div class="col-md-3">
+                    <div class="col-md-3">
                         <input type="text" id="txtNumeroConfirmacionAgregar" class="form-control" placeholder="N° Confirmación">
                     </div>
                     <div class="col-md-3">
@@ -162,11 +228,13 @@
                     </div>
                 </div>
 
+                <!-- OBSERVACIÓN -->
                 <label class="mt-2">Observación</label>
                 <textarea id="txtObs" class="form-control"></textarea>
 
             </div>
 
+            <!-- FOOTER -->
             <div class="modal-footer">
                 <button id="btnConfirmarPago" class="btn btn-success">
                     Confirmar Pago
@@ -176,8 +244,10 @@
     </div>
 </div>
 
-<!-- MODAL DE MENSAJE / ERRORES -->
-<div class="modal fade" id="modalMensaje" tabindex="-1" aria-hidden="true">
+<!-- =========================================
+MODAL MENSAJES / ERRORES
+========================================= -->
+<div class="modal fade" id="modalMensaje" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header bg-danger text-white">
@@ -186,14 +256,16 @@
             </div>
             <div class="modal-body" id="modalBody"></div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- MODAL DE ÉXITO -->
-<div class="modal fade" id="modalExito" tabindex="-1" aria-hidden="true">
+<!-- =========================================
+MODAL DE ÉXITO
+========================================= -->
+<div class="modal fade" id="modalExito" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header bg-success text-white">
@@ -205,48 +277,67 @@
                 <p><strong>Número de Documento:</strong> <span id="lblNumeroDoc"></span></p>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
             </div>
         </div>
     </div>
 </div>
 
+
 @section scripts{
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-<script>
-    const todasCuotas = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
-        Model.Select(x => new {
-            x.IdEstadoCuenta,
-            x.IdCampania,
-            x.NumeroCampania,
-            x.NombreCampania,
-            x.NombreProveedor,
-            x.NumeroCuota,
-            Fecha = x.FechaPagoProgramada.ToString("yyyy-MM-dd"),
-            x.MontoCuota
-        })
-    ));
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
 
-    let pagosTipos = [];
+    <script>
+        // ============================================
+        //  SERIALIZACIÓN DE DATOS DESDE EL MODELO
+        // ============================================
+        const todasCuotas = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+            Model.Select(x => new {
+                x.IdEstadoCuenta,
+                x.IdCampania,
+                x.NumeroCampania,
+                x.NombreCampania,
+                x.NombreProveedor,
+                x.NumeroCuota,
+                Fecha = x.FechaPagoProgramada.ToString("yyyy-MM-dd"),
+                x.MontoCuota
+            })
+        ));
 
-    function fFecha(f){ return new Date(f).toLocaleDateString('es-NI'); }
-    function fMonto(m){ return m.toLocaleString('es-NI',{style:'currency',currency:'NIO'}); }
-    function mostrarModal(msg){ $('#modalBody').text(msg); new bootstrap.Modal(document.getElementById('modalMensaje')).show(); }
+        // ============================================
+        //  VARIABLES GLOBALES
+        // ============================================
+        let pagosTipos = [];
 
-    // Abrir modal proveedores
-    $('#btnAbrirModalProveedor').click(function(){
-        new bootstrap.Modal(document.getElementById('modalProveedores')).show();
-    });
+        // ============================================
+        //  FUNCIONES UTILITARIAS
+        // ============================================
+        function fFecha(f){ return new Date(f).toLocaleDateString('es-NI'); }
+        function fMonto(m){ return m.toLocaleString('es-NI',{style:'currency',currency:'NIO'}); }
 
-    // Seleccionar proveedor desde modal
-    $(document).on('click','.btnSeleccionarProveedor', function(){
-        let prov = $(this).data('nombre');
-        $('#txtProveedorSeleccionado').val(prov);
-        $('#cmbProveedor').val(prov).trigger('change');
-        bootstrap.Modal.getInstance(document.getElementById('modalProveedores')).hide();
-    });
+        function mostrarModal(msg){
+            $('#modalBody').text(msg);
+            new bootstrap.Modal(document.getElementById('modalMensaje')).show();
+        }
 
-    // Filtrar proveedores en el modal
+        // ============================================
+        //  MODAL PROVEEDORES
+        // ============================================
+
+        // Abrir modal proveedores
+        $('#btnAbrirModalProveedor').click(function(){
+            new bootstrap.Modal(document.getElementById('modalProveedores')).show();
+        });
+
+        // Seleccionar proveedor desde modal
+        $(document).on('click','.btnSeleccionarProveedor', function(){
+            let prov = $(this).data('nombre');
+            $('#txtProveedorSeleccionado').val(prov);
+            $('#cmbProveedor').val(prov).trigger('change');
+            bootstrap.Modal.getInstance(document.getElementById('modalProveedores')).hide();
+        });
+
+        // Filtrar proveedores en el modal
         $('#txtBuscarProveedor').on('keyup', function(){
             let texto = $(this).val().toLowerCase();
             $('#tablaModalProveedores tbody tr').each(function(){
@@ -255,36 +346,63 @@
             });
         });
 
-    // Cargar cuotas según proveedor
-    $('#cmbProveedor').change(function(){
-        let prov = $(this).val();
-        $('#tablaCuotas tbody').empty();
-        $('#chkTodos').prop('checked',false);
-        if(!prov) return;
+        // ============================================
+        //  CARGA DE CUOTAS POR PROVEEDOR
+        // ============================================
+        $('#cmbProveedor').change(function () {
 
-        let lista = todasCuotas.filter(x=>x.NombreProveedor===prov);
-        let grupos = {};
+            let prov = $(this).val();
+            let tbody = $('#tablaCuotas tbody');
 
-        lista.forEach(x=>{ if(!grupos[x.IdCampania]) grupos[x.IdCampania]=[]; grupos[x.IdCampania].push(x); });
+            tbody.empty();
+            $('#chkTodos').prop('checked', false);
 
-        
+            if (!prov) return;
 
-        for(let id in grupos){
-            let cuotas = grupos[id].sort((a,b)=>a.NumeroCuota-b.NumeroCuota);
-            let ultima = cuotas[0].NumeroCuota - 1;
+            let lista = todasCuotas.filter(x => x.NombreProveedor === prov);
 
-            cuotas.forEach(e=>{
-                let clase = (e.NumeroCuota !== ultima+1) ? 'table-warning' : '';
-                ultima = e.NumeroCuota;
+            let grupos = {};
 
-                $('#tablaCuotas tbody').append(`
-                    <tr class="${clase}">
-                        <td><input type="checkbox" class="chkCuota"
-                            value="${e.IdEstadoCuenta}"
-                            data-campania="${e.IdCampania}"
-                            data-cuota="${e.NumeroCuota}"
-                            data-monto="${e.MontoCuota}"></td>
-                        <td>${e.NumeroCampania}</td>
+            lista.forEach(x => {
+                if (!grupos[x.IdCampania]) grupos[x.IdCampania] = [];
+                grupos[x.IdCampania].push(x);
+            });
+
+            for (let id in grupos) {
+
+                let cuotas = grupos[id].sort((a, b) => a.NumeroCuota - b.NumeroCuota);
+
+                let principal = cuotas[0];
+                let restantes = cuotas.slice(1);
+
+                // 🔹 FILA PRINCIPAL
+                tbody.append(`
+                <tr class="fila-principal" data-campania="${id}" style="cursor:pointer;">
+                    <td></td>
+                    <td>
+                        <i class="fas fa-chevron-right me-1 toggle-icon"></i>
+                        ${principal.NumeroCampania}
+                    </td>
+                    <td>${principal.NombreCampania}</td>
+                    <td>${principal.NombreProveedor}</td>
+                    <td>${principal.NumeroCuota}</td>
+                    <td>${fFecha(principal.Fecha)}</td>
+                    <td>${fMonto(principal.MontoCuota)}</td>
+                </tr>
+            `);
+
+                // DETALLES OCULTOS
+                restantes.forEach(e => {
+                    tbody.append(`
+                    <tr class="fila-detalle d-none" data-campania="${id}">
+                        <td>
+                            <input type="checkbox" class="chkCuota"
+                                value="${e.IdEstadoCuenta}"
+                                data-campania="${e.IdCampania}"
+                                data-cuota="${e.NumeroCuota}"
+                                data-monto="${e.MontoCuota}">
+                        </td>
+                        <td></td>
                         <td>${e.NombreCampania}</td>
                         <td>${e.NombreProveedor}</td>
                         <td>${e.NumeroCuota}</td>
@@ -292,85 +410,315 @@
                         <td>${fMonto(e.MontoCuota)}</td>
                     </tr>
                 `);
+                });
+
+                // CHECKBOX EN FILA PRINCIPAL
+                tbody.find(`tr[data-campania="${id}"].fila-principal td:first`).html(`
+                <input type="checkbox" class="chkCuota"
+                    value="${principal.IdEstadoCuenta}"
+                    data-campania="${principal.IdCampania}"
+                    data-cuota="${principal.NumeroCuota}"
+                    data-monto="${principal.MontoCuota}">
+            `);
+            }
+        });
+
+        // ============================================
+        // RETENCIONES
+        // ============================================
+
+        // Cargar retenciones
+        $.get('/TipoRetencion/Listar', function (res) {
+
+            listaRetenciones = res;
+
+            let cmb = $('#cmbRetenciones');
+            cmb.empty().append('<option value="">-- Seleccionar retención --</option>');
+
+            res.forEach(r => {
+                cmb.append(`<option value="${r.id}" data-porcentaje="${r.porcentaje}">
+              ${r.nombre} (${r.porcentaje}%)
+             </option>`);
+            });
+
+        });
+
+        $('#cmbRetenciones').change(function () {
+
+            let id = $(this).val();
+            if (!id) return;
+
+            let option = $(this).find('option:selected');
+            let nombre = option.text();
+            let porcentaje = option.data('porcentaje');
+
+            $('#contenedorRetenciones').append(`
+                <div class="form-check retencion-item" data-id="${id}">
+                    <input class="form-check-input chkRetencion"
+                           type="checkbox"
+                           checked
+                           data-id="${id}"
+                           data-porcentaje="${porcentaje}">
+
+                    <label class="form-check-label">
+                        ${nombre}
+                    </label>
+                </div>
+            `);
+
+            // eliminar del combo
+            option.remove();
+
+            $('#cmbRetenciones').val('');
+
+            calcularRetenciones();
+
+        });
+
+
+        $(document).on('change', '.chkRetencion', function () {
+
+            if (!$(this).is(':checked')) {
+
+                let cont = $(this).closest('.retencion-item');
+
+                let id = $(this).data('id');
+                let porcentaje = $(this).data('porcentaje');
+                let nombre = cont.find('label').text();
+
+                $('#cmbRetenciones').append(`
+                    <option value="${id}" data-porcentaje="${porcentaje}">
+                        ${nombre}
+                    </option>
+                `);
+
+                cont.remove();
+
+            }
+
+            calcularRetenciones();
+        });
+
+        // Evento cambio de retenciones
+        $(document).on('change', '.chkRetencion', function () {
+            calcularRetenciones();
+        });
+
+
+        // Cálculo de retenciones
+        function calcularRetenciones() {
+
+            let total = parseFloat($('#lblTotal').data('total')) || 0;
+            let totalRetenciones = 0;
+
+            $('.chkRetencion:checked').each(function () {
+                let porcentaje = parseFloat($(this).data('porcentaje'));
+                totalRetenciones += total * (porcentaje / 100);
+            });
+
+            let totalNeto = total - totalRetenciones;
+
+            $('#lblTotalRetenciones')
+                .data('total', totalRetenciones)
+                .text(fMonto(totalRetenciones));
+
+            $('#lblTotalNeto')
+                .data('total', totalNeto)
+                .text(fMonto(totalNeto));
+        }
+
+        // ============================================
+        //  EXPANDIR / CONTRAER FILAS
+        // ============================================
+        $(document).on('click', '.fila-principal', function (e) {
+
+            if ($(e.target).is('input')) return;
+
+            let campania = $(this).data('campania');
+            let icono = $(this).find('.toggle-icon');
+
+            let filas = $(`tr.fila-detalle[data-campania="${campania}"]`);
+
+            if (filas.hasClass('d-none')) {
+                filas.removeClass('d-none');
+                icono.removeClass('fa-chevron-right').addClass('fa-chevron-down');
+            } else {
+                filas.addClass('d-none');
+                icono.removeClass('fa-chevron-down').addClass('fa-chevron-right');
+            }
+        });
+
+        // ============================================
+        // CARGAR CUOTAS EN MODAL
+        // ============================================
+        function cargarCuotasEnModal(seleccionadas) {
+
+            let tbody = $('#tablaCuotasSeleccionadas tbody');
+            tbody.empty();
+
+            seleccionadas.each(function () {
+
+                let fila = $(this).closest('tr');
+
+                tbody.append(`
+                    <tr>
+                        <td>${fila.find('td:eq(1)').text()}</td>
+                        <td>${fila.find('td:eq(2)').text()}</td>
+                        <td>${fila.find('td:eq(3)').text()}</td>
+                        <td>${fila.find('td:eq(4)').text()}</td>
+                        <td>${fila.find('td:eq(5)').text()}</td>
+                        <td class="text-end">${fila.find('td:eq(6)').text()}</td>
+                    </tr>
+                `);
             });
         }
-    });
 
-    function cargarCuotasEnModal(seleccionadas) {
-    let tbody = $('#tablaCuotasSeleccionadas tbody');
-    tbody.empty();
+        // ============================================
+        //  SELECCIÓN GLOBAL DE CUOTAS
+        // ============================================
+        $('#chkTodos').click(function(){
+            $('.chkCuota').prop('checked', this.checked);
+        });
 
-    seleccionadas.each(function () {
-        let fila = $(this).closest('tr');
+        // ============================================
+        //  GESTIÓN DE PAGOS POR TIPO
+        // ============================================
+        $('#btnAgregarPago').click(function () {
 
-        tbody.append(`
-            <tr>
-                <td>${fila.find('td:eq(1)').text()}</td>
-                <td>${fila.find('td:eq(2)').text()}</td>
-                <td>${fila.find('td:eq(3)').text()}</td>
-                <td>${fila.find('td:eq(4)').text()}</td>
-                <td>${fila.find('td:eq(5)').text()}</td>
-                <td class="text-end">${fila.find('td:eq(6)').text()}</td>
-            </tr>
-        `);
-    });
-}
+            let editIndex = $(this).data('editando');
 
-
-        // Marcar/desmarcar todos
-        $('#chkTodos').click(function(){ $('.chkCuota').prop('checked', this.checked); });
-
-        // Agregar pagos por tipo 
-        $('#btnAgregarPago').click(function(){
             let idTipo = $('#cmbTipoDocAgregar').val();
             let nombre = $('#cmbTipoDocAgregar option:selected').text();
             let monto = parseFloat($('#txtMontoAgregar').val());
-            let numeroConfirmacion = $('#txtNumeroConfirmacionAgregar').val(); 
+            let numeroConfirmacion = $('#txtNumeroConfirmacionAgregar').val();
             let fileInput = document.getElementById('fileComprobanteAgregar');
 
-            // Validar tipo y monto
-            if(!idTipo || !monto || monto <= 0){
+            // VALIDACIONES
+            if (!idTipo || !monto || monto <= 0) {
                 mostrarModal('Seleccione tipo y monto válido');
                 return;
             }
-            if(!numeroConfirmacion){
-                 mostrarError('Debe ingresar N° Confirmación'); 
-                 return;
-             }
 
-            // 🔥 Validación: comprobar que haya archivo
-            if(!fileInput.files || fileInput.files.length === 0){
-                mostrarModal('Debe seleccionar un comprobante para este pago');
+            if (!numeroConfirmacion) {
+                mostrarModal('Debe ingresar N° Confirmación');
                 return;
             }
-       
-            // Agregar pago al arreglo
-            pagosTipos.push({
-                id: idTipo,
-                nombre: nombre,
-                monto: monto,
-                numeroConfirmacion: numeroConfirmacion, 
-                file: fileInput.files[0] // obligatorio, ya validamos
-            });
+
+            // EDICIÓN
+            if (editIndex !== undefined) {
+
+                let pagoExistente = pagosTipos[editIndex];
+
+                let archivoFinal = fileInput.files.length > 0
+                    ? fileInput.files[0]
+                    : pagoExistente.file;
+
+                if (!archivoFinal) {
+                    mostrarModal('Debe seleccionar un comprobante');
+                    return;
+                }
+
+                pagosTipos[editIndex] = {
+                    id: idTipo,
+                    nombre: nombre,
+                    monto: monto,
+                    numeroConfirmacion: numeroConfirmacion,
+                    file: archivoFinal
+                };
+
+                $('#btnAgregarPago').removeData('editando');
+                $('#btnAgregarPago').text('Agregar Pago');
+
+            } else {
+
+                // NUEVO
+                if (!fileInput.files || fileInput.files.length === 0) {
+                    mostrarModal('Debe seleccionar un comprobante');
+                    return;
+                }
+
+                pagosTipos.push({
+                    id: idTipo,
+                    nombre: nombre,
+                    monto: monto,
+                    numeroConfirmacion: numeroConfirmacion,
+                    file: fileInput.files[0]
+                });
+            }
 
             actualizarTablaPagos();
+
             $('#txtMontoAgregar').val('');
-             $('#txtNumeroConfirmacionAgregar').val(''); 
+            $('#txtNumeroConfirmacionAgregar').val('');
             $('#fileComprobanteAgregar').val('');
         });
 
-        function actualizarTablaPagos(){
+
+
+        function actualizarTablaPagos() {
             let tbody = $('#tablaPagosTipos tbody');
             tbody.empty();
-            pagosTipos.forEach((p,i)=>{
-                tbody.append(`<tr>
+
+            pagosTipos.forEach((p, i) => {
+
+                let tieneArchivo = p.file ? true : false;
+
+                tbody.append(`
+                <tr>
                     <td>${p.nombre}</td>
                     <td>${fMonto(p.monto)}</td>
                     <td>${p.numeroConfirmacion}</td>
-                    <td>${p.file ? p.file.name : ''}</td>
-                    <td><button class="btn btn-sm btn-danger" onclick="eliminarPago(${i})">X</button></td>
-                </tr>`);
+                    <td>
+                        ${tieneArchivo
+                        ? `<button class="btn btn-sm btn-info" onclick="verArchivo(${i})">
+                                    <i class="fas fa-eye"></i>VER
+                               </button>`
+                        : `<span class="text-muted">Sin archivo</span>`
+                    }
+                    </td>
+                       <td>
+                            <div class="d-flex justify-content-center" style="gap:6px;">
+                                <button class="btn btn-warning btn-sm" onclick="editarPago(${i})" title="Editar">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-danger btn-sm" onclick="eliminarPago(${i})" title="Eliminar">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                </tr>
+            `);
             });
+        }
+
+        function verArchivo(index) {
+
+            let file = pagosTipos[index].file;
+
+            if (!file) {
+                mostrarModal('No hay archivo disponible');
+                return;
+            }
+
+            let url = URL.createObjectURL(file);
+
+            window.open(url, '_blank');
+        }
+
+        function editarPago(index) {
+
+            let pago = pagosTipos[index];
+
+            // Cargar datos en inputs
+            $('#cmbTipoDocAgregar').val(pago.id);
+            $('#txtMontoAgregar').val(pago.monto);
+            $('#txtNumeroConfirmacionAgregar').val(pago.numeroConfirmacion);
+
+            // Guardamos índice en edición
+            $('#btnAgregarPago').data('editando', index);
+
+            // Opcional: cambiar texto botón
+            $('#btnAgregarPago').text('Actualizar Pago');
         }
 
         function eliminarPago(i){ pagosTipos.splice(i,1); actualizarTablaPagos(); }
@@ -425,7 +773,12 @@
             $('#lblTotal').data('total', total);
             $('#lblTotal').text(fMonto(total));
 
-            // 👉 NUEVO
+            // RESET AQUÍ
+            $('#lblTotalRetenciones').data('total', 0).text('C$0.00');
+            $('#lblTotalNeto').data('total', total).text(fMonto(total));
+            $('.chkRetencion').prop('checked', false);
+
+            // NUEVO
             cargarCuotasEnModal(seleccionadas);
 
             // Cargar tipos de documento
@@ -439,107 +792,107 @@
 
 
        // Confirmar Pago
-        $('#btnConfirmarPago').click(async function() {
+       $('#btnConfirmarPago').click(async function() {
 
             let cuotasSeleccionadas = $('.chkCuota:checked');
+
             if(cuotasSeleccionadas.length === 0){
                 mostrarModal('Seleccione al menos una cuota');
                 return;
             }
 
-            // Validar consecutividad y cuotas pendientes
-            let grupos = {};
-            cuotasSeleccionadas.each(function(){
-                let campania = $(this).data('campania');
-                if(!grupos[campania]) grupos[campania]=[];
-                grupos[campania].push(parseInt($(this).data('cuota')));
-            });
+           let totalNeto = parseFloat($('#lblTotalNeto').data('total'))
+               || parseFloat($('#lblTotal').data('total'))
+               || 0;
 
-            for(let campania in grupos){
-                let cuotas = grupos[campania].sort((a,b)=>a-b);
-                let pendientes = $('.chkCuota')
-                    .filter(function(){ return $(this).data('campania')==campania; })
-                    .map(function(){ return parseInt($(this).data('cuota')); }).get()
-                    .sort((a,b)=>a-b);
+           // EL TOTAL REAL PAGADO (LA VERDAD DEL SISTEMA)
+           let totalPagos = pagosTipos.reduce((s, x) => s + x.monto, 0);
 
-                for(let i=1; i<cuotas.length; i++){
-                    if(cuotas[i] !== cuotas[i-1]+1){
-                        mostrarModal('Las cuotas seleccionadas deben ser consecutivas dentro de la misma campaña.');
-                        return;
-                    }
-                }
+           // STE ES EL QUE SE ENVÍA AL SP
+           let totalAPagar = totalPagos;
 
-                let minSeleccionada = Math.min(...cuotas);
-                let minPendiente = Math.min(...pendientes);
-                if(minSeleccionada > minPendiente){
-                    let numeroCampania = $('.chkCuota')
-                        .filter(function(){ return $(this).data('campania') == campania; })
-                        .first()
-                        .closest('tr')
-                        .find('td:eq(1)')
-                        .text();
-                    mostrarModal(`Debe incluir todas las cuotas pendientes anteriores (#${minPendiente}) de la campaña ${numeroCampania}`);
+           // VALIDACIÓN CORRECTA
+           if (totalPagos < totalNeto) {
+               mostrarModal('El monto pagado no puede ser menor al total neto a pagar');
+               return;
+           }
+            // ================================
+            //  VALIDAR ARCHIVOS (IMPORTANTE)
+            // ================================
+            for (let p of pagosTipos) {
+                if (!p.file) {
+                    mostrarModal(`El pago tipo "${p.nombre}" no tiene comprobante`);
                     return;
                 }
             }
 
-            let totalAPagar = parseFloat($('#lblTotal').data('total'));
+            // ================================
+            //  RETENCIONES
+            // ================================
+            let retenciones = [];
 
-            // Validar suma exacta de pagos por tipo
-           let totalPagos = pagosTipos.reduce((s, x) => s + x.monto, 0);
+           $('.chkRetencion:checked').each(function () {
+               let porcentaje = parseFloat($(this).data('porcentaje'));
+               let total = totalPagos; // CAMBIO CLAVE
+               let monto = total * (porcentaje / 100);
 
-            // Solo bloquea si es menor al total a pagar
-            if (totalPagos + 0.01 < totalAPagar) {
-                mostrarModal('El monto total de pagos no puede ser menor al total a pagar');
-                return;
-            }
+               retenciones.push({
+                   IdTipoRetencion: $(this).data('id'),
+                   Porcentaje: porcentaje,
+                   MontoRetenido: +monto.toFixed(2)
+               });
+           });
 
-
-            // Construir detalle de pago – distribuir proporcionalmente cada pago entre cuotas
+            // ================================
+            //  DETALLE
+            // ================================
             let detalleEnvio = [];
             let sumaCuotas = 0;
-
-            // Obtener usuario actual de ViewBag o de un campo oculto
-            let usuarioActual = '@ViewBag.UsuarioActual'; 
+            let usuarioActual = '@ViewBag.UsuarioActual';
 
             cuotasSeleccionadas.each(function(){
                 sumaCuotas += parseFloat($(this).data('monto'));
             });
 
-            if (sumaCuotas <= 0) {
-    mostrarModal('El monto total de las cuotas es inválido');
-    return;
-}
-
             cuotasSeleccionadas.each(function(){
+
                 let fila = $(this);
                 let montoCuota = parseFloat(fila.data('monto'));
                 let proporcion = montoCuota / sumaCuotas;
 
                 pagosTipos.forEach(function(pago){
+
                     detalleEnvio.push({
                         IdEstadoCuenta: parseInt(fila.val()),
                         MontoPagado: +(pago.monto * proporcion).toFixed(2),
                         IdTipoDocumento: pago.id,
                         NumeroConfirmacion: pago.numeroConfirmacion,
                         RutaComprobante: pago.file ? pago.file.name : null,
-                        UsuarioPago: usuarioActual  
+                        UsuarioPago: usuarioActual
                     });
+
                 });
+
             });
 
-            // FormData
+            // ================================
+            //  FORM DATA
+            // ================================
             let formData = new FormData();
+
             formData.append('IdCampania', cuotasSeleccionadas.first().data('campania'));
             formData.append('Observacion', $('#txtObs').val());
             formData.append('DetalleCuotas', JSON.stringify(detalleEnvio));
             formData.append('TotalAPagar', totalAPagar);
+            formData.append('Retenciones', JSON.stringify(retenciones));
 
-            // Adjuntar archivos
             pagosTipos.forEach((p,i)=>{
                 if(p.file) formData.append(`PagosTipos[${i}].Comprobante`, p.file);
             });
 
+            // ================================
+            //  AJAX
+            // ================================
             $.ajax({
                 url:'/PagoPublicidad/RegistrarPagoMultiples',
                 type:'POST',
@@ -549,15 +902,17 @@
                 success:function(r){
                     if(r.success){
                         $('#lblNumeroDoc').text(r.numeroDocumento);
-                        const modalExito = new bootstrap.Modal(document.getElementById('modalExito'));
-                        modalExito.show();
+                        new bootstrap.Modal(document.getElementById('modalExito')).show();
                         setTimeout(() => location.reload(), 3000);
                     } else {
                         mostrarModal(r.mensajes.join("\n"));
                     }
                 },
-                error:function(){ mostrarModal('Error al registrar pago'); }
+                error:function(){
+                    mostrarModal('Error al registrar pago');
+                }
             });
-        });
-</script>
+
+       });
+    </script>
 }

@@ -1,0 +1,1008 @@
+﻿@{
+    ViewData["Title"] = "Citas Médicas";
+}
+
+<style>
+    .fechas-scroll {
+        max-height: 58px;
+        overflow-y: auto;
+        border: 1px solid #ddd;
+        padding: 5px;
+    }
+</style>
+
+<!-- BREADCRUMB -->
+<ol class="breadcrumb mb-4 mt-4">
+    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Bienvenido">Inicio</a></li>
+    <li class="breadcrumb-item active">Incentivos</li>
+</ol>
+
+
+<!-- CARD -->
+<div class="card shadow border-0">
+
+    <div class="card-header text-white d-flex justify-content-between"
+         style="background-color:#274DF5;">
+        <span><i class="fas fa-calendar me-2"></i> Citas Médicas</span>
+
+
+        <!--  CONTENEDOR DE BOTONES -->
+        <div class="d-flex gap-2">
+            <button id="btnNuevaCita" class="btn btn-light btn-sm">
+                <i class="fas fa-plus"></i> Nueva Cita
+            </button>
+
+            <button id="btnExportarPDF" class="btn btn-danger btn-sm">
+                <i class="fas fa-file-pdf"></i> Exportar PDF
+            </button>
+        </div>
+    </div>
+
+    <div class="card-body">
+
+        <div class="row mb-3">
+
+            <div class="col-md-3">
+                <input type="text" id="filtroNombre" class="form-control" placeholder="Buscar por nombre">
+            </div>
+
+            <div class="col-md-3">
+                <input type="text" id="filtroSucursal" class="form-control" placeholder="Sucursal">
+            </div>
+
+            <div class="col-md-2">
+                <input type="text" id="filtroDepartamento" class="form-control" placeholder="Departamento">
+            </div>
+
+            <div class="col-md-2">
+                <input type="date" id="filtroFechaInicio" class="form-control" placeholder="Desde">
+            </div>
+
+            <div class="col-md-2">
+                <input type="date" id="filtroFechaFin" class="form-control" placeholder="Hasta">
+            </div>
+
+        </div>
+
+        <div class="row" id="contenedorCards">
+            @foreach (var c in Model)
+            {
+                <div class="col-md-4 mb-3 card-item"
+                     data-nombre="@c.NombreCita.ToLower()"
+                     data-sucursal="@c.oSucursal.NombreSucursal.ToLower()"
+                     data-departamento="@c.oDepartamento.NombreDepartamento.ToLower()"
+                    data-fechas='@string.Join(",", ((IEnumerable<DateTime>)c.Fechas).Select(f => f.ToString("yyyy-MM-dd")))'>
+
+                    <div class="card border">
+                        <div class="card-body">
+                            <div class="card mb-3">
+                                <div class="card-body d-flex flex-column" style="height:250px;">
+                                    <h5 class="text-center">@c.NombreCita</h5>
+                                    <p class="mb-1"><strong>Sucursal:</strong> @c.oSucursal.NombreSucursal</p>
+                                    <p class="mb-1"><strong>Departamento:</strong> @c.oDepartamento.NombreDepartamento</p>
+                                    <p><strong>Fechas disponibles:</strong></p>
+
+                                    @if (c.Fechas.Count > 2)
+                                    {
+                                        <div class="fechas-scroll">
+                                            @foreach (var f in c.Fechas)
+                                            {
+                                                <div>✔ @f.ToString("dd 'de' MMMM 'de' yyyy")</div>
+                                            }
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        @foreach (var f in c.Fechas)
+                                        {
+                                            <div>✔ @f.ToString("dd 'de' MMMM 'de' yyyy")</div>
+                                        }
+                                    }
+
+                                    <span class="badge bg-success px-3 py-2 mt-auto">
+                                        @c.oEstado.Nombre
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="d-flex gap-3 mt-2">
+                                @if (!string.IsNullOrEmpty(c.DocumentoAdjunto))
+                                {
+                                    <a href="~/archivo/citas/@c.DocumentoAdjunto"
+                                       target="_blank"
+                                       class="btn btn-sm btn-outline-primary">
+                                        Ver Documento
+                                    </a>
+                                }
+
+                                <button class="btn btn-sm btn-warning"
+                                        onclick='editarCita(@Html.Raw(Json.Serialize(new {
+                                                idCita = c.IdCita,
+                                                nombreCita = c.NombreCita,
+                                                idDepartamento = c.oDepartamento.IdDepartamento,
+                                                departamento = c.oDepartamento.NombreDepartamento,
+                                                idSucursal = c.oSucursal.IdSucursal,
+                                                sucursal = c.oSucursal.NombreSucursal,
+                                                documentoAdjunto = c.DocumentoAdjunto
+                                            })))'>
+                                    ✏️ Editar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- Contenedor de paginación -->
+        <nav>
+            <ul class="pagination justify-content-center mt-3" id="paginacionCards"></ul>
+        </nav>
+
+    </div>
+
+</div>
+
+
+
+<div class="modal fade" id="modalCita" tabindex="-1">
+
+    <div class="modal-dialog modal-lg">
+
+        <div class="modal-content">
+
+            <div class="modal-header bg-primary text-white">
+                <h5>Nueva Cita Médica</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <form id="formCita">
+
+                    <div class="row g-3">
+
+                        <input type="hidden" id="hdDocumentoActual" />
+
+                        <div class="col-md-12">
+                            <label>Nombre Cita</label>
+                            <input id="txtNombreCita" class="form-control">
+                        </div>
+
+                        <!-- LABORATORIO -->
+                        <div class="col-md-6">
+                            <label>Departamento</label>
+                            <div class="input-group">
+                                <input type="hidden" id="cboDepartamento" name="IdDepartamento" />
+                                <input type="text" id="txtDepartamentoNombre" class="form-control" placeholder="Seleccionar Departamento" readonly>
+                                <button class="btn btn-secondary" type="button" onclick="abrirModalDepartamento()">Buscar</button>
+                            </div>
+                        </div>
+
+                        <!-- SUCURSAL -->
+                        <div class="col-md-6">
+                            <label>Sucursal</label>
+
+                            <div class="input-group">
+
+                                <input type="hidden" id="cbosucursal" />
+
+                                <input id="txtSucursalNombre"
+                                       class="form-control"
+                                       readonly>
+
+                                <button class="btn btn-secondary"
+                                        type="button"
+                                        onclick="abrirModalSucursal()">
+                                    Buscar
+                                </button>
+
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Acta</label>
+                            <input type="file" id="archivoActa" class="form-control" accept=".pdf,.jpg,.png,.jpeg,.doc,.docx,.xls,.xlsx" />
+                        </div>
+
+                        <div class="col-md-6">
+                            <div id="contenedorPreviewActa" style="display:none;">
+                                <label class="form-label">Vista previa Acta</label>
+                                <div class="border rounded p-2 text-center">
+                                    <button id="btnPreviewActa"
+                                            class="btn btn-outline-primary btn-sm"
+                                            type="button">
+                                        <i class="fas fa-eye"></i> Ver archivo
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <div class="col-md-6">
+                            <label>Agregar Fecha</label>
+
+                            <div class="input-group">
+
+                                <input type="date"
+                                       id="txtFechaCita"
+                                       class="form-control">
+
+                                <button type="button"
+                                        class="btn btn-success"
+                                        onclick="agregarFecha()">
+
+                                    Agregar
+
+                                </button>
+
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <table class="table table-bordered">
+
+                        <thead class="table-primary">
+                            <tr>
+                                <th>Fecha</th>
+                                <th width="80">Eliminar</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="tbodyFechas"></tbody>
+
+                    </table>
+
+                </form>
+            </div>
+
+            <div class="modal-footer">
+
+                <button class="btn btn-secondary"
+                        data-bs-dismiss="modal">
+                    Cancelar
+                </button>
+
+                <button class="btn btn-primary"
+                        onclick="guardarCita()">
+                    Guardar
+                </button>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================= MODAL SUCURSAL ================= -->
+<div class="modal fade" id="modalsucursal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-md modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Seleccionar Sucursal</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <div class="mb-3">
+                    <input type="text" id="txtFiltrarsucusal" class="form-control" placeholder="Filtrar sucursal por nombre o codigo ">
+                </div>
+
+                <div style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-striped table-hover" id="tablasucursal">
+                        <thead style="position: sticky; top: 0; background: white;">
+                            <tr>
+                                <th>Codigo</th>
+                                <th>Nombre</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Se llena dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Selección de Departamento -->
+<div class="modal fade" id="modalDepartamento" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+
+            <div class="modal-header bg-primary text-white">
+                <h6 class="modal-title">Seleccionar Departamento</h6>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <input type="text"
+                       id="txtFiltrarDepartamento"
+                       class="form-control mb-3"
+                       placeholder="Buscar departamento..." />
+
+                <div style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-hover" id="tablaDepartamentosModal">
+                        <thead style="position: sticky; top: 0; background: white;">
+                            <tr>
+                                <th>Departamento</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+</div>
+
+
+<!-- Modal global para mensajes de éxito -->
+<div class="modal fade" id="modalExito" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">Éxito</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="cuerpoExito"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal global para errores inesperados -->
+<div class="modal fade" id="modalMensaje" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Error</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="cuerpoMensaje"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@section Scripts {
+    <script>
+
+        document.addEventListener("DOMContentLoaded", function () {
+
+            const cardsPorPagina = 6;
+            const cards = document.querySelectorAll(".card-item");
+            const totalPaginas = Math.ceil(cards.length / cardsPorPagina);
+            const paginacion = document.getElementById("paginacionCards");
+            let paginaActual = 1;
+
+            function mostrarPagina(pagina) {
+                paginaActual = pagina;
+                const inicio = (pagina - 1) * cardsPorPagina;
+                const fin = inicio + cardsPorPagina;
+
+                cards.forEach((card, index) => {
+                    card.style.display = (index >= inicio && index < fin) ? "block" : "none";
+                });
+
+                renderPaginacion();
+            }
+
+            function renderPaginacion() {
+                let html = '';
+
+                // Botón "Anterior"
+                html += `<li class="page-item ${paginaActual === 1 ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="cambiarPagina(${paginaActual - 1}); return false;">Anterior</a>
+                     </li>`;
+
+                for (let i = 1; i <= totalPaginas; i++) {
+                    html += `<li class="page-item ${i === paginaActual ? 'active' : ''}">
+                            <a class="page-link" href="#" onclick="cambiarPagina(${i}); return false;">${i}</a>
+                         </li>`;
+                }
+
+                // Botón "Siguiente"
+                html += `<li class="page-item ${paginaActual === totalPaginas ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="cambiarPagina(${paginaActual + 1}); return false;">Siguiente</a>
+                     </li>`;
+
+                paginacion.innerHTML = html;
+            }
+
+            window.cambiarPagina = mostrarPagina;
+
+            // Mostrar primera página
+            mostrarPagina(1);
+        });
+
+        let fechas = [];
+
+        $('#btnNuevaCita').click(function () {
+
+            fechas = [];
+
+            $('#tbodyFechas').html('');
+
+            new bootstrap.Modal(
+                document.getElementById('modalCita')
+            ).show();
+
+        });
+
+        $('#btnNuevaCita').click(function () {
+
+            fechas = [];
+            $('#tbodyFechas').html('');
+
+            $('#formCita')[0].reset();
+            $('#formCita').removeData('idcita');
+
+            $('#contenedorPreviewActa').hide();
+
+            $('#modalCita .modal-title').text('Nueva Cita Médica');
+
+            new bootstrap.Modal(
+                document.getElementById('modalCita')
+            ).show();
+        });
+
+        function agregarFecha() {
+
+            let fecha = $('#txtFechaCita').val();
+
+            if (!fecha) return;
+
+            if (fechas.includes(fecha)) {
+                alert("Fecha repetida");
+                return;
+            }
+
+            fechas.push(fecha);
+
+            renderFechas();
+        }
+
+        function renderFechas() {
+
+            let html = '';
+
+            fechas.forEach((f, i) => {
+
+                html += `
+                            <tr>
+
+                                <td>${f}</td>
+
+                                <td>
+
+                                    <button class="btn btn-danger btn-sm"
+                                            onclick="eliminarFecha(${i})">
+                                        X
+                                    </button>
+
+                                </td>
+
+                            </tr>
+                            `;
+
+            });
+
+            $('#tbodyFechas').html(html);
+        }
+
+        function eliminarFecha(i) {
+
+            fechas.splice(i, 1);
+
+            renderFechas();
+
+        }
+
+        let idCitaEditar = 0;
+
+        function editarCita(cita) {
+
+            fechas = [];
+            $('#tbodyFechas').html('');
+
+            $('#modalCita .modal-title').text('Editar Cita Médica');
+
+            $('#txtNombreCita').val(cita.nombreCita);
+
+            $('#cboDepartamento').val(cita.idDepartamento);
+            $('#txtDepartamentoNombre').val(cita.departamento);
+
+            $('#cbosucursal').val(cita.idSucursal);
+            $('#txtSucursalNombre').val(cita.sucursal);
+
+            // 🔥 GUARDAR ID
+            $('#formCita').data('idcita', cita.idCita);
+
+            // 🔥🔥🔥 ESTA LÍNEA TE FALTABA
+            $('#hdDocumentoActual').val(cita.documentoAdjunto);
+
+            // =============================
+            // 📎 DOCUMENTO (preview)
+            // =============================
+            if (cita.documentoAdjunto) {
+
+                $('#contenedorPreviewActa').show();
+
+                $('#btnPreviewActa').off('click').on('click', function () {
+                    let url = '/archivo/citas/' + cita.documentoAdjunto;
+                    window.open(url, '_blank');
+                });
+
+            } else {
+                $('#contenedorPreviewActa').hide();
+            }
+
+            // =============================
+            // 📅 FECHAS
+            // =============================
+            $.get('/Incentivo/ObtenerFechas?id=' + cita.idCita, function (data) {
+
+                fechas = [];
+
+                data.forEach(f => {
+                    let fecha = new Date(f);
+                    let formato = fecha.toISOString().split('T')[0];
+                    fechas.push(formato);
+                });
+
+                renderFechas();
+            });
+
+            new bootstrap.Modal(
+                document.getElementById('modalCita')
+            ).show();
+        }
+
+
+        function cargarFechas(idCita) {
+
+            $.get('/Incentivo/ObtenerFechas?id=' + idCita, function (data) {
+
+                fechas = [];
+
+                data.forEach(f => {
+
+                    let fecha = new Date(f);
+
+                    // 🔥 formato yyyy-MM-dd (para input date)
+                    let formato = fecha.toISOString().split('T')[0];
+
+                    fechas.push(formato);
+                });
+
+                renderFechas();
+            });
+        }
+
+        /* ===== PREVIEW AL SELECCIONAR ARCHIVO ===== */
+        $('#archivo').on('change', function () {
+            let file = this.files[0];
+            if (!file) { $('#contenedorPreview').hide(); return; }
+            $('#contenedorPreview').show();
+            $('#btnPreview').off('click').on('click', function () {
+                let url = URL.createObjectURL(file);
+                window.open(url, '_blank');
+            });
+        });
+
+        /* ===== PREVIEW ACTA ===== */
+        $('#archivoActa').on('change', function () {
+
+            let file = this.files[0];
+
+            if (!file) {
+                $('#contenedorPreviewActa').hide();
+                return;
+            }
+
+            $('#contenedorPreviewActa').show();
+
+            $('#btnPreviewActa').off('click').on('click', function () {
+
+                let url = URL.createObjectURL(file);
+                window.open(url, '_blank');
+
+            });
+
+        });
+
+        // ================= SUCURSAL =================
+        function abrirModalSucursal() {
+            cargarSucursalModal();
+            $('#txtFiltrarsucusal').val('');
+            new bootstrap.Modal('#modalsucursal').show();
+        }
+
+
+        function cargarSucursalModal() {
+            $.get('/Cuentas_X_PagarAlejandra/Listar', function (data) {
+                let tbody = $('#tablasucursal tbody');
+                tbody.empty();
+                data.forEach(p => {
+                    tbody.append(`
+                                     <tr data-id="${p.idsucursal}" data-nombre="${p.nombre}">
+                                         <td>${p.codigo}</td>
+                                         <td>${p.nombre}</td>
+                                     </tr>
+                                 `);
+                });
+
+                // Click en la fila selecciona proveedor automáticamente
+                $('#tablasucursal tbody tr').click(function () {
+                    let id = $(this).data('id');
+                    let nombre = $(this).data('nombre');
+                    $('#cbosucursal').val(id);
+                    $('#txtSucursalNombre').val(nombre);
+                    bootstrap.Modal.getInstance(document.getElementById('modalsucursal')).hide();
+                });
+            });
+        }
+
+        function seleccionarSucursal(id, nombre) {
+            $('#cbosucursal').val(id);
+            $('#txtSucursalNombre').val(nombre);
+            bootstrap.Modal.getInstance(document.getElementById('modalsucursal')).hide();
+        }
+
+        // Filtro dinámico
+        $('#txtFiltrarsucusal').on('keyup', function () {
+            let valor = $(this).val().toLowerCase();
+            $('#tablasucursal tbody tr').filter(function () {
+                $(this).toggle($(this).text().toLowerCase().indexOf(valor) > -1);
+            });
+        });
+
+        //Departamento
+        function abrirModalDepartamento() {
+            cargarDepartamentosModal();
+            $('#txtFiltrarDepartamento').val('');
+            new bootstrap.Modal('#modalDepartamento').show();
+        }
+
+        function cargarDepartamentosModal() {
+            $.get('/Proveedores/ListarDepartamento', function (data) {
+
+                let tbody = $('#tablaDepartamentosModal tbody');
+                tbody.empty();
+
+                data.forEach(d => {
+                    tbody.append(`
+                                     <tr data-id="${d.idDepartamento}" data-nombre="${d.nombre}">
+                                         <td>${d.nombre}</td>
+                                     </tr>
+                                `);
+                });
+
+                // Click en fila selecciona automáticamente
+                $('#tablaDepartamentosModal tbody tr').click(function () {
+
+                    let id = $(this).data('id');
+                    let nombre = $(this).data('nombre');
+
+                    $('#cboDepartamento').val(id);
+                    $('#txtDepartamentoNombre').val(nombre);
+
+                    bootstrap.Modal
+                        .getInstance(document.getElementById('modalDepartamento'))
+                        .hide();
+                });
+            });
+        }
+
+        function seleccionarDepartamento(id, nombre) {
+            $('#cboDepartamento').val(id);
+            $('#txtDepartamentoNombre').val(nombre);
+
+            bootstrap.Modal
+                .getInstance(document.getElementById('modalDepartamento'))
+                .hide();
+        }
+
+        // Filtro dinámico
+        $('#txtFiltrarDepartamento').on('keyup', function () {
+            let valor = $(this).val().toLowerCase();
+
+            $('#tablaDepartamentosModal tbody tr').filter(function () {
+                $(this).toggle(
+                    $(this).text().toLowerCase().indexOf(valor) > -1
+                );
+            });
+        });
+
+
+        function guardarCita() {
+
+            let formData = new FormData();
+
+            formData.append("IdCita", $('#formCita').data('idcita') || 0);
+            formData.append("DocumentoAdjunto", $('#hdDocumentoActual').val());
+            formData.append("NombreCita", $('#txtNombreCita').val());
+            formData.append("IdDepartamento", $('#cboDepartamento').val());
+            formData.append("IdSucursal", $('#cbosucursal').val());
+            formData.append("Fechas", JSON.stringify(fechas));
+
+            let archivo = $('#archivoActa')[0].files[0];
+
+            if (archivo)
+                formData.append("archivo", archivo);
+
+            $.ajax({
+
+                url: '/Incentivo/CrearCitasmedicas',
+                type: 'POST',
+                data: formData,
+
+                processData: false,
+                contentType: false,
+
+                success: function (response) {
+
+                    if (response.success) {
+
+                        $('#cuerpoExito').html("Cita médica registrada correctamente.");
+
+                        new bootstrap.Modal(
+                            document.getElementById('modalExito')
+                        ).show();
+
+                        setTimeout(() => location.reload(), 1500);
+
+                    } else {
+
+                        $('#cuerpoMensaje').html(
+                            response.mensajes.join("<br>")
+                        );
+
+                        new bootstrap.Modal(
+                            document.getElementById('modalMensaje')
+                        ).show();
+                    }
+
+                },
+                error: function () {
+
+                    $('#cuerpoMensaje').html("Error inesperado al guardar.");
+
+                    new bootstrap.Modal(
+                        document.getElementById('modalMensaje')
+                    ).show();
+
+                }
+
+            });
+        }
+
+        function aplicarFiltros() {
+
+            let nombre = $('#filtroNombre').val().toLowerCase();
+            let sucursal = $('#filtroSucursal').val().toLowerCase();
+            let departamento = $('#filtroDepartamento').val().toLowerCase();
+
+            let fechaInicio = $('#filtroFechaInicio').val();
+            let fechaFin = $('#filtroFechaFin').val();
+
+            let cards = document.querySelectorAll(".card-item");
+
+            cards.forEach(card => {
+
+                let cNombre = card.dataset.nombre;
+                let cSucursal = card.dataset.sucursal;
+                let cDepartamento = card.dataset.departamento;
+                let cFechas = card.dataset.fechas.split(',');
+
+                // 🔥 validar rango de fechas
+                let cumpleFecha = true;
+
+                if (fechaInicio || fechaFin) {
+
+                    cumpleFecha = cFechas.some(f => {
+
+                        if (!f) return false;
+
+                        if (fechaInicio && f < fechaInicio) return false;
+                        if (fechaFin && f > fechaFin) return false;
+
+                        return true;
+                    });
+                }
+
+                let cumple =
+                    (!nombre || cNombre.includes(nombre)) &&
+                    (!sucursal || cSucursal.includes(sucursal)) &&
+                    (!departamento || cDepartamento.includes(departamento)) &&
+                    cumpleFecha;
+
+                card.style.display = cumple ? "block" : "none";
+
+            });
+
+            reiniciarPaginacion();
+        }
+
+        $('#filtroNombre, #filtroSucursal, #filtroDepartamento, #filtroFechaInicio, #filtroFechaFin')
+            .on('keyup change', function () {
+                aplicarFiltros();
+            });
+
+        function reiniciarPaginacion() {
+
+            const visibles = document.querySelectorAll(".card-item:not([style*='display: none'])");
+
+            const cardsPorPagina = 6;
+            const totalPaginas = Math.ceil(visibles.length / cardsPorPagina);
+            let paginaActual = 1;
+
+            function mostrarPaginaFiltrada(pagina) {
+
+                paginaActual = pagina;
+
+                let inicio = (pagina - 1) * cardsPorPagina;
+                let fin = inicio + cardsPorPagina;
+
+                visibles.forEach((card, index) => {
+                    card.style.display = (index >= inicio && index < fin) ? "block" : "none";
+                });
+
+            }
+
+            mostrarPaginaFiltrada(1);
+        }
+
+        //$('#btnExportarPDF').click(function () {
+
+        //    let data = [];
+
+        //    let nombre = $('#filtroNombre').val().toLowerCase();
+        //    let sucursal = $('#filtroSucursal').val().toLowerCase();
+        //    let departamento = $('#filtroDepartamento').val().toLowerCase();
+        //    let fechaInicio = $('#filtroFechaInicio').val();
+        //    let fechaFin = $('#filtroFechaFin').val();
+
+        //    document.querySelectorAll(".card-item").forEach(card => {
+
+        //        let cNombre = card.dataset.nombre;
+        //        let cSucursal = card.dataset.sucursal;
+        //        let cDepartamento = card.dataset.departamento;
+        //        let cFechas = card.dataset.fechas.split(',');
+
+        //        // 🔥 MISMA LÓGICA DE FILTRO (pero sin paginación)
+        //        let cumpleFecha = true;
+
+        //        if (fechaInicio || fechaFin) {
+        //            cumpleFecha = cFechas.some(f => {
+        //                if (!f) return false;
+        //                if (fechaInicio && f < fechaInicio) return false;
+        //                if (fechaFin && f > fechaFin) return false;
+        //                return true;
+        //            });
+        //        }
+
+        //        let cumple =
+        //            (!nombre || cNombre.includes(nombre)) &&
+        //            (!sucursal || cSucursal.includes(sucursal)) &&
+        //            (!departamento || cDepartamento.includes(departamento)) &&
+        //            cumpleFecha;
+
+        //        if (!cumple) return;
+
+        //        data.push({
+        //            Nombre: card.querySelector("h5").innerText,
+        //            Sucursal: card.dataset.sucursal,
+        //            Departamento: card.dataset.departamento,
+        //            Fechas: card.dataset.fechas
+        //        });
+
+        //    });
+
+        //    if (data.length === 0) {
+        //        alert("No hay datos para exportar");
+        //        return;
+        //    }
+
+        //    $.ajax({
+        //        url: '/Incentivo/ExportarCitasPDF',
+        //        type: 'POST',
+        //        contentType: 'application/json',
+        //        data: JSON.stringify(data),
+        //        xhrFields: { responseType: 'blob' },
+        //        success: function (blob) {
+
+        //            let link = document.createElement('a');
+        //            link.href = window.URL.createObjectURL(blob);
+        //            link.download = "CitasFiltradas.pdf";
+        //            link.click();
+        //        }
+        //    });
+
+        //});
+
+        $('#btnExportarPDF').click(function () {
+
+            let nuevaVentana = window.open('', '_blank'); // 🔥 abrir primero
+
+            let data = [];
+
+            let nombre = $('#filtroNombre').val().toLowerCase();
+            let sucursal = $('#filtroSucursal').val().toLowerCase();
+            let departamento = $('#filtroDepartamento').val().toLowerCase();
+            let fechaInicio = $('#filtroFechaInicio').val();
+            let fechaFin = $('#filtroFechaFin').val();
+
+            document.querySelectorAll(".card-item").forEach(card => {
+
+                let cNombre = card.dataset.nombre;
+                let cSucursal = card.dataset.sucursal;
+                let cDepartamento = card.dataset.departamento;
+                let cFechas = card.dataset.fechas.split(',');
+
+                let cumpleFecha = true;
+
+                if (fechaInicio || fechaFin) {
+                    cumpleFecha = cFechas.some(f => {
+                        if (!f) return false;
+                        if (fechaInicio && f < fechaInicio) return false;
+                        if (fechaFin && f > fechaFin) return false;
+                        return true;
+                    });
+                }
+
+                let cumple =
+                    (!nombre || cNombre.includes(nombre)) &&
+                    (!sucursal || cSucursal.includes(sucursal)) &&
+                    (!departamento || cDepartamento.includes(departamento)) &&
+                    cumpleFecha;
+
+                if (!cumple) return;
+
+                data.push({
+                    Nombre: card.querySelector("h5").innerText,
+                    Sucursal: card.dataset.sucursal,
+                    Departamento: card.dataset.departamento,
+                    Fechas: card.dataset.fechas
+                });
+
+            });
+
+            if (data.length === 0) {
+                nuevaVentana.close(); // cerrar si no hay datos
+                alert("No hay datos para exportar");
+                return;
+            }
+
+            $.ajax({
+                url: '/Incentivo/ExportarCitasPDF',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                xhrFields: { responseType: 'blob' },
+                success: function (blob) {
+
+                    let url = window.URL.createObjectURL(blob);
+
+                    // 🔥 cargar el PDF en la pestaña ya abierta
+                    nuevaVentana.location.href = url;
+                }
+            });
+
+        });
+
+    </script>
+}

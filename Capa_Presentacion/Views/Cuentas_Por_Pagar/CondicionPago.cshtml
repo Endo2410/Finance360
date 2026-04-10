@@ -1,0 +1,552 @@
+﻿@using System.Text.Json
+@model List<Capa_Entidad.Cuentas_Por_Pagar.CondicionPagoProveedor>
+
+@{
+    ViewData["Title"] = "Condiciones de Pago por Proveedor";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<ol class="breadcrumb mb-4 mt-4">
+    <li class="breadcrumb-item">
+        <a asp-controller="Home" asp-action="Bienvenido">Inicio</a>
+    </li>
+    <li class="breadcrumb-item active">Condiciones de Pago</li>
+</ol>
+
+<div class="card shadow border-0">
+
+    <div class="card-header text-white d-flex justify-content-between align-items-center"
+         style="background-color:#274DF5;">
+
+        <span>
+            <i class="fas fa-file-invoice-dollar me-2"></i>
+            Condiciones de Pago por Proveedor
+        </span>
+
+        <button id="btnNuevo" class="btn btn-light btn-sm">
+            <i class="fas fa-plus"></i> Nueva Condición
+        </button>
+
+    </div>
+
+    <div class="card-body">
+
+        <div class="row mb-3">
+
+            <div class="col-md-3">
+                <select id="filtroCampo" class="form-control">
+                    <option value="">-- Filtrar por --</option>
+                    <option value="1">Proveedor</option>
+                    <option value="2">Días Crédito</option>
+                    <option value="3">Retención</option>
+                    <option value="4">Descuento</option>
+                </select>
+            </div>
+
+            <div class="col-md-4">
+                <input id="filtroValor"
+                       class="form-control"
+                       placeholder="Buscar..."
+                       autocomplete="off"
+                       onkeyup="filtrarColumna()" />
+            </div>
+
+        </div>
+
+
+        <table class="table table-striped" id="tablaCondiciones">
+
+            <thead class="text-white" style="background-color:#274DF5;">
+
+                <tr>
+                    <th style="display:none;">ID</th>
+                    <th>Proveedor</th>
+                    <th>Días Crédito</th>
+                    <th>Retención</th>
+                    <th>Descuento</th>
+                    <th class="text-center">Acciones</th>
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+                @foreach (var c in Model)
+                {
+
+                var json = JsonSerializer.Serialize(new
+                {
+                c.IdCondicion,
+                IdProveedor = c.oProveedor?.IdProveedor ?? 0,
+                Proveedor = c.oProveedor?.NombreProveedor ?? "",
+                c.DiasCredito,
+                IdTipoRetencion = c.oTipoRetencion?.IdTipoRetencion ?? 0,
+                Retencion = c.oTipoRetencion?.Nombre ?? "",
+                IdTipoDescuento = c.oTipoDescuento?.IdTipoDescuento ?? 0,
+                Descuento = c.oTipoDescuento?.Nombre ?? ""
+                });
+
+                <tr>
+
+                    <td style="display:none;">@c.IdCondicion</td>
+                    <td>@c.oProveedor?.NombreProveedor</td>
+                    <td>@c.DiasCredito</td>
+                    <td>@c.oTipoRetencion?.Nombre</td>
+                    <td>@c.oTipoDescuento?.Nombre</td>
+
+                    <td class="text-center">
+
+                        <button class="btn btn-warning btn-sm btn-editar"
+                                data-json='@Html.Raw(json)'>
+
+                            <i class="fas fa-edit"></i> Editar
+
+                        </button>
+
+                    </td>
+
+                </tr>
+
+                }
+
+            </tbody>
+
+        </table>
+
+    </div>
+</div>
+
+<!-- ================= MODAL CONDICION ================= -->
+
+<div class="modal fade" id="modalCondicion" tabindex="-1" data-bs-backdrop="static">
+
+    <div class="modal-dialog">
+
+        <div class="modal-content">
+
+                <div class="modal-header bg-primary text-white">
+
+                    <h5 class="modal-title">Condición de Pago</h5>
+
+                    <button class="btn-close" data-bs-dismiss="modal"></button>
+
+                </div>
+
+                <div class="modal-body">
+
+                    <input type="hidden" id="txtIdCondicion" value="0" />
+                    <input type="hidden" id="cboproveedor" />
+
+                    <div class="row g-3">
+
+                        <div class="col-md-12">
+
+                            <label>Proveedor</label>
+
+                            <div class="input-group">
+
+                                <input id="txtProveedorNombre"
+                                       class="form-control"
+                                       readonly />
+
+                                <button class="btn btn-secondary"
+                                        onclick="abrirModalProveedor()">
+
+                                    Buscar
+
+                                </button>
+
+                            </div>
+
+                        </div>
+
+                        <div class="col-md-12">
+
+                            <label>Días de Crédito</label>
+
+                            <input id="txtDiasCredito"
+                                   type="number"
+                                   class="form-control" />
+
+                        </div>
+
+                        <div class="col-md-12">
+
+                            <label>Tipo Retención</label>
+
+                            <select id="cboRetencion"
+                                    class="form-select"></select>
+
+                        </div>
+
+                        <div class="col-md-12">
+
+                            <label>Tipo Descuento</label>
+
+                            <select id="cboDescuento"
+                                    class="form-select"></select>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+
+                    <button class="btn btn-secondary"
+                            data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+
+                    <button class="btn btn-primary"
+                            onclick="guardarCondicion()">
+
+                        Guardar
+
+                    </button>
+
+                </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- ================= MODAL PROVEEDOR ================= -->
+
+<div class="modal fade" id="modalProveedor">
+
+    <div class="modal-dialog">
+
+        <div class="modal-content">
+
+                <div class="modal-header bg-primary text-white">
+
+                    <h5 class="modal-title">Seleccionar Proveedor</h5>
+
+                </div>
+
+                <div class="modal-body">
+
+                    <input id="txtFiltrarProveedor"
+                           class="form-control mb-2"
+                           placeholder="Buscar proveedor" />
+
+                    <table class="table table-hover"
+                           id="tablaProveedores">
+
+                        <thead>
+                            <tr>
+                                <th>RUC</th>
+                                <th>Nombre</th>
+                            </tr>
+                        </thead>
+
+                        <tbody></tbody>
+
+                    </table>
+
+                </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- ================= MODAL EXITO ================= -->
+
+<div class="modal fade" id="modalExito">
+
+    <div class="modal-dialog modal-dialog-centered">
+
+        <div class="modal-content">
+
+                <div class="modal-header bg-success text-white">
+
+                    <h5 class="modal-title">Éxito</h5>
+
+                    <button class="btn-close"
+                            data-bs-dismiss="modal"></button>
+
+                </div>
+
+                <div class="modal-body" id="cuerpoExito"></div>
+
+                <div class="modal-footer">
+
+                    <button class="btn btn-secondary"
+                            data-bs-dismiss="modal">
+                        Cerrar
+                    </button>
+
+                </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- ================= MODAL ERROR ================= -->
+
+<div class="modal fade" id="modalMensaje">
+
+    <div class="modal-dialog modal-dialog-centered">
+
+        <div class="modal-content">
+
+            <div class="modal-header bg-danger text-white">
+
+                <h5 class="modal-title">Error</h5>
+
+                <button class="btn-close"
+                        data-bs-dismiss="modal"></button>
+
+            </div>
+
+            <div class="modal-body" id="cuerpoMensaje"></div>
+
+            <div class="modal-footer">
+
+                <button class="btn btn-secondary"
+                        data-bs-dismiss="modal">
+                    Cerrar
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+@section Scripts{
+
+<script>
+
+    $(document).ready(function(){
+
+        $('#tablaCondiciones').DataTable({
+
+            pageLength: 15,
+            lengthChange: false,
+            searching: false,
+            ordering: false,
+            responsive: true,
+            language: {
+                paginate: { previous: "Anterior", next: "Siguiente" },
+                info: "Mostrando _START_ a _END_ de _TOTAL_ registros",
+                emptyTable: "No hay condiciones registradas"
+            }
+
+        });
+
+        cargarRetenciones();
+        cargarDescuentos();
+
+        $('#btnNuevo').click(function(){
+
+        abrirModal()
+
+        })
+
+    })
+
+    function filtrarColumna() {
+
+        let idx = $('#filtroCampo').val()
+        let val = $('#filtroValor').val().toLowerCase()
+
+        $('#tablaCondiciones tbody tr').each(function () {
+
+            if (idx === "") {
+                $(this).show()
+                return
+            }
+
+            let texto = $(this).find('td').eq(idx).text().toLowerCase()
+
+            $(this).toggle(texto.includes(val))
+
+        })
+
+    }
+
+    $('#txtFiltrarProveedor').on('keyup', function () {
+
+        let valor = $(this).val().toLowerCase()
+
+        $('#tablaProveedores tbody tr').filter(function () {
+
+            $(this).toggle($(this).text().toLowerCase().indexOf(valor) > -1)
+
+        })
+
+    })
+
+    function abrirModal(data=null){
+
+        $('#txtIdCondicion').val(data?.IdCondicion ?? 0)
+
+        $('#cboproveedor').val(data?.IdProveedor ?? 0)
+
+        $('#txtProveedorNombre').val(data?.Proveedor ?? "")
+
+        $('#txtDiasCredito').val(data?.DiasCredito ?? "")
+
+        $('#cboRetencion').val(data?.IdTipoRetencion ?? "")
+
+        $('#cboDescuento').val(data?.IdTipoDescuento ?? "")
+
+        new bootstrap.Modal('#modalCondicion').show()
+
+    }
+
+    $('#tablaCondiciones').on('click','.btn-editar',function(){
+
+    let data = JSON.parse($(this).attr('data-json'))
+
+    abrirModal(data)
+
+    })
+
+    function guardarCondicion(){
+
+        let obj={
+
+        IdCondicion:$('#txtIdCondicion').val(),
+
+        IdProveedor:$('#cboproveedor').val(),
+
+        DiasCredito:$('#txtDiasCredito').val(),
+
+        IdTipoRetencion:$('#cboRetencion').val(),
+
+        IdTipoDescuento:$('#cboDescuento').val()
+
+        }
+
+    $.ajax({
+
+    url: obj.IdCondicion==0
+            ?'/Cuentas_Por_Pagar/Crear'
+            :'/Cuentas_Por_Pagar/Editar',
+
+    type:'POST',
+
+    data:obj,
+
+    success:function(r){
+
+    if(r.success){
+
+    $('#cuerpoExito').html("Operación realizada correctamente")
+
+    new bootstrap.Modal('#modalExito').show()
+
+    setTimeout(()=>location.reload(),1500)
+
+    }else{
+
+    $('#cuerpoMensaje').html(r.mensajes.join("<br>"))
+
+    new bootstrap.Modal('#modalMensaje').show()
+
+    }
+
+    },
+
+    error:function(){
+
+    $('#cuerpoMensaje').html("Error al conectar con el servidor")
+
+    new bootstrap.Modal('#modalMensaje').show()
+
+    }
+
+    })
+
+    }
+
+    function abrirModalProveedor(){
+
+        $.get('/Proveedores/Listar',function(data){
+
+            let tbody=$('#tablaProveedores tbody')
+
+            tbody.empty()
+
+            data.forEach(p=>{
+
+            tbody.append(`
+            <tr data-id="${p.idProveedor}" data-nombre="${p.nombre}">
+            <td>${p.ruc}</td>
+            <td>${p.nombre}</td>
+            </tr>
+            `)
+
+        })
+
+            $('#tablaProveedores tbody tr').click(function(){
+
+            $('#cboproveedor').val($(this).data('id'))
+
+            $('#txtProveedorNombre').val($(this).data('nombre'))
+
+            bootstrap.Modal.getInstance(document.getElementById('modalProveedor')).hide()
+
+            })
+
+        })
+
+        new bootstrap.Modal('#modalProveedor').show()
+
+    }
+
+    function cargarRetenciones(){
+
+        $.get('/TipoRetencion/Listar',function(data){
+
+            let cbo=$('#cboRetencion')
+
+                cbo.empty()
+
+                cbo.append('<option value="">Seleccione</option>')
+
+                data.forEach(r=>{
+
+                cbo.append(`<option value="${r.id}">${r.nombre}</option>`)
+
+            })
+
+        })
+
+    }
+
+    function cargarDescuentos(){
+
+        $.get('/TipoRetencion/ListarDescuento',function(data){
+
+            let cbo=$('#cboDescuento')
+
+                cbo.empty()
+
+                cbo.append('<option value="">Seleccione</option>')
+
+                data.forEach(d=>{
+
+                cbo.append(`<option value="${d.id}">${d.nombre}</option>`)
+
+            })
+
+        })
+
+    }
+
+    </script>
+
+}

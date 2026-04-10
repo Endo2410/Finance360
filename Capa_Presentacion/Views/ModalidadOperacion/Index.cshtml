@@ -6,9 +6,91 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
+<br />
+<br />
+
+
+<div class="row">
+    <!-- Publcidad -->
+    <div class="col-md-2 mb-2">
+        <a asp-controller="TipoPublicidad" asp-action="Index" class="text-decoration-none">
+            <div class="card shadow h-100 border-0">
+                <div class="card-body text-center">
+                    <i class="fas fa-bullhorn fa-2x text-danger"></i>
+                    <h6 class="mt-2">Tipo Publicidad</h6>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <!-- Tipo Retenciones-->
+    <div class="col-md-2 mb-2">
+        <a asp-controller="TipoRetencion" asp-action="Index" class="text-decoration-none">
+            <div class="card shadow h-100 border-0">
+                <div class="card-body text-center">
+                    <i class="fas fa-hand-holding-usd fa-2x text-danger"></i>
+                    <h6 class="mt-2">Tipo Retención</h6>
+                </div>
+            </div>
+        </a>
+    </div>
+
+
+    <!-- Rebate -->
+    <div class="col-md-2 mb-2">
+        <a asp-controller="Rebate" asp-action="Tipo_Rebate" class="text-decoration-none">
+            <div class="card shadow h-100 border-0">
+                <div class="card-body text-center">
+                    <i class="fas fa-percentage fa-2x text-info"></i>
+                    <h6 class="mt-2">Tipo Rebate</h6>
+                </div>
+            </div>
+        </a>
+    </div>
+
+
+    <!-- Documento Pago -->
+    <div class="col-md-2 mb-2">
+        <a asp-controller="TipoDocumentoPago" asp-action="Index" class="text-decoration-none">
+            <div class="card shadow h-100 border-0">
+                <div class="card-body text-center">
+                    <i class="fas fa-file-invoice fa-2x text-secondary"></i>
+                    <h6 class="mt-2">Tipo Pago</h6>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <!-- Modalidad -->
+    <div class="col-md-2 mb-2">
+        <a asp-controller="Modalidad" asp-action="Index" class="text-decoration-none">
+            <div class="card shadow h-100 border-0">
+                <div class="card-body text-center">
+                    <i class="fas fa-cogs fa-2x text-danger"></i>
+                    <h6 class="mt-2">Modalidad</h6>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <!-- Operaciones -->
+    <div class="col-md-2 mb-2">
+        <a asp-controller="ModalidadOperacion" asp-action="Index" class="text-decoration-none">
+            <div class="card shadow h-100 border-0">
+                <div class="card-body text-center">
+                    <i class="fas fa-exchange-alt fa-2x text-info"></i>
+                    <h6 class="mt-2">Operaciones</h6>
+                </div>
+            </div>
+        </a>
+    </div>
+</div>
+
+
+
 <!-- Breadcrumb -->
 <ol class="breadcrumb mb-4 mt-4">
-    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Inicio</a></li>
+    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Bienevenido">Inicio</a></li>
     <li class="breadcrumb-item active">Modalidades de Operación</li>
 </ol>
 
@@ -73,7 +155,7 @@
 
                     <div class="mb-3">
                         <label class="form-label">Nombre</label>
-                        <input id="txtnombre" class="form-control" required  />
+                        <input id="txtnombre" class="form-control" required />
                     </div>
 
                     <div class="mb-3">

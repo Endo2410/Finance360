@@ -12,6 +12,8 @@ namespace Capa_Entidad
         public decimal MontoTotal { get; set; }
         public string Observacion { get; set; }
         public List<DetallePagoCanje> DetalleCanjes { get; set; }
+         public List<RetencionVM> Retenciones { get; set; }
+            = new List<RetencionVM>();
     }
 
     public class DetallePagoCanje
@@ -36,6 +38,7 @@ namespace Capa_Entidad
         public string NumeroConfirmacion { get; set; }
 
         public string Comprobante { get; set; }  // Comprobante
+        public string Observacion { get; set; }  // Comprobante
         public string UsuarioPago { get; set; }
         public DateTime FechaRegistro { get; set; }
 

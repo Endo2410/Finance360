@@ -1,0 +1,70 @@
+﻿
+@{
+    Layout = null;
+}
+
+<div class="table-responsive">
+
+    <table id="tablaIncentivosRecibidos" class="table table-bordered table-striped">
+
+        <thead class="table-dark">
+            <tr>
+                <th>Fecha</th>
+                <th>Incentivo</th>
+                <th>Proveedor</th>
+                <th>Monto</th>
+            </tr>
+        </thead>
+
+        <tbody id="tbodyIncentivosRecibidos">
+        </tbody>
+
+    </table>
+
+</div>
+
+
+<script>
+
+    function iniciarTablaIncentivos() {
+
+        if ($.fn.DataTable.isDataTable('#tablaIncentivosRecibidos')) {
+            $('#tablaIncentivosRecibidos').DataTable().destroy();
+        }
+
+        $('#tablaIncentivosRecibidos').DataTable({
+            pageLength: 6,
+            lengthChange: false,
+            searching: false,
+            ordering: false,
+            responsive: true,
+            language: {
+                paginate: {
+                    previous: "Anterior",
+                    next: "Siguiente"
+                },
+                info: "Mostrando _START_ a _END_ de _TOTAL_ registros",
+                emptyTable: "No hay incentivos registrados"
+            }
+        });
+
+    }
+    //function filtrarMovimientos() {
+
+    //    let idx = $('#filtroCampoMov').val();
+    //    let val = $('#filtroValorMov').val().toLowerCase();
+
+    //    $('#tablaMovimientos tbody tr').each(function () {
+
+    //        if (idx === "") {
+    //            $(this).show();
+    //            return;
+    //        }
+
+    //        let texto = $(this).find('td').eq(idx).text().toLowerCase();
+
+    //        $(this).toggle(texto.includes(val));
+
+    //    });
+    /*}*/
+</script>

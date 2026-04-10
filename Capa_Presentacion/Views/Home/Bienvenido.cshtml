@@ -1,0 +1,56 @@
+﻿@{
+    ViewData["Title"] = "Bienvenido";
+}
+
+<div class="welcome-wrapper">
+
+    <img src="/img/SABA.jpg" class="welcome-logo" />
+
+    <div class="welcome-text">
+
+        <h2>BIENVENIDO A</h2>
+
+        <h1>Vista 360 Finance</h1>
+
+    </div>
+
+</div>
+
+<style>
+
+    .welcome-wrapper {
+        height: 85vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+        font-family: 'Segoe UI', Tahoma, sans-serif;
+    }
+
+    /* logo de fondo tipo watermark */
+    .welcome-logo {
+        position: absolute;
+        width: 820px;
+        opacity: 0.08;
+    }
+
+    /* texto */
+    .welcome-text {
+        text-align: center;
+    }
+
+        .welcome-text h2 {
+            font-size: 2em;
+            font-weight: 400;
+            color: #666;
+            letter-spacing: 4px;
+            margin: 0;
+        }
+
+        .welcome-text h1 {
+            font-size: 3.8em;
+            font-weight: 700;
+            color: #26634A;
+            margin-top: 10px;
+        }
+</style>

@@ -2,13 +2,17 @@
 @model List<Capa_Entidad.Usuario>
 
 @{
+    var rolUsuario = Context.Session.GetString("RolUsuario") ?? "";
+}
+
+@{
     ViewData["Title"] = "Gestión de Usuarios";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
 <!-- Breadcrumb -->
 <ol class="breadcrumb mb-4 mt-4">
-    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Inicio</a></li>
+    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Bienvenido">Inicio</a></li>
     <li class="breadcrumb-item active">Usuarios</li>
 </ol>
 
@@ -23,10 +27,32 @@
     </div>
 
     <div class="card-body">
+
+        <!-- Filtro por columna -->
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <select id="filtroCampo" class="form-control">
+                    <option value="">-- Filtrar por --</option>
+                    <option value="0">Nombres</option>
+                    <option value="1">Apellidos</option>
+                    <option value="4">Rol</option>
+                    <option value="5">Estado</option>
+                </select>
+            </div>
+
+            <div class="col-md-4">
+                <input id="filtroValor"
+                       class="form-control"
+                       placeholder="Buscar..."
+                       autocomplete="off"
+                       onkeyup="filtrarColumna()" />
+            </div>
+        </div>
+
         <table class="table table-striped align-middle" id="tablaUsuarios">
             <thead class="text-white" style="background-color:#274DF5;">
                 <tr>
-                    <th>ID</th>
+                    @*                     <th>ID</th> *@
                     <th>Nombres</th>
                     <th>Apellidos</th>
                     <th>Usuario</th>
@@ -39,6 +65,16 @@
             <tbody>
                 @foreach (var u in Model)
                 {
+                    var rol = u.oRol?.Nombre?.ToUpper();
+
+                    if (rolUsuario == "ADMINISTRADOR" &&
+                       (rol == "DESARROLLADOR" ||
+                        rol == "PAGOS GUBERNAMENTALES" ||
+                        rol == "BACK ORDER"))
+                    {
+                        continue;
+                    }
+
                     var json = JsonSerializer.Serialize(new
                     {
                         u.IdUsuario,
@@ -47,11 +83,12 @@
                         u.NombreUsuario,
                         u.Correo,
                         IdRol = u.oRol?.IdRol ?? 0,
-                        IdEstado = u.oEstado?.IdEstado ?? 0
+                        IdEstado = u.oEstado?.IdEstado ?? 0,
+                        IdSucursal = u.IdSucursal,
+                        SucursalNombre = u.NombreSucursal
                     });
 
                     <tr>
-                        <td>@u.IdUsuario</td>
                         <td>@u.Nombres</td>
                         <td>@u.Apellidos</td>
                         <td>@u.NombreUsuario</td>
@@ -59,13 +96,13 @@
                         <td>@u.oRol?.Nombre</td>
                         <td>@u.oEstado?.Nombre</td>
                         <td class="text-center">
-                            <button class="btn btn-warning btn-sm" onclick='abrirModal(@Html.Raw(json))'>
+                            <button class="btn btn-warning btn-sm"
+                                    onclick='abrirModal(@Html.Raw(json))'>
                                 <i class="fas fa-edit"></i>
                             </button>
                         </td>
                     </tr>
                 }
-            </tbody>
         </table>
     </div>
 </div>
@@ -116,6 +153,25 @@
                             <select id="cboestado" class="form-select"></select>
                         </div>
 
+                        <div class="col-md-6" id="divSucursal" style="display:none;">
+                            <label class="form-label">Sucursal</label>
+
+                            <div class="input-group">
+                                <input type="hidden" id="cbosucursal" />
+
+                                <input id="txtSucursalNombre"
+                                       class="form-control"
+                                       placeholder="Seleccione una sucursal"
+                                       readonly>
+
+                                <button class="btn btn-secondary"
+                                        type="button"
+                                        onclick="abrirModalSucursal()">
+                                    Buscar
+                                </button>
+                            </div>
+                        </div>
+
                         <div class="col-12 mt-3">
                             <div class="alert alert-danger d-none" id="mensajeError"></div>
                             <div class="alert alert-success d-none" id="mensajeOk"></div>
@@ -131,6 +187,36 @@
         </div>
     </div>
 </div>
+
+<!-- ================= MODAL SUCURSAL ================= -->
+<div class="modal fade" id="modalsucursal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-md">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Seleccionar Sucursal</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <div class="mb-3">
+                    <input type="text" id="txtFiltrarsucusal" class="form-control" placeholder="Filtrar sucursal por nombre o codigo ">
+                </div>
+                <table class="table table-striped table-hover" id="tablasucursal">
+                    <thead>
+                        <tr>
+                            <th>Codigo</th>
+                            <th>Nombre</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Se llena dinámicamente -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
 
 <!-- Modal global para mensajes de éxito -->
 <div class="modal fade" id="modalExito" tabindex="-1">
@@ -167,17 +253,66 @@
 @section Scripts {
     <script>
         $(document).ready(function () {
+
+            $('#tablaUsuarios').DataTable({
+                pageLength: 15,
+                lengthChange: false,
+                searching: false,
+                ordering: false,
+                responsive: true,
+                language: {
+                    paginate: { previous: "Anterior", next: "Siguiente" },
+                    info: "Mostrando _START_ a _END_ de _TOTAL_ registros",
+                    emptyTable: "No hay usuarios registrados"
+                }
+            });
+
             cargarRoles();
             cargarEstados();
+
             $('#btnNuevo').click(() => abrirModal());
+
+            $('#cborol').change(function () {
+
+                let rolSeleccionado = $(this).find('option:selected').text().toUpperCase();
+
+                if (rolSeleccionado === "SUCURSAL") {
+                    $('#divSucursal').show();
+                    cargarSucursales();
+                } else {
+                    $('#divSucursal').hide();
+                }
+            });
+
         });
 
+        function filtrarColumna() {
+
+            let idx = $('#filtroCampo').val();
+            let val = $('#filtroValor').val().toLowerCase();
+
+            $('#tablaUsuarios tbody tr').each(function () {
+
+                if (idx === "") {
+                    $(this).show();
+                    return;
+                }
+
+                let texto = $(this).find('td').eq(idx).text().toLowerCase();
+
+                $(this).toggle(texto.includes(val));
+            });
+        }
+
         function abrirModal(u = null) {
+
             $('#mensajeError, #mensajeOk').addClass('d-none').text('');
             $('#formUsuario')[0].reset();
+
             $('#txtid').val(u ? u.IdUsuario : 0);
 
             if (u) {
+
                 $('#txtnombres').val(u.Nombres);
                 $('#txtapellidos').val(u.Apellidos);
                 $('#txtusuario').val(u.NombreUsuario);
@@ -185,22 +320,112 @@
                 $('#cborol').val(u.IdRol);
                 $('#cboestado').val(u.IdEstado);
 
-                // 🔒 Bloquear estado si es el usuario logueado
                 let idUsuarioLogueado = $('#idUsuarioLogueado').val();
                 $('#cboestado').prop('disabled', u.IdUsuario == idUsuarioLogueado);
+
             } else {
+
                 $('#cboestado').prop('disabled', false);
+
+            }
+
+            let rolSeleccionado = $('#cborol option:selected').text().toUpperCase();
+
+            if (rolSeleccionado === "SUCURSAL") {
+
+                $('#divSucursal').show();
+
+                if (u && u.IdSucursal) {
+
+                    // guardar ID
+                    $('#cbosucursal').val(u.IdSucursal);
+
+                    // mostrar nombre directamente
+                    $('#txtSucursalNombre').val(u.SucursalNombre);
+
+                }
+
+            } else {
+
+                $('#divSucursal').hide();
+                $('#cbosucursal').val('');
+                $('#txtSucursalNombre').val('');
+
             }
 
             new bootstrap.Modal('#modalUsuario').show();
         }
 
         function cargarRoles() {
+
+            let rolUsuario = '@rolUsuario';
+
             $.get('/Rol/Listar', data => {
+
                 $('#cborol').empty();
-                data.forEach(r => $('#cborol').append(`<option value="${r.idRol}">${r.nombre}</option>`));
+
+                data.forEach(r => {
+
+                    // 🔒 ADMINISTRADOR no puede ver estos roles
+                    if (rolUsuario === "ADMINISTRADOR" &&
+                        (r.nombre.toUpperCase() === "DESARROLLADOR" ||
+                         r.nombre.toUpperCase() === "PAGOS GUBERNAMENTALES")) {
+                        return; // skip
+                    }
+
+                    $('#cborol').append(
+                        `<option value="${r.idRol}">${r.nombre}</option>`
+                    );
+                });
             });
         }
+
+        // ================= SUCURSAL =================
+
+        function abrirModalSucursal() {
+            cargarSucursalModal();
+            $('#txtFiltrarsucusal').val('');
+            new bootstrap.Modal('#modalsucursal').show();
+        }
+
+
+        function cargarSucursalModal() {
+            $.get('/Cuentas_X_PagarAlejandra/Listar', function (data) {
+                let tbody = $('#tablasucursal tbody');
+                tbody.empty();
+                data.forEach(p => {
+                    tbody.append(`
+                <tr data-id="${p.idsucursal}" data-nombre="${p.nombre}">
+                    <td>${p.codigo}</td>
+                    <td>${p.nombre}</td>
+                </tr>
+            `);
+                });
+
+                // Click en la fila selecciona proveedor automáticamente
+                $('#tablasucursal tbody tr').click(function () {
+                    let id = $(this).data('id');
+                    let nombre = $(this).data('nombre');
+                    $('#cbosucursal').val(id);
+                    $('#txtSucursalNombre').val(nombre);
+                    bootstrap.Modal.getInstance(document.getElementById('modalsucursal')).hide();
+                });
+            });
+        }
+
+        function seleccionarSucursal(id, nombre) {
+            $('#cbosucursal').val(id);
+            $('#txtSucursalNombre').val(nombre);
+            bootstrap.Modal.getInstance(document.getElementById('modalsucursal')).hide();
+        }
+
+        // Filtro dinámico
+        $('#txtFiltrarsucusal').on('keyup', function () {
+            let valor = $(this).val().toLowerCase();
+            $('#tablasucursal tbody tr').filter(function () {
+                $(this).toggle($(this).text().toLowerCase().indexOf(valor) > -1);
+            });
+        });
 
         function cargarEstados() {
             $.get('/Pais/Estado', data => {
@@ -229,7 +454,8 @@
                 NombreUsuario: $('#txtusuario').val(),
                 Correo: $('#txtcorreo').val(),
                 IdRol: $('#cborol').val(),
-                IdEstado: $('#cboestado').val()
+                IdEstado: $('#cboestado').val(),
+                IdSucursal: $('#divSucursal').is(':visible') ? $('#cbosucursal').val() : null
             };
 
             let url = usuario.IdUsuario == 0 ? '/Usuarios/Crear' : '/Usuarios/Editar';

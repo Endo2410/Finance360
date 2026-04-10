@@ -83,6 +83,8 @@ namespace Capa_Presentacion.Controllers
                 campania.DocumentoAdjunto = Request.Form["DocumentoAdjunto"];
             }
 
+            campania.UsuarioModificacion = HttpContext.Session.GetString("NombreCompleto") ?? "UsuarioDesconocido";
+
             // Llamada al CN
             bool exito = objcn.EditarCampania(campania, out List<string> mensajes);
 

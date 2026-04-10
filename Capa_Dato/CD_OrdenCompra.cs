@@ -13,38 +13,7 @@ namespace Capa_Dato
     {
         private readonly string cadenaConexion = Conexion.cn;
 
-        public List<OrdenCompra> ObtenerReporteOrdenes(DateTime inicio, DateTime fin)
-        {
-            List<OrdenCompra> lista = new();
-
-            using (SqlConnection cn = new SqlConnection(Conexion.cn))
-            {
-                SqlCommand cmd = new SqlCommand("SP_OBTENER_REPORTE_ORDENES_COMPRA", cn);
-                cmd.CommandType = CommandType.StoredProcedure;
-                cmd.Parameters.AddWithValue("@FechaInicio", inicio);
-                cmd.Parameters.AddWithValue("@FechaFin", fin);
-
-                cn.Open();
-                using (SqlDataReader dr = cmd.ExecuteReader())
-                {
-                    while (dr.Read())
-                    {
-                        lista.Add(new OrdenCompra
-                        {
-                            Proveedor = dr["Proveedor"].ToString(),
-                            NumeroOrden = dr["NumeroOrden"].ToString(),
-                            Estado = dr["Estado"].ToString(),
-                            Confirmacion = dr["Confirmacion"].ToString(),
-                            Observaciones = dr["Observaciones"].ToString(),
-                            FechaCreacion = Convert.ToDateTime(dr["FechaCreacion"]),
-
-                        });
-                    }
-                }
-            }
-            return lista;
-        }
-
+   
         //nuevos 
 
         public List<OrdenCompra> ObtenerOrdenes(DateTime inicio, DateTime fin)
@@ -96,6 +65,5 @@ namespace Capa_Dato
                 return Convert.ToInt32(cmd.ExecuteScalar() ?? 0);
             }
         }
-
     }
 }

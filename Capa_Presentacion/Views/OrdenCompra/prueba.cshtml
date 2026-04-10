@@ -1,0 +1,672 @@
+﻿@model List<Capa_Entidad.OrdenCompra>
+
+@{
+    ViewData["Title"] = "Pago Facturas OC";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var facturasPendientes = Model
+        .Where(x => x.IdEstado == 5) // pendiente
+        .ToList();
+
+}
+
+<ol class="breadcrumb mb-4 mt-4">
+    <li class="breadcrumb-item">
+        <a asp-controller="Home" asp-action="Bienevenido">Inicio</a>
+    </li>
+    <li class="breadcrumb-item active">
+        Pago Facturas Orden Compra
+    </li>
+</ol>
+
+<div class="card shadow border-0">
+
+    <div class="card-header text-white" style="background-color:#274DF5;">
+        <i class="fas fa-file-invoice-dollar me-2"></i>
+        Pago de Facturas OC
+    </div>
+
+    <div class="card-body">
+
+        <div class="row mb-3">
+
+            <div class="col-md-4">
+
+                <label>Proveedor</label>
+
+                <div class="input-group">
+
+                    <input type="text"
+                           id="txtProveedorSeleccionado"
+                           class="form-control"
+                           readonly>
+
+                    <button class="btn btn-primary"
+                            id="btnAbrirModalProveedor">
+
+                        <i class="fas fa-search"></i>
+
+                    </button>
+
+                </div>
+
+                <input type="hidden" id="cmbProveedor" />
+
+            </div>
+
+        </div>
+
+        <table class="table table-striped" id="tablaFacturas">
+
+            <thead class="text-white" style="background-color:#274DF5;">
+
+                <tr>
+
+
+                    <th class="text-center">
+                        <input type="checkbox" id="chkTodasFacturas">
+                    </th>
+                    <th>Orden</th>
+                    <th>Factura</th>
+                    <th>Proveedor</th>
+                    <th class="text-center">Total</th>
+
+                </tr>
+
+            </thead>
+
+            <tbody></tbody>
+
+        </table>
+
+        <button id="btnPagar" class="btn btn-success">
+
+            <i class="fas fa-check"></i>
+            Registrar Pago
+
+        </button>
+
+    </div>
+</div>
+
+
+
+<!-- MODAL PROVEEDORES -->
+
+<div class="modal fade" id="modalProveedores">
+
+    <div class="modal-dialog modal-dialog-centered">
+
+        <div class="modal-content">
+
+            <div class="modal-header bg-primary text-white">
+
+
+                <h5 class="modal-title">
+                    Seleccionar Proveedor
+                </h5>
+
+                <button type="button" class="btn-close"
+                        data-bs-dismiss="modal"></button>
+
+            </div>
+
+            <div class="modal-body">
+                <div class="row mb-3">
+
+                    <div class="col-md-6">
+                        <label>Fecha Inicio</label>
+                        <input type="date" id="fechaInicio" class="form-control">
+                    </div>
+
+                    <div class="col-md-6">
+                        <label>Fecha Fin</label>
+                        <input type="date" id="fechaFin" class="form-control">
+                    </div>
+
+                </div>
+
+
+                <table class="table table-hover">
+
+                    <thead>
+
+                        <tr>
+                            <th>Proveedor</th>
+                            <th></th>
+                        </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                        @foreach (var p in facturasPendientes.Select(x => x.Proveedor).Distinct())
+                        {
+                            <tr>
+
+                                <td>@p</td>
+
+                                <td>
+
+                                    <button class="btn btn-success btn-sm btnSeleccionarProveedor"
+                                            data-nombre="@p">
+
+                                        Seleccionar
+
+                                    </button>
+
+                                </td>
+
+                            </tr>
+                        }
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+    </div>
+</div>
+
+
+<!-- MODAL DE PAGO -->
+<div class="modal fade" id="modalPago">
+
+    <div class="modal-dialog modal-xl">
+
+        <div class="modal-content">
+
+            <div class="modal-header bg-primary text-white">
+
+                <h5 class="modal-title">
+                    Datos del Pago
+                </h5>
+
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+
+            </div>
+
+            <div class="modal-body">
+
+                <h6 class="fw-bold text-primary">
+                    Facturas Seleccionadas
+                </h6>
+
+                <div class="table-responsive mb-3">
+
+                    <table class="table table-sm table-bordered"
+                           id="tablaFacturasSeleccionadas">
+
+                        <thead class="table-primary text-center">
+
+                            <tr>
+                                <th>Orden</th>
+                                <th>Factura</th>
+                                <th>Proveedor</th>
+                                <th class="text-end">Total</th>
+                            </tr>
+
+                        </thead>
+
+                        <tbody></tbody>
+
+                    </table>
+
+                </div>
+
+                <div class="alert alert-success d-flex justify-content-between">
+
+                    <strong>Total Facturas</strong>
+
+                    <span id="lblTotal" class="fs-5 fw-bold"
+                          data-total="0"></span>
+
+                </div>
+
+                <hr>
+
+                <h6 class="fw-bold text-danger">
+                    <i class="fas fa-percentage me-1"></i>
+                    Retenciones
+                </h6>
+
+                <div class="row mb-2">
+
+                    <div class="col-md-6">
+
+                        <select id="cmbRetenciones" class="form-control">
+
+                            <option value="">-- Seleccionar retención --</option>
+
+                        </select>
+
+                    </div>
+
+                </div>
+
+                <div id="contenedorRetenciones"></div>
+
+                <div class="alert alert-warning d-flex justify-content-between">
+
+                    <strong>Total Retenciones</strong>
+
+                    <span id="lblTotalRetenciones"
+                          data-total="0">
+
+                        C$0.00
+
+                    </span>
+
+                </div>
+
+                <div class="alert alert-primary d-flex justify-content-between">
+
+                    <strong>Total Neto a Pagar</strong>
+
+                    <span id="lblTotalNeto"
+                          data-total="0">
+
+                        C$0.00
+
+                    </span>
+
+                </div>
+
+                <hr>
+
+                <h6 class="fw-bold text-secondary">
+
+                    <i class="fas fa-money-check-alt me-1"></i>
+
+                    Datos del Cheque
+
+                </h6>
+
+                <div class="row">
+
+                    <div class="col-md-4">
+
+                        <label>Número de Cheque</label>
+
+                        <input type="text"
+                               id="txtNumeroCheque"
+                               class="form-control">
+
+                    </div>
+
+                    <div class="col-md-4">
+
+                        <label>Monto del Cheque</label>
+
+                        <input type="number"
+                               id="txtMontoCheque"
+                               class="form-control">
+
+                    </div>
+
+                </div>
+
+                <div class="mt-3">
+
+                    <label>Observación</label>
+
+                    <textarea id="txtObs" class="form-control"></textarea>
+
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+
+                <button id="btnConfirmarPago"
+                        class="btn btn-success">
+
+                    Confirmar Pago
+
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+@section scripts{
+ <script>
+     $(document).ready(function () {
+
+         $('#tablaFacturas').DataTable({
+             pageLength: 10,
+             lengthChange: false,
+             searching: false,
+             ordering: false,
+             responsive: true,
+             language: {
+                 paginate: { previous: "Anterior", next: "Siguiente" },
+                 info: "Mostrando _START_ a _END_ de _TOTAL_ registros",
+                 emptyTable: "No hay facturas"
+             }
+         });
+
+         $('#tablaFacturasSeleccionadas').DataTable({
+             pageLength: 10,
+             lengthChange: false,
+             searching: false,
+             ordering: false,
+             responsive: true,
+             language: {
+                 paginate: { previous: "Anterior", next: "Siguiente" },
+                 info: "Mostrando _START_ a _END_ de _TOTAL_ facturas",
+                 emptyTable: "No hay facturas seleccionadas"
+             }
+         });
+
+     });
+
+   const todasFacturas =
+     @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+        facturasPendientes.Select(x => new {
+
+            x.IdOrden,
+            x.NumeroOrden,
+            x.Proveedor,
+            x.Factura,
+            x.Total,
+            Fecha = x.FechaCreacion.ToString("yyyy-MM-dd")
+
+        })
+    ));
+
+     function fMonto(m){
+
+        return m.toLocaleString('es-NI',
+        {
+            style:'currency',
+            currency:'NIO'
+        });
+
+     }
+
+
+     $('#btnAbrirModalProveedor').click(function(){
+
+        new bootstrap.Modal(
+        document.getElementById('modalProveedores')
+        ).show();
+
+     });
+
+
+     $(document).on('click', '.btnSeleccionarProveedor', function () {
+
+         let prov = $(this).data('nombre');
+
+         let fechaInicio = $('#fechaInicio').val();
+         let fechaFin = $('#fechaFin').val();
+
+         // VALIDAR FECHAS
+         if (fechaInicio && fechaFin && fechaInicio > fechaFin) {
+             alert("La fecha inicio no puede ser mayor que la fecha fin");
+             return;
+         }
+
+         $('#txtProveedorSeleccionado').val(prov);
+
+         let tabla = $('#tablaFacturas').DataTable();
+         tabla.clear();
+
+         let lista = todasFacturas.filter(x => {
+
+             let fecha = new Date(x.Fecha);
+
+             let cumpleProveedor = x.Proveedor === prov;
+
+             let cumpleInicio = !fechaInicio || fecha >= new Date(fechaInicio);
+
+             let cumpleFin = !fechaFin || fecha <= new Date(fechaFin);
+
+             return cumpleProveedor && cumpleInicio && cumpleFin;
+
+         });
+
+         lista.forEach(e => {
+
+             tabla.row.add([
+                 `<input type="checkbox"
+             class="chkFactura"
+             value="${e.IdOrden}"
+             data-monto="${e.Total}">`,
+                 e.NumeroOrden,
+                 e.Factura,
+                 e.Proveedor,
+                 fMonto(e.Total)
+             ]);
+
+         });
+
+         tabla.draw();
+
+         bootstrap.Modal
+             .getInstance(document.getElementById('modalProveedores'))
+             .hide();
+
+     });
+
+     // ============================================
+     // RETENCIONES
+     // ============================================
+
+     // Cargar retenciones
+     $.get('/TipoRetencion/Listar', function (res) {
+
+         listaRetenciones = res;
+
+         let cmb = $('#cmbRetenciones');
+         cmb.empty().append('<option value="">-- Seleccionar retención --</option>');
+
+         res.forEach(r => {
+             cmb.append(`<option value="${r.id}" data-porcentaje="${r.porcentaje}">
+      ${r.nombre} (${r.porcentaje}%)
+     </option>`);
+         });
+
+     });
+
+     $('#cmbRetenciones').change(function () {
+
+         let id = $(this).val();
+         if (!id) return;
+
+         let option = $(this).find('option:selected');
+         let nombre = option.text();
+         let porcentaje = option.data('porcentaje');
+
+        $('#contenedorRetenciones').append(`
+            <div class="form-check retencion-item" data-id="${id}">
+                <input class="form-check-input chkRetencion"
+                       type="checkbox"
+                       checked
+                       data-id="${id}"
+                       data-porcentaje="${porcentaje}">
+
+                <label class="form-check-label">
+                    ${nombre}
+                </label>
+            </div>
+        `);
+
+         // eliminar del combo
+         option.remove();
+
+         $('#cmbRetenciones').val('');
+
+         calcularRetenciones();
+
+     });
+
+
+     $(document).on('change', '.chkRetencion', function () {
+
+         if (!$(this).is(':checked')) {
+
+             let cont = $(this).closest('.retencion-item');
+
+             let id = $(this).data('id');
+             let porcentaje = $(this).data('porcentaje');
+             let nombre = cont.find('label').text();
+
+            $('#cmbRetenciones').append(`
+                <option value="${id}" data-porcentaje="${porcentaje}">
+                    ${nombre}
+                </option>
+            `);
+
+             cont.remove();
+
+         }
+
+         calcularRetenciones();
+
+     });
+
+     // Evento cambio de retenciones
+     $(document).on('change', '.chkRetencion', function () {
+         calcularRetenciones();
+     });
+
+     // Cálculo de retenciones
+     function calcularRetenciones() {
+
+         let total = parseFloat($('#lblTotal').data('total')) || 0;
+         let totalRetenciones = 0;
+
+         $('.chkRetencion:checked').each(function () {
+             let porcentaje = parseFloat($(this).data('porcentaje'));
+             totalRetenciones += total * (porcentaje / 100);
+         });
+
+         let totalNeto = total - totalRetenciones;
+
+         $('#lblTotalRetenciones')
+             .data('total', totalRetenciones)
+             .text(fMonto(totalRetenciones));
+
+         $('#lblTotalNeto')
+             .data('total', totalNeto)
+             .text(fMonto(totalNeto));
+     }
+
+     $('#btnPagar').click(function () {
+
+         let tabla = $('#tablaFacturas').DataTable();
+
+         let seleccionadas = [];
+
+         tabla.rows().every(function () {
+
+             let chk = $(this.node()).find('.chkFactura');
+
+             if (chk.is(':checked')) {
+                 seleccionadas.push(chk);
+             }
+
+         });
+
+         if (seleccionadas.length == 0) {
+             alert('Seleccione facturas');
+             return;
+         }
+
+         let total = 0;
+
+         let tablaSel = $('#tablaFacturasSeleccionadas').DataTable();
+         tablaSel.clear();
+
+         seleccionadas.forEach(function (chk) {
+
+             let fila = chk.closest('tr');
+
+             let monto = parseFloat(chk.data('monto'));
+
+             total += monto;
+
+             tablaSel.row.add([
+                 fila.find('td:eq(1)').text(),
+                 fila.find('td:eq(2)').text(),
+                 fila.find('td:eq(3)').text(),
+                 fila.find('td:eq(4)').text()
+             ]);
+
+         });
+
+         tablaSel.draw();
+
+         $('#lblTotal')
+             .data('total', total)
+             .text(fMonto(total));
+
+         calcularRetenciones();
+
+         new bootstrap.Modal(
+             document.getElementById('modalPago')
+         ).show();
+
+     });
+
+     $('#btnConfirmarPago').click(function () {
+
+         let numeroCheque = $('#txtNumeroCheque').val();
+         let montoCheque = parseFloat($('#txtMontoCheque').val());
+
+         let totalNeto =
+             parseFloat($('#lblTotalNeto').data('total')) || 0;
+
+         if (!numeroCheque) {
+             alert('Ingrese número de cheque');
+             return;
+         }
+
+         if (!montoCheque || montoCheque <= 0) {
+             alert('Ingrese monto del cheque');
+             return;
+         }
+
+         if (montoCheque > totalNeto) {
+             alert('El monto del cheque no puede ser mayor al total neto');
+             return;
+         }
+
+         alert('Pago válido para registrar'); 
+
+     });
+
+     // Seleccionar todas las facturas
+     $(document).on('change', '#chkTodasFacturas', function () {
+
+         let estado = $(this).is(':checked');
+
+         let tabla = $('#tablaFacturas').DataTable();
+
+         tabla.rows().every(function () {
+
+             $(this.node()).find('.chkFactura').prop('checked', estado);
+
+         });
+
+     });
+
+     $(document).on('change', '.chkFactura', function () {
+
+         let total = $('.chkFactura').length;
+         let marcadas = $('.chkFactura:checked').length;
+
+         $('#chkTodasFacturas').prop('checked', total === marcadas);
+
+     });
+    </script>
+}

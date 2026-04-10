@@ -28,5 +28,13 @@ namespace Capa_Negocio
         {
             return objcd.SincronizarDepartamentos();
         }
+
+        public List<ItemDepartamento> LISTAR_ITEM(int? ID_DEPARTAMENTO)
+        {
+            return objcd.LISTAR_ITEM(ID_DEPARTAMENTO);
+        }
+
+
+
     }
 }

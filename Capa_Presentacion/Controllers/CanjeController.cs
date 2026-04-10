@@ -1,10 +1,12 @@
 ﻿using Capa_Entidad;
 using Capa_Negocio;
 using Capa_Presentacion.Filtros;
+using Capa_Presentacion.Utilidades;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Capa_Presentacion.Controllers
 {
+
     [FiltroSesion]
     public class CanjeController : Controller
     {
@@ -17,13 +19,13 @@ namespace Capa_Presentacion.Controllers
         }
 
         [HttpPost]
-        public IActionResult Crear([FromForm] Canje canje, IFormFile archivo)
+        public IActionResult Crear([FromForm] Canje canje, IFormFile archivo, IFormFile archivoActa)
         {
+            string ruta = Path.Combine("wwwroot/archivo/canje");
+            Directory.CreateDirectory(ruta);
+
             if (archivo != null)
             {
-                string ruta = Path.Combine("wwwroot/archivo/canje");
-                Directory.CreateDirectory(ruta);
-
                 string nombre = $"{Guid.NewGuid()}_{archivo.FileName}";
                 using var fs = new FileStream(Path.Combine(ruta, nombre), FileMode.Create);
                 archivo.CopyTo(fs);
@@ -31,22 +33,31 @@ namespace Capa_Presentacion.Controllers
                 canje.DocumentoAdjunto = nombre;
             }
 
+            // ARCHIVO ACTA
+            if (archivoActa != null)
+            {
+                string nombreActa = $"{Guid.NewGuid()}_{archivoActa.FileName}";
+                using var fs = new FileStream(Path.Combine(ruta, nombreActa), FileMode.Create);
+                archivoActa.CopyTo(fs);
+
+                canje.ArchivoActa = nombreActa;
+            }
+
             canje.UsuarioRegistro = HttpContext.Session.GetString("NombreCompleto") ?? "UsuarioDesconocido";
 
-
             bool ok = cn.Crear(canje, out var mensajes);
+
             return Json(new { success = ok, mensajes });
         }
 
-
         [HttpPost]
-        public IActionResult Editar([FromForm] Canje canje, IFormFile archivo)
+        public IActionResult Editar([FromForm] Canje canje, IFormFile archivo, IFormFile archivoActa)
         {
+            string ruta = Path.Combine("wwwroot/archivo/canje");
+            Directory.CreateDirectory(ruta);
+
             if (archivo != null)
             {
-                string ruta = Path.Combine("wwwroot/archivo/canje");
-                Directory.CreateDirectory(ruta);
-
                 string nombre = $"{Guid.NewGuid()}_{archivo.FileName}";
                 using var fs = new FileStream(Path.Combine(ruta, nombre), FileMode.Create);
                 archivo.CopyTo(fs);
@@ -58,7 +69,25 @@ namespace Capa_Presentacion.Controllers
                 canje.DocumentoAdjunto = Request.Form["DOCUMENTO_EXISTENTE"];
             }
 
+            // ACTA
+            if (archivoActa != null)
+            {
+                string nombreActa = $"{Guid.NewGuid()}_{archivoActa.FileName}";
+                using var fs = new FileStream(Path.Combine(ruta, nombreActa), FileMode.Create);
+                archivoActa.CopyTo(fs);
+
+                canje.ArchivoActa = nombreActa;
+            }
+            else
+            {
+                canje.ArchivoActa = Request.Form["ACTA_EXISTENTE"];
+            }
+
+            // AQUÍ PASAS EL USUARIO QUE MODIFICA
+            canje.UsuarioModificacion = HttpContext.Session.GetString("NombreCompleto") ?? "UsuarioDesconocido";
+
             bool ok = cn.Editar(canje, out var mensajes);
+
             return Json(new { success = ok, mensajes });
         }
 

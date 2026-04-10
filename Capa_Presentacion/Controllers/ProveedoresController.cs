@@ -68,5 +68,21 @@ namespace Capa_Presentacion.Controllers
         {
             return View();
         }
+
+
+        [HttpGet]
+        public IActionResult ListarItem(int? idDepartamento)
+        {
+            var lista = objcn.LISTAR_ITEM(idDepartamento);
+
+            return Json(lista.Select(i => new
+            {
+                idItem = i.ID_ITEM,
+                descripcion = i.DESCRIPTION,
+                codigo = i.ITEMLOOKUPCODE,
+                idDepartamento = i.ID_DEPARTAMENTO,
+                nombreDepartamento = i.NOMBRE_DEPARTAMENTO
+            }));
+        }
     }
 }

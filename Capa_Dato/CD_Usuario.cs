@@ -37,6 +37,16 @@ namespace Capa_Dato
                         Reestablecer = Convert.ToBoolean(dr["Reestablecer"]),
                         IdRol = Convert.ToInt32(dr["IdRol"]),
                         IdEstado = Convert.ToInt32(dr["IdEstado"]),
+
+
+                        IdSucursal = dr["IdSucursal"] == DBNull.Value
+                        ? (int?)null
+                        : Convert.ToInt32(dr["IdSucursal"]),
+
+                                            NombreSucursal = dr["NOMBRE_SUCURSAL"] == DBNull.Value
+                        ? ""
+                        : dr["NOMBRE_SUCURSAL"].ToString(),
+
                         oRol = new Rol
                         {
                             IdRol = Convert.ToInt32(dr["IdRol"]),
@@ -76,6 +86,7 @@ namespace Capa_Dato
                     cmd.Parameters.AddWithValue("@Clave", obj.Clave);
                     cmd.Parameters.AddWithValue("@IdRol", obj.IdRol);
                     cmd.Parameters.AddWithValue("@IdEstado", obj.IdEstado);
+                    cmd.Parameters.AddWithValue("@IdSucursal", (object)obj.IdSucursal ?? DBNull.Value);
 
                     conn.Open();
                     cmd.ExecuteNonQuery();
@@ -109,6 +120,7 @@ namespace Capa_Dato
                     cmd.Parameters.AddWithValue("@Correo", obj.Correo);
                     cmd.Parameters.AddWithValue("@IdRol", obj.IdRol);
                     cmd.Parameters.AddWithValue("@IdEstado", obj.IdEstado);
+                    cmd.Parameters.AddWithValue("@IdSucursal", (object)obj.IdSucursal ?? DBNull.Value);
 
 
                     conn.Open();
@@ -180,6 +192,35 @@ namespace Capa_Dato
 
             return resultado;
         }
-        
+
+
+        public List<Usuario> UsuariosPorRol(int idRol)
+        {
+            List<Usuario> lista = new List<Usuario>();
+
+            using (SqlConnection cn = new SqlConnection(Conexion.cn))
+            {
+                SqlCommand cmd = new SqlCommand("SP_USUARIOS_POR_ROL", cn);
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.AddWithValue("@IDROL", idRol);
+
+                cn.Open();
+
+                using (SqlDataReader dr = cmd.ExecuteReader())
+                {
+                    while (dr.Read())
+                    {
+                        lista.Add(new Usuario()
+                        {
+                            IdUsuario = Convert.ToInt32(dr["IDUSUARIO"]),
+                            Nombres = dr["NOMBRES"].ToString(),
+                            Apellidos = dr["APELLIDOS"].ToString()
+                        });
+                    }
+                }
+            }
+
+            return lista;
+        }
     }
 }

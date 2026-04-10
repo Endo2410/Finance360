@@ -1,33 +1,312 @@
 ﻿@using Capa_Entidad
+
+@{
+    var rolUsuario = Context.Session.GetString("RolUsuario")?.ToUpper();
+}
+
 @{
     ViewData["Title"] = "Gestión de Permisos";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<h3>Gestión de Permisos</h3>
 
-<div class="row mb-3">
-    <div class="col-md-4">
-        <label>Seleccione Rol</label>
-        <select id="cbRol" class="form-select">
-            <option value="">--Seleccione--</option>
-            @foreach (var rol in ViewBag.Roles as List<Rol>)
-            {
-                <option value="@rol.IdRol">@rol.Nombre</option>
-            }
-        </select>
+<h3 class="mb-4">Gestión de Permisos</h3>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+
+        <div class="row">
+            <div class="col-md-4">
+                <label class="form-label fw-bold">Seleccione Rol</label>
+
+                <select id="cbRol" class="form-select">
+                    <option value="">--Seleccione--</option>
+
+                    @foreach (var rol in ViewBag.Roles as List<Rol>)
+                    {
+                        var nombreRol = rol.Nombre.ToUpper();
+
+                        if (rolUsuario == "ADMINISTRADOR" &&
+                            (nombreRol == "DESARROLLADOR"
+                            || nombreRol == "PAGOS GUBERNAMENTALES"
+                            || nombreRol == "BACK ORDER"))
+                        {
+                            continue;
+                        }
+
+                        <option value="@rol.IdRol">@rol.Nombre</option>
+                    }
+                </select>
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label fw-bold">Seleccione Usuario</label>
+                <select id="cbUsuario" class="form-select">
+                    <option value="">--Seleccione--</option>
+                </select>
+            </div>
+
+        </div>
+
     </div>
 </div>
 
-<div id="permisosContainer" class="border p-3 rounded shadow-sm bg-light"></div>
+<div class="card shadow-sm">
+    <div class="card-header bg-light">
+        <strong>Permisos del Rol</strong>
+    </div>
 
-<div class="mt-3">
-    <button id="btnGuardar" class="btn btn-primary">Guardar Permisos</button>
+    <div class="card-body">
+
+        <div id="permisosContainer" class="permisos-container"></div>
+
+    </div>
+</div>
+
+
+<div class="mt-4 text-end">
+    <button id="btnGuardar" class="btn btn-success px-4">
+        <i class="bi bi-save"></i> Guardar Permisos
+    </button>
 </div>
 
 @section Scripts {
-    <script>
-        $(document).ready(function () {
+ <script>
+    $(document).ready(function () {
+
+        $('#cbRol').change(function () {
+
+            let idRol = $(this).val() || 0;
+
+            cargarPermisos(idRol);
+
+            $.get('/Permiso/UsuariosPorRol', { idRol: idRol }, function (res) {
+
+                $('#cbUsuario').empty();
+                $('#cbUsuario').append('<option value="">--Seleccione--</option>');
+
+                res.forEach(u => {
+
+                    const nombreCompleto = `${u.nombres} ${u.apellidos}`;
+
+                    $('#cbUsuario').append(`<option value="${u.idUsuario}">${nombreCompleto}</option>`);
+
+                });
+
+            });
+
+        });
+
+        function cargarPermisosUsuario(idUsuario) {
+            $('.chkAccion, .chkSubmenu, .chkModulo').each(function () {
+                $(this).removeAttr('data-usuario');
+                $(this).attr('data-auto', 0);
+
+                if ($(this).data('rol') != 1) {
+                    $(this).prop('checked', false);
+                } else {
+                    $(this).prop('checked', true);
+                }
+            });
+
+            return $.get('/Permiso/ObtenerPermisosUsuario', { idUsuario: idUsuario }, function (res) {
+
+                const acciones = res.Acciones || [];
+                const submenus = res.SubMenus || [];
+                const modulos = res.Modulos || [];
+
+                acciones.forEach(id => {
+                    let chk = $(`.chkAccion[data-id='${id}']`);
+                    chk.prop('checked', true).attr('data-usuario', 1);
+                });
+
+                submenus.forEach(id => {
+                    let chk = $(`.chkSubmenu[data-id='${id}']`);
+                    chk.prop('checked', true).attr('data-usuario', 1);
+                });
+
+                modulos.forEach(id => {
+                    let chk = $(`.chkModulo[data-id='${id}']`);
+                    chk.prop('checked', true).attr('data-usuario', 1);
+                });
+
+                marcarJerarquiaAutomatica();
+
+                // 🔥 aplicar filtros DESPUÉS de marcar
+                aplicarFiltrosVisuales();
+            });
+        }
+
+        function marcarJerarquiaAutomatica() {
+            // Marcar submenús si tienen acciones marcadas (por rol o por usuario)
+            $('.chkAccion:checked').each(function () {
+                const idSub = $(this).data('submenu');
+                if (idSub) {
+                    $(`.chkSubmenu[data-id='${idSub}']`)
+                        .prop('checked', true)
+                        .attr('data-auto', 1);
+                }
+            });
+
+            // Marcar módulos si tienen submenús marcados
+            $('.chkSubmenu:checked').each(function () {
+                const idModulo = $(this).data('modulo');
+                if (idModulo) {
+                    $(`.chkModulo[data-id='${idModulo}']`)
+                        .prop('checked', true)
+                        .attr('data-auto', 1);
+                }
+            });
+        }
+
+        $('#cbUsuario').change(function () {
+            const idUsuario = $(this).val();
+
+            if (idUsuario) {
+                cargarPermisosUsuario(idUsuario);
+
+            } else {
+                // Si quitan el usuario, regresamos al estado original del Rol
+                // 1. Quitar marcas de usuario
+                $('.chkAccion, .chkSubmenu, .chkModulo').removeAttr('data-usuario');
+
+                // 2. Restaurar checks según el Rol
+                $('.chkAccion, .chkSubmenu, .chkModulo').each(function () {
+                    let esDelRol = $(this).data('rol') == 1;
+                    $(this).prop('checked', esDelRol);
+                });
+
+                aplicarFiltrosVisuales();
+            }
+        });
+
+        function aplicarFiltrosVisuales() {
+
+            const idUsuario = $('#cbUsuario').val();
+
+
+
+            // Si no hay usuario seleccionado, mostrar todo
+            if (!idUsuario) {
+
+                $('.chkAccion, .chkSubmenu, .chkModulo').closest('div').show();
+                $('.chkModulo').closest('.mb-2').show();
+
+                $('.chkAccion, .chkSubmenu, .chkModulo').prop('disabled', false);
+
+                return;
+            }
+
+            // ======================
+            // ACCIONES
+            // ======================
+
+            $('.chkAccion').each(function () {
+
+                const esDelRol = $(this).data('rol') == 1;
+                const esDelUsuario = $(this).data('usuario') == 1;
+
+                if (esDelRol && !esDelUsuario) {
+
+                    $(this).closest('div').hide();
+
+                } else {
+
+                    $(this).closest('div').show();
+
+                }
+
+            });
+
+
+            // ======================
+            // SUBMENUS
+            // ======================
+
+            $('.chkSubmenu').each(function () {
+
+                const idSub = $(this).data('id');
+                const esDelRol = $(this).data('rol') == 1;
+                const esDelUsuario = $(this).data('usuario') == 1;
+
+                const accionesVisibles = $(`.chkAccion[data-submenu='${idSub}']:visible`).length;
+
+                if (esDelRol && !esDelUsuario) {
+
+                    if (accionesVisibles > 0) {
+
+                        $(this).closest('div').show();
+                        $(this).prop('disabled', true);
+
+                    } else {
+
+                        $(this).closest('div').hide();
+
+                    }
+
+                } else {
+
+                    $(this).closest('div').show();
+                    $(this).prop('disabled', false);
+
+                }
+
+            });
+
+
+            // ======================
+            // MODULOS
+            // ======================
+
+            $('.chkModulo').each(function () {
+
+                const idMod = $(this).data('id');
+                const esDelRol = $(this).data('rol') == 1;
+                const esDelUsuario = $(this).data('usuario') == 1;
+
+                const moduloContainer = $(this).closest('.mb-2');
+                const contenidoSubmenus = moduloContainer.next('.ms-4');
+
+                const submenusVisibles = contenidoSubmenus.find('.chkSubmenu:visible').length;
+
+                // 🔥 PERMISO DIRECTO DEL USUARIO
+                if (esDelUsuario) {
+
+                    moduloContainer.show();
+                    contenidoSubmenus.show();
+                    $(this).prop('disabled', false);
+                    return;
+
+                }
+
+                if (esDelRol && !esDelUsuario) {
+
+                    if (submenusVisibles > 0) {
+
+                        moduloContainer.show();
+                        contenidoSubmenus.show();
+                        $(this).prop('disabled', true);
+
+                    } else {
+
+                        moduloContainer.hide();
+                        contenidoSubmenus.hide();
+
+                    }
+
+                } else {
+
+                    moduloContainer.show();
+                    contenidoSubmenus.show();
+                    $(this).prop('disabled', false);
+
+                }
+
+            });
+
+
+        }
+            
 
             function cargarPermisos(idRol) {
                 $.get('/Permiso/ObtenerPermisos', { idRol: idRol }, function (res) {
@@ -54,13 +333,20 @@
                         let modulo = modulos[modKey][0].oModulo;
 
                         let checkedModulo = modulosRol.includes(modulo.IdModulo) ? 'checked' : '';
+                        let esRolModulo = modulosRol.includes(modulo.IdModulo) ? 1 : 0;
+
                         html += `
-                            <div class="mb-2">
-                                <label>
-                                    <input type="checkbox" class="chkModulo" data-id="${modulo?.IdModulo ?? 0}" ${checkedModulo} />
-                                    <strong>${modulo?.NombreModulo ?? 'Sin módulo'}</strong>
-                                </label>
-                            </div>`;
+                        <div class="mb-2">
+                        <label class="d-flex align-items-center gap-2">
+                        <input type="checkbox"
+                        class="chkModulo"
+                        data-id="${modulo?.IdModulo ?? 0}"
+                        data-rol="${esRolModulo}"
+                        ${checkedModulo}>
+                        <strong>${modulo?.NombreModulo ?? 'Sin módulo'}</strong>
+                        </label>
+                        </div>`;
+
 
                         let submenus = {};
                         modulos[modKey].forEach(item => {
@@ -75,13 +361,21 @@
 
                             if (sub?.NombreSubMenu) {
                                 let checkedSub = submenusRol.includes(sub.IdSubMenu) ? 'checked' : '';
+                                let esRolSub = submenusRol.includes(sub.IdSubMenu) ? 1 : 0;
                                 html += `
-                                    <div>
-                                        <label>
-                                            <input type="checkbox" class="chkSubmenu" data-id="${sub.IdSubMenu}" data-modulo="${modulo.IdModulo ?? 0}" data-submenu-nombre="${sub.NombreSubMenu}" ${checkedSub} />
-                                            ${sub.NombreSubMenu}
-                                        </label>
-                                    </div>`;
+                                <div>
+                                <label class="d-flex align-items-center gap-2">
+                                <input type="checkbox"
+                                class="chkSubmenu"
+                                data-id="${sub.IdSubMenu}"
+                                data-modulo="${modulo.IdModulo ?? 0}"
+                                data-submenu-nombre="${sub.NombreSubMenu}"
+                                data-rol="${esRolSub}"
+                                ${checkedSub}>
+                                ${sub.NombreSubMenu}
+                                </label>
+                                </div>`;
+
                             }
 
                             html += '<div class="ms-4">';
@@ -89,14 +383,22 @@
                                 let accion = item.oAccion;
                                 if (accion?.NombreAccion) {
                                     let checkedAcc = accionesRol.includes(accion.IdAccion) ? 'checked' : '';
+                                    let esRolAcc = accionesRol.includes(accion.IdAccion) ? 1 : 0;
+
                                     html += `
-                                        <div>
-                                            <label>
-                                                <input type="checkbox" class="chkAccion" data-id="${accion.IdAccion}" data-submenu="${sub?.IdSubMenu ?? 0}" ${checkedAcc} />
-                                                ${accion.NombreAccion}
-                                            </label>
-                                        </div>`;
-                                }
+                                    <div>
+                                    <label class="d-flex align-items-center gap-2">
+                                    <input type="checkbox"
+                                    class="chkAccion"
+                                    data-id="${accion.IdAccion}"
+                                    data-submenu="${sub?.IdSubMenu ?? 0}"
+                                    data-rol="${esRolAcc}"
+                                    ${checkedAcc}>
+                                    ${accion.NombreAccion}
+                                    </label>
+                                    </div>`;
+
+                                                                                                        }
                             });
                             html += '</div>';
                         }
@@ -105,21 +407,90 @@
 
                     $('#permisosContainer').html(html);
 
+                    ////////////////////////////////aqui empieza
+                            // REGLAS POR ROL
+                    const rolUsuario = '@Context.Session.GetString("RolUsuario")'.toUpperCase();
+
+                            // 🔒 TODOS EXCEPTO DESARROLLADOR (ocultar)
+                        if (rolUsuario !== "DESARROLLADOR") {
+
+                            // ❌ Acciones a OCULTAR
+                            const accionesOcultas = [
+                                "CREAR_ROL",
+                                "EDITAR_ROL"
+                            ];
+
+                            $('.chkAccion').each(function () {
+                                const texto = $(this).parent().text().trim().toUpperCase();
+
+                                if (accionesOcultas.includes(texto)) {
+                                    $(this).closest('div').remove();
+                                }
+                            });
+
+                            // ❌ Submenús a OCULTAR
+                            const submenusOcultos = [
+                                "CLIENTES",
+                                "CXP_ALEJANDRA",
+                                "GESTION_INCENTIVO",
+                                "MOVIMIENTO_INCENTIVO",
+                                "ORDENES_SIN_RECIBIR",
+                            ];
+
+                            $('.chkSubmenu').each(function () {
+                                const texto = $(this).data('submenu-nombre')?.toUpperCase();
+
+                                if (submenusOcultos.includes(texto)) {
+                                    const idSub = $(this).data('id');
+
+                                    $(`.chkAccion[data-submenu='${idSub}']`).each(function () {
+                                        $(this).closest('div').remove();
+                                    });
+
+                                    $(this).closest('div').remove();
+                                }
+                            });
+
+                            // ❌ Módulos a OCULTAR
+                            const modulosOcultos = [
+                                "CUENTASXPAGAR_ALEJANDRA",
+                                "INCENTIVO"
+                            ];
+
+                            $('.chkModulo').each(function () {
+                                const texto = $(this).parent().text().trim().toUpperCase();
+
+                                if (modulosOcultos.includes(texto)) {
+
+                                    const contenedorModulo = $(this).closest('.mb-2');
+                                    const contenido = contenedorModulo.next('.ms-4');
+
+                                    contenido.remove();
+                                    contenedorModulo.remove();
+                                }
+                            });
+                        }
+
+
                     // Marcar submenús si tienen acciones
                     $('.chkAccion:checked').each(function () {
                         const idSub = $(this).data('submenu');
-                        if (idSub) $(`.chkSubmenu[data-id='${idSub}']`).prop('checked', true);
+                        if (idSub) $(`.chkSubmenu[data-id='${idSub}']`)
+                            .prop('checked', true)
+                            .attr('data-auto', 1);
                     });
 
                     // Marcar módulos si tienen submenús seleccionados
                     $('.chkSubmenu:checked').each(function () {
                         const idModulo = $(this).data('modulo');
-                        if (idModulo) $(`.chkModulo[data-id='${idModulo}']`).prop('checked', true);
+                        if (idModulo) $(`.chkModulo[data-id='${idModulo}']`)
+                            .prop('checked', true)
+                            .attr('data-auto', 1);
                     });
 
                     // 🔹 DESHABILITAR “Asignar Permisos” si es rol Administrador
                     const rolSeleccionado = $('#cbRol option:selected').text().toUpperCase();
-                    if (rolSeleccionado === "ADMINISTRADOR") {
+                    if (rolSeleccionado === "DESARROLLADOR") {
                         $('.chkSubmenu').each(function () {
                             if ($(this).data('submenu-nombre') === "Asignar Permisos") {
                                 $(this).prop('disabled', true);
@@ -132,14 +503,10 @@
                 });
             }
 
-            // Cambiar rol
-            $('#cbRol').change(function () {
-                let idRol = $(this).val() || 0;
-                cargarPermisos(idRol);
-            });
 
-            // Jerarquía módulo → submenú → acción
-                   $(document).on('change', '.chkModulo', function () {
+
+        // Jerarquía módulo → submenú → acción
+        $(document).on('change', '.chkModulo', function () {
             const idModulo = $(this).data('id');
             const checked = $(this).is(':checked');
             // Marcar/desmarcar todos los submenús del módulo
@@ -161,51 +528,98 @@
             if (checked) $(`.chkModulo[data-id='${idModulo}']`).prop('checked', true);
         });
 
-            // Carga inicial sin rol
+        // Carga inicial sin rol
             cargarPermisos(0);
 
-            // Guardar permisos
-                  $('#btnGuardar').click(function () {
+        // Guardar permisos
+        $('#btnGuardar').click(function () {
+
             const idRol = $('#cbRol').val();
+            const idUsuario = $('#cbUsuario').val();
+
             if (!idRol) {
                 alert('Seleccione un rol primero.');
                 return;
             }
 
-            // Acciones marcadas
-            const acciones = $('.chkAccion:checked').map((_, e) => $(e).data('id')).get();
+            let acciones = [];
+            let submenus = [];
+            let modulos = [];
 
-            // Submenús marcados (guardar todos los submenús seleccionados)
-            const submenus = $('.chkSubmenu:checked').map((_, e) => $(e).data('id')).get();
+            if (idUsuario) {
 
-            // Módulos que no tienen submenús ni acciones
-            const modulos = $('.chkModulo:checked').map((_, e) => {
-                const idMod = $(e).data('id');
-                const tieneSubmenus = $(`.chkSubmenu[data-modulo='${idMod}']`).length > 0;
-                const tieneAcciones = $(`.chkAccion[data-submenu][data-modulo='${idMod}']`).length > 0;
-                return (!tieneSubmenus && !tieneAcciones) ? idMod : null;
-            }).get().filter(e => e != null);
+                //  PERMISOS SOLO DEL USUARIO (overrides)
 
-            // Enviar al servidor
-            $.ajax({
-                url: '/Permiso/GuardarPermisos',
-                method: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify({
-                    IdRol: parseInt(idRol),
-                    Acciones: acciones,
-                    SubMenus: submenus,
-                    Modulos: modulos
-                }),
-                success: function (res) {
-                    alert(res.success ? 'Permisos guardados correctamente.' : 'Error: ' + (res.message || 'Intente de nuevo.'));
-                },
-                error: function () {
-                    alert('Ocurrió un error al guardar los permisos.');
-                }
-            });
+                acciones = $('.chkAccion:checked')
+                    .filter((_, e) => $(e).data('rol') == 0)
+                    .map((_, e) => $(e).data('id'))
+                    .get();
+
+                submenus = $('.chkSubmenu:checked')
+                    .filter((_, e) => $(e).data('rol') == 0 && !$(e).attr('data-auto'))
+                    .map((_, e) => $(e).data('id'))
+                    .get();
+
+                modulos = $('.chkModulo:checked')
+                    .filter((_, e) => $(e).data('rol') == 0 && !$(e).attr('data-auto'))
+                    .map((_, e) => $(e).data('id'))
+                    .get();
+
+            } else {
+
+                // 🔹 PERMISOS DEL ROL (TODOS)
+
+                acciones = $('.chkAccion:checked')
+                    .map((_, e) => $(e).data('id'))
+                    .get();
+
+                submenus = $('.chkSubmenu:checked')
+                    .map((_, e) => $(e).data('id'))
+                    .get();
+
+                modulos = $('.chkModulo:checked')
+                    .map((_, e) => $(e).data('id'))
+                    .get();
+            }
+
+            const payload = {
+                Acciones: acciones,
+                SubMenus: submenus,
+                Modulos: modulos
+            };
+
+            if (idUsuario) {
+
+                payload.IdUsuario = parseInt(idUsuario);
+
+                $.ajax({
+                    url: '/Permiso/GuardarPermisosUsuario',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(payload),
+                    success: function (res) {
+                        alert(res.success ? 'Permisos guardados correctamente al usuario.' : 'Error');
+                    }
+                });
+
+            } else {
+
+                payload.IdRol = parseInt(idRol);
+
+                $.ajax({
+                    url: '/Permiso/GuardarPermisos',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(payload),
+                    success: function (res) {
+                        alert(res.success ? 'Permisos guardados correctamente al rol.' : 'Error');
+                    }
+                });
+
+            }
+
         });
-
-        });
-    </script>
+               
+    });
+ </script>
 }

@@ -39,6 +39,9 @@ namespace Capa_Negocio
             if (string.IsNullOrEmpty(obj.DocumentoAdjunto))
                 mensajes.Add("Debe adjuntar un documento.");
 
+            //if (string.IsNullOrEmpty(obj.ArchivoActa))
+            //    mensajes.Add("Debe adjuntar una Acta.");
+
             if (mensajes.Any()) return false;
 
             bool ok = cd.Crear(obj, out string msg);

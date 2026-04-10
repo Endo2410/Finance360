@@ -17,7 +17,7 @@
 
 
 <ol class="breadcrumb mb-4 mt-4">
-    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Inicio</a></li>
+    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Bienvenido">Inicio</a></li>
     <li class="breadcrumb-item active">Lista de Vencidos</li>
 </ol>
 
@@ -36,7 +36,7 @@
                     <option value="1">Proveedor</option>
                     <option value="3">Usuario</option>
                     <option value="4">Fecha Creación</option>
-                    <option value="9">Estado Pago</option>
+                    <option value="11">Estado Pago</option>
                 </select>
             </div>
             <div class="col-md-4">
@@ -55,6 +55,8 @@
                     <th>Saldo Vencido</th>
                     <th>Monto Total</th>
                     <th>Monto Pagado</th>
+                    <th>Retenciones</th>
+                    <th>Neto Pagado</th>
                     <th>Saldo</th>
                     <th>Estado Pago</th>
                     <th>Acciones</th>
@@ -71,19 +73,35 @@
                         <td>@v.FechaCreacion.ToShortDateString()</td>
                         <td>@v.Saldovencido.ToString("C")</td>
                         <td>@v.MontoTotal.ToString("C")</td>
-                        <td>@v.MontoPagado.ToString("C")</td>
                         <td>
-                            @if (v.MontoPagado > v.MontoTotal)
+                            <span class="fw-bold text-primary">
+                                @v.MontoPagado.ToString("C")
+                            </span>
+                        </td>
+
+                        <td>
+                            <span class="text-danger">
+                                @v.TotalRetenciones.ToString("C")
+                            </span>
+                        </td>
+
+                        <td>
+                            <span class="text-success">
+                                @v.TotalNeto.ToString("C")
+                            </span>
+                        </td>
+                        <td>
+                            @if (v.MontoPagado >= v.MontoTotal)
                             {
-                                <span class="badge bg-success">@v.SaldoPendiente.ToString("C")</span>
-                            }
-                            else if (v.MontoPagado < v.MontoTotal)
-                            {
-                                <span class="badge bg-danger">@v.SaldoPendiente.ToString("C")</span>
+                                <span class="badge bg-success">
+                                    @((v.MontoPagado - v.MontoTotal).ToString("C"))
+                                </span>
                             }
                             else
                             {
-                                <span class="badge bg-secondary">@v.SaldoPendiente.ToString("C")</span>
+                                <span class="badge bg-danger">
+                                    @((v.MontoTotal - v.MontoPagado).ToString("C"))
+                                </span>
                             }
                         </td>
                         <td>
@@ -259,6 +277,8 @@
                         return;
                     }
 
+                    let pagosMostrados = new Set();
+
                     detalles.forEach(function (d) {
 
                         let accion = '';
@@ -296,6 +316,21 @@
                                 <td>${accion}</td>
                             </tr>
                         `);
+
+
+                        if (!pagosMostrados.has(d.documentoPago) && d.observacion) {
+
+                            pagosMostrados.add(d.documentoPago);
+
+                            $('#detallePagosBody').append(`
+                                   <tr style="background:#f8f9fa;">
+                                       <td colspan="8" style="padding:10px 20px;">
+                                           <i class="fas fa-comment-alt text-primary me-2"></i>
+                                           <strong>Observación:</strong> ${d.observacion}
+                                       </td>
+                                   </tr>
+                               `);
+                            }
                     });
                 }
             });

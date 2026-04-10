@@ -18,6 +18,8 @@ namespace Capa_Entidad
 
         public int IdEstado { get; set; }
         public Estado oEstado { get; set; }
+
+        public List<int> TiposAlerta { get; set; } 
     }
 
 
@@ -35,5 +37,6 @@ namespace Capa_Entidad
         public string Mensaje { get; set; }
         public DateTime FechaAlerta { get; set; }
         public bool Enviada { get; set; }
+        public bool Vista { get; set; }
     }
 }

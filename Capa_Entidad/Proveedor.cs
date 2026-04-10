@@ -32,4 +32,14 @@ namespace Capa_Entidad
         public DateTime FechaActualizacion { get; set; }
         public string NombreDepartamento { get; set; }
     }
+
+    public class ItemDepartamento
+    {
+        public int ID_DEPARTAMENTO { get; set; }
+        public string NOMBRE_DEPARTAMENTO { get; set; }
+
+        public int ID_ITEM { get; set; }
+        public string DESCRIPTION { get; set; }
+        public string ITEMLOOKUPCODE { get; set; }
+    }
 }

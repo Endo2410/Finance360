@@ -31,4 +31,38 @@ namespace Capa_Entidad
         public int? IdUsuarioPago { get; set; }
         public DateTime? FechaPago { get; set; }
     }
+
+    public class ReporteCompras
+    {
+        public string Proveedor { get; set; }
+        public string Laboratorio { get; set; }
+        public decimal TotalComprado { get; set; }
+    }
+
+    public class OrdenSinRecibir
+    {
+        public string PONumber { get; set; }
+        public DateTime DateCreated { get; set; }
+        public string Farmacia { get; set; }
+    }
+
+
+    public class PagoFactura
+    {
+
+        public int IdProveedor { get; set; }
+
+        public string NumeroCheque { get; set; }
+
+        public int IdBanco { get; set; }
+
+        public DateTime Fecha { get; set; }
+
+        public decimal MontoCheque { get; set; }
+
+        //public List<DetalleFacturaPago> Facturas { get; set; }
+
+        //public List<DetalleNotaCreditoPago> NotasCredito { get; set; }
+
+    }
 }

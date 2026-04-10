@@ -29,7 +29,7 @@ namespace Capa_Dato
 
                     cmd.Parameters.AddWithValue("@ID_CAMPANIA", pago.IdCampania);
                     cmd.Parameters.AddWithValue("@FECHA_DOCUMENTO", pago.FechaDocumento);
-                    cmd.Parameters.AddWithValue("@MONTO_TOTAL", pago.MontoTotal);
+                    cmd.Parameters.AddWithValue("@MONTO_TOTAL", pago.MontoNeto);
                     cmd.Parameters.AddWithValue("@OBSERVACION", pago.Observacion ?? "");
 
                     DataTable dt = new DataTable();
@@ -58,6 +58,18 @@ namespace Capa_Dato
                         Direction = ParameterDirection.Output
                     };
                     cmd.Parameters.Add(outNumeroDoc);
+
+                    DataTable dtRetenciones = new DataTable();
+                    dtRetenciones.Columns.Add("ID_TIPO_RETENCION", typeof(int));
+                    dtRetenciones.Columns.Add("PORCENTAJE", typeof(decimal));
+                    dtRetenciones.Columns.Add("MONTO_RETENIDO", typeof(decimal));
+
+                    foreach (var r in pago.Retenciones)
+                        dtRetenciones.Rows.Add(r.IdTipoRetencion, r.Porcentaje, r.MontoRetenido);
+
+                    SqlParameter paramRet = cmd.Parameters.AddWithValue("@RETENCIONES", dtRetenciones);
+                    paramRet.SqlDbType = SqlDbType.Structured;
+                    paramRet.TypeName = "T_RETENCIONES_PUBLICIDAD";
 
                     conn.Open();
                     cmd.ExecuteNonQuery();

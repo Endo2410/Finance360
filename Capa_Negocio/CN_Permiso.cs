@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Capa_Negocio
 {
@@ -27,8 +28,13 @@ namespace Capa_Negocio
             return objcd.GuardarPermisos(idRol, acciones, subMenus, modulos);
         }
 
+        public bool GuardarPermisosUsuario(int idUsuario, List<int> acciones, List<int> subMenus, List<int> modulos)
+        {
+            return objcd.GuardarPermisosUsuario(idUsuario, acciones, subMenus, modulos);
+        }
 
-       
+
+
         public List<Permiso> ObtenerEstructuraPorUsuario(int idUsuario)
         {
             // Primero obtienes el rol del usuario
@@ -47,5 +53,9 @@ namespace Capa_Negocio
             return objcd.ObtenerAccionesPorUsuario(idUsuario);
         }
 
+        public PermisoRolDto ObtenerPermisosPorUsuario(int idUsuario)
+        {
+            return objcd.ObtenerPermisosPorUsuario(idUsuario);
+        }
     }
 }

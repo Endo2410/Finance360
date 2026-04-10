@@ -20,5 +20,8 @@ namespace Capa_Entidad
         public DateTime FechaRegistro { get; set; }
         public Estado oEstado { get; set; }
         public Rol oRol { get; set; }
+
+        public int? IdSucursal { get; set; }  // Nullable, solo aplica a rol Sucursal
+        public string NombreSucursal { get; set; }  // Opcional, para mostrar en la tabla
     }
 }

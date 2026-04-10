@@ -179,6 +179,33 @@ namespace Capa_Dato
             return resultado;
         }
 
+        public bool GuardarPermisosUsuario(int idUsuario, List<int> acciones, List<int> subMenus, List<int> modulos)
+        {
+            bool resultado = false;
+
+            using (SqlConnection oconexion = new SqlConnection(cadena))
+            {
+                try
+                {
+                    SqlCommand cmd = new SqlCommand("SP_GUARDAR_PERMISOS_POR_USUARIO", oconexion);
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("@IdUsuario", idUsuario);
+                    cmd.Parameters.AddWithValue("@ListaAcciones", string.Join(",", acciones));
+                    cmd.Parameters.AddWithValue("@ListaSubMenus", string.Join(",", subMenus));
+                    cmd.Parameters.AddWithValue("@ListaModulos", string.Join(",", modulos));
+                    oconexion.Open();
+                    cmd.ExecuteNonQuery();
+                    resultado = true;
+                }
+                catch
+                {
+                    resultado = false;
+                }
+            }
+
+            return resultado;
+        }
+
 
         public List<Permiso> ObtenerEstructuraPorUsuario(int idUsuario)
         {
@@ -243,5 +270,81 @@ namespace Capa_Dato
             return lista;
         }
 
+        public PermisoRolDto ObtenerPermisosPorUsuario(int idUsuario)
+        {
+            var result = new PermisoRolDto();
+
+            using (SqlConnection conn = new SqlConnection(cadena))
+            {
+                SqlCommand cmd = new SqlCommand("SP_LISTAR_PERMISOS_POR_USUARIO", conn);
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.AddWithValue("@IdUsuario", idUsuario);
+
+                conn.Open();
+
+                var listaPermisos = new List<Permiso>();
+
+                using (SqlDataReader dr = cmd.ExecuteReader())
+                {
+                    while (dr.Read())
+                    {
+                        int? idModulo = dr["IDMODULO"] != DBNull.Value ? Convert.ToInt32(dr["IDMODULO"]) : (int?)null;
+                        int? idSubMenu = dr["IDSUBMENU"] != DBNull.Value ? Convert.ToInt32(dr["IDSUBMENU"]) : (int?)null;
+                        int? idAccion = dr["IDACCION"] != DBNull.Value ? Convert.ToInt32(dr["IDACCION"]) : (int?)null;
+
+                        // Crear objetos con nombres
+                        Modulo modulo = idModulo.HasValue ? new Modulo
+                        {
+                            IdModulo = idModulo.Value,
+                            NombreModulo = dr["NombreModulo"].ToString()
+                        } : null;
+
+                        SubMenu submenu = idSubMenu.HasValue ? new SubMenu
+                        {
+                            IdSubMenu = idSubMenu.Value,
+                            NombreSubMenu = dr["NombreSubMenu"]?.ToString()
+                        } : null;
+
+                        Accion accion = idAccion.HasValue ? new Accion
+                        {
+                            IdAccion = idAccion.Value,
+                            NombreAccion = dr["NombreAccion"]?.ToString()
+                        } : null;
+
+                        listaPermisos.Add(new Permiso
+                        {
+                            oModulo = modulo,
+                            oSubMenu = submenu,
+                            oAccion = accion
+                        });
+                    }
+                }
+
+                // 🔹 Reconstruir jerarquía igual que rol
+                foreach (var p in listaPermisos)
+                {
+                    if (p.oModulo != null)
+                    {
+                        if (!result.Modulos.Contains(p.oModulo.IdModulo))
+                            result.Modulos.Add(p.oModulo.IdModulo);
+                    }
+
+                    if (p.oSubMenu != null)
+                    {
+                        if (!result.SubMenus.Contains(p.oSubMenu.IdSubMenu))
+                            result.SubMenus.Add(p.oSubMenu.IdSubMenu);
+                    }
+
+                    if (p.oAccion != null)
+                    {
+                        if (!result.Acciones.Contains(p.oAccion.IdAccion))
+                            result.Acciones.Add(p.oAccion.IdAccion);
+                    }
+                }
+
+            }
+
+            return result;
+        }
     }
 }

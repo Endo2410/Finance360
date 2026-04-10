@@ -32,8 +32,16 @@ namespace Capa_Dato
                         MontoInversion = Convert.ToDecimal(dr["MONTO_INVERSION"]),
                         FechaInicio = Convert.ToDateTime(dr["FECHA_INICIO"]),
                         FechaFin = Convert.ToDateTime(dr["FECHA_FIN"]),
-                        FechaRegistro = Convert.ToDateTime(dr["FECHA_REGISTRO"]),
                         UsuarioRegistro = dr["USUARIO_REGISTRO"]?.ToString(),
+                        FechaRegistro = Convert.ToDateTime(dr["FECHA_REGISTRO"]),
+
+                        UsuarioModificacion = dr["USUARIO_MODIFICACION"] == DBNull.Value
+                        ? null
+                        : dr["USUARIO_MODIFICACION"].ToString(),
+
+                                FechaModificacion = dr["FECHA_MODIFICACION"] == DBNull.Value
+                        ? null
+                        : Convert.ToDateTime(dr["FECHA_MODIFICACION"]),
                         DocumentoAdjunto = dr["DOCUMENTO_ADJUNTO"]?.ToString(),
 
                         IdProveedor = Convert.ToInt32(dr["ID_PROVEEDOR"]),
@@ -184,6 +192,8 @@ namespace Capa_Dato
                              ? DBNull.Value
                              : obj.DocumentoAdjunto;
 
+                    cmd.Parameters.AddWithValue("@USUARIO_MODIFICACION", obj.UsuarioModificacion);
+
                     conn.Open();
                     cmd.ExecuteNonQuery();
                     resultado = true;
@@ -218,9 +228,11 @@ namespace Capa_Dato
                         MontoInversion = Convert.ToDecimal(dr["MONTO_INVERSION"]),
                         Saldovencido = Convert.ToDecimal(dr["SALDO_VENCIDO"]),
                         MontoPagado = Convert.ToDecimal(dr["MONTO_PAGADO"]),
+                        TotalRetenciones = Convert.ToDecimal(dr["TOTAL_RETENCIONES"]),
+                        TotalNeto = Convert.ToDecimal(dr["TOTAL_NETO"]),
                         SaldoPendiente = Convert.ToDecimal(dr["SALDO_PENDIENTE"]),
                         EstadoCampania = dr["ESTADO_CAMPANIA"].ToString(),
-                        IdEstado = Convert.ToInt32(dr["ID_ESTADO_PAGO"]), //  CLAVE
+                        IdEstado = Convert.ToInt32(dr["IDESTADO_PAGO"]), //  CLAVE
                         EstadoPago = dr["ESTADO_PAGO"].ToString(),
                         FechaInicio = Convert.ToDateTime(dr["FECHA_INICIO"]),
                         FechaFin = Convert.ToDateTime(dr["FECHA_FIN"]),
@@ -265,6 +277,7 @@ namespace Capa_Dato
                                 FechaRegistro = dr["FechaRegistro"] == DBNull.Value ? (DateTime?)null : Convert.ToDateTime(dr["FechaRegistro"]),
                                 Comprobante = dr["Comprobante"] == DBNull.Value ? null : dr["Comprobante"].ToString(),
                                 IdEstado = dr["IdEstado"] == DBNull.Value ? (int?)null : Convert.ToInt32(dr["IdEstado"]),
+                                Observacion = dr["Observacion"] == DBNull.Value ? null : dr["Observacion"].ToString(),
                                 NotaCreditoAplicada = dr["NotaCreditoAplicada"] != DBNull.Value && Convert.ToBoolean(dr["NotaCreditoAplicada"])
                             });
                         }

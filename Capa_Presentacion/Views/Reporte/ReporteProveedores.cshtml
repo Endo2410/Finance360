@@ -1,0 +1,260 @@
+﻿@model List<Capa_Entidad.ReporteCompras>
+
+@{
+    ViewData["Title"] = "Reporte Compras";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    DateTime fechaHoy = DateTime.Today;
+    DateTime fechaLimite = fechaHoy.AddMonths(-3);
+}
+
+<style>
+    #tablaReporte th,
+    #tablaReporte td {
+        white-space: nowrap;
+        vertical-align: middle;
+    }
+
+    #btnExcel {
+        margin-bottom: 10px;
+    }
+</style>
+
+<ol class="breadcrumb mb-4 mt-4">
+    <li class="breadcrumb-item">
+        <a asp-controller="Home" asp-action="Bienvenido">Inicio</a>
+    </li>
+    <li class="breadcrumb-item active">Reporte Compras</li>
+</ol>
+
+<div class="card shadow border-0">
+
+    <!-- HEADER -->
+    <div class="card-header text-white d-flex justify-content-between align-items-center"
+         style="background-color:#274DF5;">
+
+        <div>
+            <i class="fas fa-chart-bar me-2"></i> Reporte de Compras
+        </div>
+
+        <div class="d-flex align-items-center">
+
+            <input type="date" id="fechaInicio"
+                   class="form-control form-control-sm me-2"
+                   style="height:32px;"
+                   value="@ViewBag.FechaInicio"
+                   min="@fechaLimite.ToString("yyyy-MM-dd")"
+                   max="@fechaHoy.ToString("yyyy-MM-dd")" />
+
+            <input type="date" id="fechaFin"
+                   class="form-control form-control-sm me-2"
+                   style="height:32px;"
+                   value="@ViewBag.FechaFin"
+                   min="@fechaLimite.ToString("yyyy-MM-dd")"
+                   max="@fechaHoy.ToString("yyyy-MM-dd")" />
+
+            <button class="btn btn-light btn-sm px-3"
+                    style="height:32px;"
+                    onclick="filtrar()">
+                <i class="fas fa-search"></i>
+            </button>
+
+        </div>
+    </div>
+
+    <div id="mensajeFecha" class="text-danger px-3 mt-1" style="display:none;font-size:13px;"></div>
+
+    <div class="card-body">
+
+        <!-- FILTRO POR COLUMNA -->
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <select id="filtroCampo" class="form-control">
+                    <option value="">-- Filtrar por --</option>
+                    <option value="0">Proveedor</option>
+                    <option value="1">Laboratorio</option>
+                </select>
+            </div>
+
+            <div class="col-md-4">
+                <input id="filtroValor"
+                       class="form-control"
+                       placeholder="Buscar..."
+                       autocomplete="off"
+                       onkeyup="filtrarColumna()" />
+            </div>
+        </div>
+
+        <!-- BOTONES -->
+        <div class="d-flex gap-2 mb-2">
+
+            <button id="btnExcel"
+                    class="btn btn-success btn-sm d-flex align-items-center justify-content-center"
+                    style="height:35px; min-width:150px;">
+                <i class="fas fa-file-excel me-2"></i> Exportar a Excel
+            </button>
+
+            <button id="btnPdf"
+                    class="btn btn-danger btn-sm d-flex align-items-center justify-content-center"
+                    style="height:35px; min-width:100px;">
+                <i class="fas fa-file-pdf me-2"></i> PDF
+            </button>
+
+        </div>
+
+        <!-- TABLA -->
+        <table class="table table-striped align-middle" id="tablaReporte">
+            <thead class="text-white" style="background-color:#274DF5;">
+                <tr>
+                    <th>Proveedor</th>
+                    <th>Laboratorio</th>
+                    <th>Total Comprado</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td>@item.Proveedor</td>
+                        <td>@item.Laboratorio</td>
+                        <td>@item.TotalComprado.ToString("C")</td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="2"><strong>Total General</strong></td>
+                    <td>
+                        <strong id="totalTabla"></strong>
+                    </td>
+                </tr>
+            </tfoot>
+        </table>
+
+    </div>
+</div>
+
+@section scripts {
+    <script>
+        let tablaReporte;
+
+        $(document).ready(function () {
+
+            tablaReporte = $('#tablaReporte').DataTable({
+                pageLength: 15,
+                lengthChange: false,
+                searching: true,
+                ordering: false,
+                responsive: true,
+
+                language: {
+                    paginate: { previous: "Anterior", next: "Siguiente" },
+                    info: "Mostrando _START_ a _END_ de _TOTAL_ registros",
+                    emptyTable: "No hay datos para mostrar"
+                },
+
+                drawCallback: function () {
+
+                    let api = this.api();
+
+                    let total = api
+                        .column(2, { search: 'applied' }) // columna Total Comprado
+                        .data()
+                        .reduce(function (a, b) {
+
+                            let x = typeof a === 'string'
+                                ? a.replace(/[C$,]/g, '') * 1
+                                : a;
+
+                            let y = typeof b === 'string'
+                                ? b.replace(/[C$,]/g, '') * 1
+                                : b;
+
+                            return x + y;
+
+                        }, 0);
+
+                    $('#totalTabla').html(
+                        total.toLocaleString('es-NI', {
+                            style: 'currency',
+                            currency: 'NIO'
+                        })
+                    );
+                }
+            });
+
+            $('#tablaReporte_filter').hide();
+        });
+
+        //EXPORTAR EXCEL
+        $("#btnExcel").click(function () {
+
+            let fechaInicio = $("#fechaInicio").val();
+            let fechaFin = $("#fechaFin").val();
+
+            let filtroCampo = $("#filtroCampo").val();
+            let filtroValor = $("#filtroValor").val();
+
+            let url = `/Reporte/ExportarExcelCompras?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}&campo=${filtroCampo}&valor=${filtroValor}`;
+
+            window.location.href = url;
+        });
+
+        $("#btnPdf").click(function () {
+
+            let fechaInicio = $("#fechaInicio").val();
+            let fechaFin = $("#fechaFin").val();
+
+            let filtroCampo = $("#filtroCampo").val();
+            let filtroValor = $("#filtroValor").val();
+
+            let url = `/Reporte/DescargarPdfCompras?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}&campo=${filtroCampo}&valor=${filtroValor}`;
+
+            window.open(url, "_blank");
+        });
+
+        function filtrarColumna() {
+            let col = $("#filtroCampo").val();
+            let val = $("#filtroValor").val();
+
+            tablaReporte.columns().search('');
+
+            if (col !== "") {
+                tablaReporte.column(col).search(val).draw();
+            } else {
+                tablaReporte.search(val).draw();
+            }
+        }
+
+        function filtrar() {
+            let inicio = $('#fechaInicio').val();
+            let fin = $('#fechaFin').val();
+
+            const hoy = new Date();
+            const limite = new Date();
+            limite.setMonth(limite.getMonth() - 3);
+
+            const msg = $('#mensajeFecha');
+            msg.hide();
+
+            if (!inicio || !fin) {
+                msg.text("Seleccione un rango de fechas válido.").show();
+                return;
+            }
+
+            if (new Date(inicio) < limite || new Date(fin) > hoy) {
+                msg.text("Solo se permiten fechas de los últimos 3 meses.").show();
+                return;
+            }
+
+            if (new Date(inicio) > new Date(fin)) {
+                msg.text("La fecha inicio no puede ser mayor que la fecha fin.").show();
+                return;
+            }
+
+            window.location.href =
+                `?fechaInicio=${inicio}&fechaFin=${fin}`;
+        }
+    </script>
+}

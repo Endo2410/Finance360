@@ -2,6 +2,7 @@
 using Capa_Negocio;
 using Capa_Presentacion.Filtros;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -65,28 +66,58 @@ namespace Capa_Presentacion.Controllers
             return Json(new { success = true, estados = jsonEstados });
         }
 
-        // 🔹 CREAR
         [HttpPost]
-        public IActionResult Crear(AlertaUsuario alerta)
+        public IActionResult GuardarAlertas([FromBody] AlertaUsuario alerta)
         {
-            bool exito = objcn.CrearAlertaUsuario(alerta, out List<string> mensajes);
+            bool exito = objcn.GuardarAlertas(alerta, out List<string> mensajes);
 
             if (exito && (mensajes == null || mensajes.Count == 0))
-                mensajes = new List<string> { "Alerta asignada correctamente." };
+                mensajes = new List<string> { "Alertas guardadas correctamente." };
 
             return Json(new { success = exito, mensajes });
         }
 
-        // 🔹 EDITAR
-        [HttpPost]
-        public IActionResult Editar(AlertaUsuario alerta)
+       
+
+        public IActionResult ObtenerPorUsuario(int idUsuario)
         {
-            bool exito = objcn.EditarAlertaUsuario(alerta, out List<string> mensajes);
+            var lista = objcn.ObtenerAlertaUsuario()
+                             .Where(x => x.IdUsuario == idUsuario)
+                             .ToList();
 
-            if (exito && (mensajes == null || mensajes.Count == 0))
-                mensajes = new List<string> { "Alerta actualizada correctamente." };
+            return Json(lista);
+        }
 
-            return Json(new { success = exito, mensajes });
+        //nueva
+        // 🔹 LISTAR ALERTAS (para dropdown)
+        public IActionResult ObtenerAlertas()
+        {
+            int idUsuario = HttpContext.Session.GetInt32("IdUsuario") ?? 0;
+
+            var lista = objcn.ObtenerAlertasUsuario(idUsuario);
+
+            return Json(lista);
+        }
+
+        // 🔹 CONTADOR (badge rojo)
+        public IActionResult ContarAlertas()
+        {
+            int idUsuario = HttpContext.Session.GetInt32("IdUsuario") ?? 0;
+
+            int total = objcn.ContarAlertas(idUsuario);
+
+            return Json(new { total });
+        }
+
+        // 🔹 MARCAR TODAS COMO VISTAS
+        [HttpPost]
+        public IActionResult MarcarVistas()
+        {
+            int idUsuario = HttpContext.Session.GetInt32("IdUsuario") ?? 0;
+
+            objcn.MarcarTodasComoVistas(idUsuario);
+
+            return Json(new { ok = true });
         }
     }
 }

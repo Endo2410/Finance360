@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Capa_Entidad.Contabilidad_Alejandra;
+using Capa_Entidad.CE_Incentivo;
 
 namespace Capa_Dato
 {
@@ -14,9 +15,9 @@ namespace Capa_Dato
     {
         private readonly string cn = Conexion.cn;
 
-        public List<Capa_Entidad.Incentivo> Obtener()
+        public List<Capa_Entidad.CE_Incentivo.Incentivo> Obtener()
         {
-            var lista = new List<Capa_Entidad.Incentivo>();
+            var lista = new List<Capa_Entidad.CE_Incentivo.Incentivo>();
 
             using (SqlConnection con = new SqlConnection(cn))
             {
@@ -28,7 +29,7 @@ namespace Capa_Dato
 
                 while (dr.Read())
                 {
-                    lista.Add(new Capa_Entidad.Incentivo
+                    lista.Add(new Capa_Entidad.CE_Incentivo.Incentivo
                     {
                         IdIncentivo = Convert.ToInt32(dr["ID_INCENTIVO"]),
                         NumeroDocumento = dr["NUMERO_DOCUMENTO"].ToString(),
@@ -74,7 +75,7 @@ namespace Capa_Dato
             return lista;
         }
 
-        public bool Crear(Capa_Entidad.Incentivo obj, out string mensaje)
+        public bool Crear(Capa_Entidad.CE_Incentivo.Incentivo obj, out string mensaje)
         {
             mensaje = "";
             try
@@ -103,7 +104,7 @@ namespace Capa_Dato
             }
         }
 
-        public bool Editar(Capa_Entidad.Incentivo obj, out string mensaje)
+        public bool Editar(Capa_Entidad.CE_Incentivo.Incentivo obj, out string mensaje)
         {
             mensaje = "";
             try
@@ -212,6 +213,38 @@ namespace Capa_Dato
                 return false;
             }
         }
-    }
 
+        public List<DetallePagoIncentivo> ObtenerDetallePago(int idIncentivo)
+        {
+            List<DetallePagoIncentivo> lista = new();
+
+            using (SqlConnection con = new SqlConnection(cn))
+            {
+                SqlCommand cmd = new SqlCommand(
+                    "SP_OBTENER_DETALLE_PAGO_INCENTIVO", con);
+
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.AddWithValue("@ID_INCENTIVO", idIncentivo);
+
+                con.Open();
+
+                SqlDataReader dr = cmd.ExecuteReader();
+
+                while (dr.Read())
+                {
+                    lista.Add(new DetallePagoIncentivo
+                    {
+                        MontoPagado = Convert.ToDecimal(dr["MONTO_PAGADO"]),
+                        NumeroConfirmacion = dr["NUMERO_CONFIRMACION"].ToString(),
+                        RutaComprobante = dr["COMPROBANTE"].ToString(),
+                        UsuarioPago = dr["USUARIO_PAGO"].ToString(),
+                        TipoDocumento = dr["TIPO_DOCUMENTO"].ToString(),
+                        FechaRegistro = Convert.ToDateTime(dr["FECHA_REGISTRO"])
+                    });
+                }
+            }
+
+            return lista;
+        }
+    }
 }

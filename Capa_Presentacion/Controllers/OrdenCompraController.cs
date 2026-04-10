@@ -2,10 +2,12 @@
 using Capa_Negocio;
 using Capa_Presentacion.Filtros;
 using Microsoft.AspNetCore.Mvc;
+using ClosedXML.Excel;
+using Humanizer;
 
 namespace Capa_Presentacion.Controllers
 {
-    [FiltroSesion]
+    //[FiltroSesion]
     public class OrdenCompraController : Controller
     {
         private readonly CN_OrdenCompra objcn = new();
@@ -26,6 +28,7 @@ namespace Capa_Presentacion.Controllers
             return View(lista);
         }
 
+
         [HttpPost]
         public IActionResult Sincronizar()
         {
@@ -38,32 +41,6 @@ namespace Capa_Presentacion.Controllers
             {
                 return Json(new { exito = false, mensaje = ex.Message });
             }
-        }
-        public IActionResult Reporte(DateTime? fechaInicio, DateTime? fechaFin)
-        {
-            if (!fechaInicio.HasValue) fechaInicio = DateTime.Today.AddMonths(-1);
-            if (!fechaFin.HasValue) fechaFin = DateTime.Today;
-
-            var lista = objcn.ObtenerReporteOrdenes(fechaInicio.Value, fechaFin.Value);
-
-            // ORDEN CORRECTO:
-            // 1. FechaCreacion DESC (últimos días primero)
-            // 2. NumeroOrden DESC (mayor a menor)
-            lista = lista
-                .OrderByDescending(o => o.FechaCreacion)
-                .ThenByDescending(o =>
-                {
-                    if (int.TryParse(o.NumeroOrden, out int num))
-                        return num;
-
-                    return 0; // Si no es numérico, lo manda abajo
-                })
-                .ToList();
-
-            ViewBag.FechaInicio = fechaInicio.Value.ToString("yyyy-MM-dd");
-            ViewBag.FechaFin = fechaFin.Value.ToString("yyyy-MM-dd");
-
-            return View(lista);
         }
 
         private string[] ObtenerColumnas(OrdenCompra o)
@@ -78,5 +55,26 @@ namespace Capa_Presentacion.Controllers
                 o.FechaCreacion.ToString("dd/MM/yyyy")
             };
         }
+
+
+        public IActionResult Prueba(DateTime? inicio, DateTime? fin, string proveedor)
+        {
+            if (!inicio.HasValue)
+                inicio = new DateTime(DateTime.Today.Year, 1, 1); // inicio del año
+
+            if (!fin.HasValue)
+                fin = DateTime.Today;
+
+            var lista = objcn.ObtenerOrdenes(inicio.Value, fin.Value)
+                             .Where(x => x.IdEstado == 5)   // SOLO PENDIENTES
+                             .ToList();
+
+            if (!string.IsNullOrEmpty(proveedor))
+                lista = lista.Where(x => x.Proveedor == proveedor).ToList();
+
+            return View(lista);
+        }
+
+
     }
 }

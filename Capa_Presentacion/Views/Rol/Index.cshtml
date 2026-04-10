@@ -2,14 +2,30 @@
 @model List<Capa_Entidad.Rol>
 
 @{
+    var rolUsuario = Context.Session.GetString("RolUsuario") ?? "";
+}
+
+@{
     ViewData["Title"] = "Gestión Rol";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
+
+@{
+    var jsonAcciones = Context.Session.GetString("AccionesUsuario");
+    var acciones = !string.IsNullOrEmpty(jsonAcciones)
+        ? JsonSerializer.Deserialize<List<string>>(jsonAcciones)
+        : new List<string>();
+
+    bool puedeCrear = acciones.Contains("Crear_Rol");
+    bool puedeEditar = acciones.Contains("Editar_Rol");
+}
+
+
 <!-- Breadcrumb -->
 <ol class="breadcrumb mb-4 mt-4">
     <li class="breadcrumb-item">
-        <a asp-controller="Home" asp-action="Index">Inicio</a>
+        <a asp-controller="Home" asp-action="Bienevenido">Inicio</a>
     </li>
     <li class="breadcrumb-item active">Rol</li>
 </ol>
@@ -21,25 +37,40 @@
         <span>
             <i class="fas fa-user-shield me-2"></i>Lista de Roles
         </span>
-        <button id="btnNuevo" class="btn btn-light btn-sm">
-            <i class="fas fa-plus"></i> Nuevo
-        </button>
+        @if (puedeCrear)
+        {
+            <button id="btnNuevo" class="btn btn-light btn-sm">
+                <i class="fas fa-plus"></i> Nuevo 
+            </button>
+        }
     </div>
 
     <div class="card-body">
         <table class="table table-striped align-middle">
             <thead class="text-white" style="background-color:#274DF5;">
                 <tr>
-                    <th>ID</th>
+                   @*  <th>ID</th> *@
                     <th>Nombre</th>
                     <th>Descripción</th>
                     <th>Estado</th>
-                    <th class="text-center">Acciones</th>
+                     @if (puedeEditar)
+                     {
+                        <th class="text-center">Acciones</th>
+                     }
                 </tr>
             </thead>
             <tbody>
                 @foreach (var r in Model)
                 {
+                    // 🔒 REGLAS DE VISIBILIDAD
+                    if (rolUsuario == "ADMINISTRADOR" &&
+                       (r.Nombre.ToUpper() == "DESARROLLADOR"
+                     || r.Nombre.ToUpper() == "PAGOS GUBERNAMENTALES"
+                     || r.Nombre.ToUpper() == "BACK ORDER"))
+                    {
+                        continue; // no mostrar estos roles
+                    }
+
                     var json = JsonSerializer.Serialize(new
                     {
                         r.IdRol,
@@ -49,16 +80,19 @@
                     });
 
                     <tr>
-                        <td>@r.IdRol</td>
                         <td>@r.Nombre</td>
                         <td>@r.Descripcion</td>
                         <td>@r.oEstado?.Nombre</td>
-                        <td class="text-center">
-                            <button class="btn btn-warning btn-sm"
-                                    onclick='abrirModal(@Html.Raw(json))'>
-                                <i class="fas fa-edit"></i>
-                            </button>
-                        </td>
+
+                        @if (puedeEditar)
+                        {
+                            <td class="text-center">
+                                <button class="btn btn-warning btn-sm btn-editar"
+                                        data-json='@Html.Raw(json)'>
+                                    <i class="fas fa-edit"></i> Editar
+                                </button>
+                            </td>
+                        }
                     </tr>
                 }
             </tbody>
@@ -146,6 +180,11 @@
         $(document).ready(function () {
             cargarEstados();
             $('#btnNuevo').click(() => abrirModal());
+
+            $(document).on('click', '.btn-editar', function () {
+                const data = $(this).data('json');
+                abrirModal(data);
+            });
         });
 
         function abrirModal(data = null) {
@@ -159,7 +198,7 @@
                 $('#cboestado').val(data.IdEstado);
 
                 // 🔒 Si es ADMINISTRADOR, bloquear combo de estado
-                if (data.Nombre.toUpperCase() === 'ADMINISTRADOR') {
+                if (data.Nombre.toUpperCase() === 'DESARROLLADOR') {
                     $('#cboestado').prop('disabled', true); // solo lectura
                 } else {
                     $('#cboestado').prop('disabled', false); // editable

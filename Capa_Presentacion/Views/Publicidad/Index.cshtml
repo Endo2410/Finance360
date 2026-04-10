@@ -20,7 +20,7 @@
 
 <!-- Breadcrumb -->
 <ol class="breadcrumb mb-4 mt-4">
-    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Inicio</a></li>
+    <li class="breadcrumb-item">  <a asp-controller="Home" asp-action="Bienvenido">Inicio</a></li>
     <li class="breadcrumb-item active">Campañas Publicitarias</li>
 </ol>
 
@@ -75,7 +75,6 @@
                     <th>Monto Inversión Total</th>
                     <th>Fecha Inicio</th>
                     <th>Fecha Fin</th>
-                    <th>Usuario Registro</th> <!-- nueva columna -->
                     <th>Documento</th>       <!-- nueva columna -->
                     <th>Estado</th>
                     <th class="text-center">Acciones</th>
@@ -83,9 +82,9 @@
             </thead>
             <tbody>
                 @foreach (var u in Model
-                                .OrderBy(x => x.oEstado.IdEstado == 3 ? 1 :
-                                x.oEstado.IdEstado == 4 ? 2 : 3)
-                                .ThenByDescending(x => x.IdCampania))
+                               .OrderBy(x => x.oEstado.IdEstado == 3 ? 1 :
+                               x.oEstado.IdEstado == 4 ? 2 : 3)
+                               .ThenByDescending(x => x.IdCampania))
 
                 {
                     var json = JsonSerializer.Serialize(new
@@ -105,6 +104,9 @@
                         FechaInicio = u.FechaInicio.ToString("yyyy-MM-dd"),
                         FechaFin = u.FechaFin.ToString("yyyy-MM-dd"),
                         u.UsuarioRegistro,
+                        FechaRegistro = u.FechaRegistro.ToString("dd/MM/yyyy HH:mm"),
+                        UsuarioModificacion = u.UsuarioModificacion,
+                        FechaModificacion = u.FechaModificacion?.ToString("dd/MM/yyyy HH:mm"),
                         u.DocumentoAdjunto,
                         IdEstado = u.oEstado?.IdEstado ?? 0,
                         IdEstadoPago = u.oEstadoPago?.IdEstado ?? 0
@@ -123,7 +125,6 @@
                         <td>@u.MontoInversion.ToString("C")</td>
                         <td>@u.FechaInicio.ToString("yyyy-MM-dd")</td>
                         <td>@u.FechaFin.ToString("yyyy-MM-dd")</td>
-                        <td>@u.UsuarioRegistro</td> <!-- nuevo -->
                         <td>
                             @if (!string.IsNullOrEmpty(u.DocumentoAdjunto))
                             {
@@ -264,7 +265,7 @@
 
                         <div class="col-md-6">
                             <label class="form-label">Documento Adjunto</label>
-                            <input type="file" id="archivo" class="form-control" />
+                            <input type="file" id="archivo" class="form-control"  accept=".pdf,.jpg,.png,.jpeg,.doc,.docx,.xls,.xlsx" />
                             <div id="archivoExistente" class="mt-1"></div>
                         </div>
 
@@ -277,6 +278,27 @@
                                 </a>
                             </div>
                         </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Usuario Creación</label>
+                            <input id="txtUsuarioRegistro" class="form-control" readonly />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Fecha Creación</label>
+                            <input id="txtFechaRegistro" class="form-control" readonly />
+                        </div>
+
+                        <div class="col-md-6 mt-2">
+                            <label class="form-label">Usuario Modificación</label>
+                            <input id="txtUsuarioModificacion" class="form-control" readonly />
+                        </div>
+
+                        <div class="col-md-6 mt-2">
+                            <label class="form-label">Fecha Modificación</label>
+                            <input id="txtFechaModificacion" class="form-control" readonly />
+                        </div>
+
 
                         <div class="col-12 mt-3">
                             <div class="alert alert-danger d-none" id="mensajeError"></div>
@@ -312,7 +334,7 @@
 
 <!-- Modal Selección de Proveedor -->
 <div class="modal fade" id="modalProveedor" tabindex="-1" data-bs-backdrop="static">
-    <div class="modal-dialog modal-md">
+    <div class="modal-dialog modal-md modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title">Seleccionar Proveedor</h5>
@@ -323,17 +345,19 @@
                 <div class="mb-3">
                     <input type="text" id="txtFiltrarProveedor" class="form-control" placeholder="Filtrar proveedor por nombre o RUC">
                 </div>
-                <table class="table table-striped table-hover" id="tablaProveedores">
-                    <thead>
-                        <tr>
-                            <th>RUC</th>
-                            <th>Nombre</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- Se llena dinámicamente -->
-                    </tbody>
-                </table>
+                <div style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-striped table-hover" id="tablaProveedores">
+                        <thead style="position: sticky; top: 0; background: white;">
+                            <tr>
+                                <th>RUC</th>
+                                <th>Nombre</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Se llena dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
@@ -348,6 +372,7 @@
 
             <div class="modal-header bg-primary text-white">
                 <h6 class="modal-title">Seleccionar Departamento</h6>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
             </div>
 
             <div class="modal-body">
@@ -357,14 +382,17 @@
                        class="form-control mb-3"
                        placeholder="Buscar departamento..." />
 
-                <table class="table table-hover" id="tablaDepartamentosModal">
-                    <thead>
-                        <tr>
-                            <th>Departamento</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
+                <div style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-hover" id="tablaDepartamentosModal">
+                        <thead style="position: sticky; top: 0; background: white;">
+                            <tr>
+                                <th>Departamento</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+
+                </div>
 
             </div>
 
@@ -467,8 +495,12 @@
             $('#archivo').prop('disabled', false);
 
             // ID y Usuario
-            $('#txtid').val(c ? c.IdCampania : 0);
-            $('#txtUsuarioRegistro').val(c ? c.UsuarioRegistro : '@ViewBag.UsuarioActual');
+             $('#txtid').val(c ? c.IdCampania : 0);
+             $('#txtUsuarioRegistro').val(c ? c.UsuarioRegistro : '@ViewBag.UsuarioActual');
+             $('#txtFechaRegistro').val(c?.FechaRegistro ?? '');
+
+             $('#txtUsuarioModificacion').val(c?.UsuarioModificacion ?? '');
+             $('#txtFechaModificacion').val(c?.FechaModificacion ?? '');
 
             if (c) {
 

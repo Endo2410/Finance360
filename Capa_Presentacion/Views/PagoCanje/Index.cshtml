@@ -1,18 +1,28 @@
-﻿@model List<Capa_Entidad.Canje>
+﻿@using System.Text.Json
+@model List<Capa_Entidad.Canje>
 
 @{
     ViewData["Title"] = "Pago de Canje";
     Layout = "~/Views/Shared/_Layout.cshtml";
 
- // Filtrar únicamente canjes con estado 5 o 9
+    // Filtrar únicamente canjes con estado 5 o 9
     var canjesActivos = Model
         .Where(x => x.oEstado != null && (x.oEstado.IdEstado == 5 || x.oEstado.IdEstado == 9))
         .ToList();
 
 }
 
+@{
+    var jsonAcciones = Context.Session.GetString("AccionesUsuario");
+    var acciones = !string.IsNullOrEmpty(jsonAcciones)
+        ? JsonSerializer.Deserialize<List<string>>(jsonAcciones)
+        : new List<string>();
+
+    bool puedepagarmenos = acciones.Contains("Permitir_Pago_Menor");
+}
+
 <ol class="breadcrumb mb-4 mt-4">
-    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Inicio</a></li>
+    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Bienvenido">Inicio</a></li>
     <li class="breadcrumb-item active">Pago de Canje</li>
 </ol>
 
@@ -75,7 +85,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                       @foreach(var p in canjesActivos.Select(x => x.oProveedor.NombreProveedor).Distinct())
+                        @foreach (var p in canjesActivos.Select(x => x.oProveedor.NombreProveedor).Distinct())
                         {
                             <tr>
                                 <td>@p</td>
@@ -124,7 +134,47 @@
                     <span id="lblTotal" class="fs-4 fw-bold" data-total="0"></span>
                 </div>
 
-               <hr class="my-4">
+                <hr>
+
+                <!-- =========================================
+    🔹 RETENCIONES
+    ========================================= -->
+                <h6 class="fw-bold text-danger">
+                    <i class="fas fa-percentage me-1"></i> Retenciones
+                </h6>
+
+                <div class="row mb-2">
+                    <div class="col-md-6">
+                        <select id="cmbRetenciones" class="form-control">
+                            <option value="">-- Seleccionar retención --</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="contenedorRetenciones" class="mb-2"></div>
+
+                <div class="alert alert-warning d-flex justify-content-between">
+                    <strong>Total Retenciones</strong>
+                    <span id="lblTotalRetenciones" data-total="0">C$0.00</span>
+                </div>
+
+                <div class="alert alert-primary d-flex justify-content-between">
+                    <strong>Total Neto a Pagar</strong>
+                    <span id="lblTotalNeto" data-total="0">C$0.00</span>
+                </div>
+
+
+                @if (puedepagarmenos)
+                {
+                    <div class="form-check mt-2">
+                        <input class="form-check-input" type="checkbox" id="chkPermitirPagoMenor">
+                        <label class="form-check-label text-danger fw-bold">
+                            Permitir registrar pago menor al neto
+                        </label>
+                    </div>
+                 }
+
+                <hr class="my-4">
                 <h6 class="fw-bold text-secondary">
                     <i class="fas fa-file-invoice-dollar me-1"></i> Forma de Pago
                 </h6>
@@ -135,13 +185,13 @@
                             <th>Monto</th>
                             <th>N° Confirmación</th>
                             <th>Comprobante</th>
-                            <th>Eliminar</th>
+                            <th>Acciones</th>
                         </tr>
                     </thead>
                     <tbody></tbody>
                 </table>
 
-               <div class="row mb-3">
+                <div class="row mb-3">
                     <div class="col-md-3">
                         <select id="cmbTipoDocAgregar" class="form-control">
                             <option value="">-- Seleccione Tipo --</option>
@@ -214,9 +264,8 @@
 </div>
 
 @section scripts{
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-
-        <script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script>
         const todosCanjes = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
             canjesActivos.Select(x => new {
                 x.IdCanje,
@@ -268,59 +317,249 @@
 
         });
 
-        // Agregar pagos por tipo
-        $('#btnAgregarPago').click(function(){
-            let idTipo = $('#cmbTipoDocAgregar').val();
-            let nombre = $('#cmbTipoDocAgregar option:selected').text();
-            let monto = parseFloat($('#txtMontoAgregar').val());
-            let numeroConfirmacion = $('#txtNumeroConfirmacionAgregar').val(); // nuevo
-            let fileInput = document.getElementById('fileComprobanteAgregar');
+        function editarPago(index) {
 
-            if(!idTipo || !monto || monto <= 0){
-                mostrarError('Seleccione tipo y monto válido');
-                return;
-            }
-            if(!numeroConfirmacion){
-                mostrarError('Debe ingresar N° Confirmación'); // validación
-                return;
-            }
-            if(!fileInput.files || fileInput.files.length === 0){
-                mostrarError('Debe seleccionar un comprobante');
-                return;
-            }
+            let pago = pagosTipos[index];
 
-            let total = parseFloat($('#lblTotal').data('total'));
-            let totalActual = pagosTipos.reduce((s,x)=>s+x.monto,0);
-            
+            // Cargar datos en inputs
+            $('#cmbTipoDocAgregar').val(pago.id);
+            $('#txtMontoAgregar').val(pago.monto);
+            $('#txtNumeroConfirmacionAgregar').val(pago.numeroConfirmacion);
 
-            pagosTipos.push({
-                id: idTipo,
-                nombre: nombre,
-                monto: monto,
-                numeroConfirmacion: numeroConfirmacion, // agregado
-                file: fileInput.files[0]
+            // Guardamos índice en edición
+            $('#btnAgregarPago').data('editando', index);
+
+            // Opcional: cambiar texto botón
+            $('#btnAgregarPago').text('Actualizar Pago');
+        }
+
+
+         // ============================================
+         // RETENCIONES
+         // ============================================
+
+         // Cargar retenciones
+        $.get('/TipoRetencion/Listar', function (res) {
+
+            listaRetenciones = res;
+
+            let cmb = $('#cmbRetenciones');
+            cmb.empty().append('<option value="">-- Seleccionar retención --</option>');
+
+            res.forEach(r => {
+                cmb.append(`<option value="${r.id}" data-porcentaje="${r.porcentaje}">
+                ${r.nombre} (${r.porcentaje}%)
+               </option>`);
             });
 
-            actualizarTablaPagos();
-            $('#txtMontoAgregar').val('');
-            $('#txtNumeroConfirmacionAgregar').val(''); // limpiar
-            $('#fileComprobanteAgregar').val('');
+        });
+
+        $('#cmbRetenciones').change(function () {
+
+            let id = $(this).val();
+            if (!id) return;
+
+            let option = $(this).find('option:selected');
+            let nombre = option.text();
+            let porcentaje = option.data('porcentaje');
+
+            $('#contenedorRetenciones').append(`
+              <div class="form-check retencion-item" data-id="${id}">
+                  <input class="form-check-input chkRetencion"
+                         type="checkbox"
+                         checked
+                         data-id="${id}"
+                         data-porcentaje="${porcentaje}">
+
+                  <label class="form-check-label">
+                      ${nombre}
+                  </label>
+              </div>
+            `);
+
+            // eliminar del combo
+            option.remove();
+
+            $('#cmbRetenciones').val('');
+
+            calcularRetenciones();
+
         });
 
 
-        function actualizarTablaPagos(){
+        $(document).on('change', '.chkRetencion', function () {
+
+            if (!$(this).is(':checked')) {
+
+                let cont = $(this).closest('.retencion-item');
+
+                let id = $(this).data('id');
+                let porcentaje = $(this).data('porcentaje');
+                let nombre = cont.find('label').text();
+
+                $('#cmbRetenciones').append(`
+                  <option value="${id}" data-porcentaje="${porcentaje}">
+                      ${nombre}
+                  </option>
+                `);
+
+                cont.remove();
+
+            }
+
+            calcularRetenciones();
+
+        });
+
+
+         // Evento cambio de retenciones
+         $(document).on('change', '.chkRetencion', function () {
+             calcularRetenciones();
+         });
+
+         // Cálculo de retenciones
+         function calcularRetenciones() {
+
+             let total = parseFloat($('#lblTotal').data('total')) || 0;
+             let totalRetenciones = 0;
+
+             $('.chkRetencion:checked').each(function () {
+                 let porcentaje = parseFloat($(this).data('porcentaje'));
+                 totalRetenciones += total * (porcentaje / 100);
+             });
+
+             let totalNeto = total - totalRetenciones;
+
+             $('#lblTotalRetenciones')
+                 .data('total', totalRetenciones)
+                 .text(fMonto(totalRetenciones));
+
+             $('#lblTotalNeto')
+                 .data('total', totalNeto)
+                 .text(fMonto(totalNeto));
+         }
+
+
+
+        // Agregar pagos por tipo
+        $('#btnAgregarPago').click(function () {
+
+            let idTipo = $('#cmbTipoDocAgregar').val();
+            let nombre = $('#cmbTipoDocAgregar option:selected').text();
+            let monto = parseFloat($('#txtMontoAgregar').val());
+            let numeroConfirmacion = $('#txtNumeroConfirmacionAgregar').val();
+            let fileInput = document.getElementById('fileComprobanteAgregar');
+
+            if (!idTipo || !monto || monto <= 0) {
+                mostrarError('Seleccione tipo y monto válido');
+                return;
+            }
+
+            if (!numeroConfirmacion) {
+                mostrarError('Debe ingresar N° Confirmación');
+                return;
+            }
+
+            let editIndex = $('#btnAgregarPago').data('editando');
+
+            // SOLO exigir archivo si es nuevo
+            if (editIndex === undefined) {
+                if (!fileInput.files || fileInput.files.length === 0) {
+                    mostrarError('Debe seleccionar un comprobante');
+                    return;
+                }
+            }
+
+            if (editIndex !== undefined) {
+
+                pagosTipos[editIndex] = {
+                    id: idTipo,
+                    nombre: nombre,
+                    monto: monto,
+                    numeroConfirmacion: numeroConfirmacion,
+                    file: fileInput.files.length > 0 ? fileInput.files[0] : pagosTipos[editIndex].file
+                };
+
+                $('#btnAgregarPago').removeData('editando');
+                $('#btnAgregarPago').text('Agregar Pago');
+
+            } else {
+
+                pagosTipos.push({
+                    id: idTipo,
+                    nombre: nombre,
+                    monto: monto,
+                    numeroConfirmacion: numeroConfirmacion,
+                    file: fileInput.files[0]
+                });
+
+            }
+
+            actualizarTablaPagos();
+
+            $('#txtMontoAgregar').val('');
+            $('#txtNumeroConfirmacionAgregar').val('');
+            $('#fileComprobanteAgregar').val('');
+
+        });
+
+            function verArchivo(index) {
+
+                let file = pagosTipos[index].file;
+
+                if (!file) {
+                    mostrarError('No hay archivo disponible');
+                    return;
+                }
+
+                let url = URL.createObjectURL(file);
+
+                window.open(url, '_blank');
+            }
+
+        function actualizarTablaPagos() {
+
             let tbody = $('#tablaPagosTipos tbody');
             tbody.empty();
-            pagosTipos.forEach((p,i)=>{
-                tbody.append(`<tr>
+
+            pagosTipos.forEach((p, i) => {
+
+                let tieneArchivo = p.file != null;
+
+                tbody.append(`
+                <tr>
                     <td>${p.nombre}</td>
                     <td>${fMonto(p.monto)}</td>
-                    <td>${p.numeroConfirmacion}</td> <!-- mostrar confirmación -->
-                    <td>${p.file ? p.file.name : ''}</td>
-                    <td><button class="btn btn-sm btn-danger" onclick="eliminarPago(${i})">X</button></td>
-                </tr>`);
+                    <td>${p.numeroConfirmacion}</td>
+
+                    <td>
+                        ${tieneArchivo
+                        ? `<button class="btn btn-sm btn-info" onclick="verArchivo(${i})">
+                                    <i class="fas fa-eye"></i> Ver
+                               </button>`
+                        : `<span class="text-muted">Sin archivo</span>`
+                    }
+                    </td>
+
+                    <td>
+
+                        <button class="btn btn-warning btn-sm" onclick="editarPago(${i})">
+                            <i class="fas fa-edit"></i>
+                        </button>
+
+                        <button class="btn btn-danger btn-sm" onclick="eliminarPago(${i})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+
+                    </td>
+
+                </tr>
+            `);
+
             });
+
         }
+
 
         function eliminarPago(i){ pagosTipos.splice(i,1); actualizarTablaPagos(); }
 
@@ -350,6 +589,8 @@
             $('#lblTotal').data('total', total);
             $('#lblTotal').text(fMonto(total));
 
+            calcularRetenciones();
+
             $.get('/TipoDocumentoPago/ListarTipos', function(res){
                 $('#cmbTipoDocAgregar').empty().append('<option value="">-- Seleccione Tipo --</option>');
                 res.forEach(t => $('#cmbTipoDocAgregar').append(`<option value="${t.id}">${t.nombre}</option>`));
@@ -359,28 +600,66 @@
         });
 
         // Confirmar pago
-        $('#btnConfirmarPago').click(async function() {
-            let seleccionadas = $('.chkCanje:checked');
-            if(seleccionadas.length === 0){ mostrarError('Seleccione al menos un canje'); return; }
+        $('#btnConfirmarPago').click(async function () {
 
-            let totalAPagar = parseFloat($('#lblTotal').data('total'));
-            let totalPagos = pagosTipos.reduce((s,x)=>s+x.monto,0);
-            if(totalPagos + 0.01 < totalAPagar){ 
-                mostrarError('El monto total de pagos no puede ser menor al total a pagar'); 
-                return; 
+            let seleccionadas = $('.chkCanje:checked');
+
+            if (seleccionadas.length === 0) {
+                mostrarError('Seleccione al menos un canje');
+                return;
             }
 
+            // ================================
+            // TOTALES
+            // ================================
+
+            let totalCanje = parseFloat($('#lblTotal').data('total')) || 0;
+            let totalRetenciones = parseFloat($('#lblTotalRetenciones').data('total')) || 0;
+
+            // 🔹 DINERO REAL QUE NOS PAGAN
+            let totalPagos = pagosTipos.reduce((s, x) => s + x.monto, 0);
+
+            // 🔹 TOTAL APLICADO (NETO + RETENCIONES)
+            let totalAplicado = totalPagos + totalRetenciones;
+
+            // ================================
+            // VALIDACIÓN
+            // ================================
+
+            let totalNeto = parseFloat($('#lblTotalNeto').data('total')) || 0;
+            let permitirPagoMenor = $('#chkPermitirPagoMenor').is(':checked');
+
+            // 🔥 VALIDACIÓN FINANCIERA
+            if (totalPagos < totalNeto && !permitirPagoMenor) {
+
+                mostrarError(
+                    'El monto pagado no puede ser menor al total neto. ' +
+                    'Active la opción "Permitir pago menor" si tiene autorización.'
+                );
+
+                return;
+            }
+
+            // ================================
+            // GENERAR DETALLE
+            // ================================
 
             let detalleEnvio = [];
             let suma = 0;
-            seleccionadas.each(function(){ suma += parseFloat($(this).data('monto')); });
+
+            seleccionadas.each(function () {
+                suma += parseFloat($(this).data('monto'));
+            });
 
             let usuarioActual = '@ViewBag.UsuarioActual';
 
-            seleccionadas.each(function(){
+            seleccionadas.each(function () {
+
                 let fila = $(this);
                 let proporcion = parseFloat(fila.data('monto')) / suma;
-                pagosTipos.forEach(function(pago){
+
+                pagosTipos.forEach(function (pago) {
+
                     detalleEnvio.push({
                         IdCanje: parseInt(fila.val()),
                         MontoPagado: +(pago.monto * proporcion).toFixed(2),
@@ -389,36 +668,90 @@
                         RutaComprobante: pago.file ? pago.file.name : null,
                         UsuarioPago: usuarioActual
                     });
+
                 });
+
             });
 
+            // ================================
+            // RETENCIONES
+            // ================================
+
+            let retenciones = [];
+
+            $('.chkRetencion:checked').each(function () {
+
+                let porcentaje = parseFloat($(this).data('porcentaje'));
+                let id = parseInt($(this).data('id'));
+
+                let monto = +(totalCanje * (porcentaje / 100)).toFixed(2);
+
+                retenciones.push({
+                    IdTipoRetencion: id,
+                    Porcentaje: porcentaje,
+                    MontoRetenido: monto
+                });
+
+            });
+
+            // ================================
+            // FORM DATA
+            // ================================
+
             let formData = new FormData();
+
             formData.append('IdCanje', seleccionadas.first().val());
             formData.append('Observacion', $('#txtObs').val());
             formData.append('DetalleCanjes', JSON.stringify(detalleEnvio));
-            formData.append('TotalAPagar', totalAPagar);
 
-            pagosTipos.forEach((p,i)=>{
-                if(p.file) formData.append(`PagosTipos[${i}].Comprobante`, p.file);
+            // 🔥 MONTO TOTAL = LO QUE REALMENTE SE APLICÓ
+            formData.append('TotalAPagar', totalAplicado);
+
+            formData.append('Retenciones', JSON.stringify(retenciones));
+
+            pagosTipos.forEach((p, i) => {
+                if (p.file) {
+                    formData.append(`PagosTipos[${i}].Comprobante`, p.file);
+                }
             });
+
+            // ================================
+            // AJAX
+            // ================================
 
             $.ajax({
-                url:'/PagoCanje/RegistrarPagoMultiples',
-                type:'POST',
+                url: '/PagoCanje/RegistrarPagoMultiples',
+                type: 'POST',
                 data: formData,
-                processData:false,
-                contentType:false,
-                success:function(r){
-                    if(r.success){
+                processData: false,
+                contentType: false,
+
+                success: function (r) {
+
+                    if (r.success) {
+
                         $('#lblNumeroDoc').text(r.numeroDocumento);
-                        new bootstrap.Modal(document.getElementById('modalExito')).show();
-                        setTimeout(()=>location.reload(),3000);
+
+                        new bootstrap.Modal(
+                            document.getElementById('modalExito')
+                        ).show();
+
+                        setTimeout(() => location.reload(), 3000);
+
                     } else {
+
                         mostrarError(r.mensajes.join('\n'));
+
                     }
+
                 },
-                error:function(){ mostrarError('Error al registrar pago'); }
+
+                error: function () {
+                    mostrarError('Error al registrar pago');
+                }
+
             });
+
         });
-</script>
+    </script>
 }

@@ -1,5 +1,5 @@
 ﻿@using System.Text.Json
-@model List<Capa_Entidad.Incentivo>
+@model List<Capa_Entidad.CE_Incentivo.Incentivo>
 
 @{
     ViewData["Title"] = "Gestión de Incentivos";
@@ -17,7 +17,7 @@
 
 <!-- BREADCRUMB -->
 <ol class="breadcrumb mb-4 mt-4">
-    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Inicio</a></li>
+    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Bienvenido">Inicio</a></li>
     <li class="breadcrumb-item active">Incentivos</li>
 </ol>
 
@@ -467,6 +467,45 @@
 
 </div>
 
+<!-- MODAL DETALLE PAGO -->
+<div class="modal fade" id="modalDetallePago" tabindex="-1">
+
+    <div class="modal-dialog modal-lg">
+
+        <div class="modal-content">
+
+            <div class="modal-header bg-primary text-white">
+                <h5>Detalle Pago Incentivo</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <table class="table table-bordered">
+
+                    <thead class="table-primary">
+                        <tr>
+                            <th>Tipo Documento</th>
+                            <th>Monto</th>
+                            <th>Confirmación</th>
+                            <th>Comprobante</th>
+                            <th>Usuario</th>
+                            <th>Fecha</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="tbodyDetallePago"></tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
 <!-- MODAL EXITO -->
 <div class="modal fade" id="modalExitoPagoIncentivo" tabindex="-1">
     <div class="modal-dialog">
@@ -536,7 +575,7 @@
 
 <!-- ================= MODAL PROVEEDOR ================= -->
 <div class="modal fade" id="modalProveedor" tabindex="-1" data-bs-backdrop="static">
-    <div class="modal-dialog modal-md">
+    <div class="modal-dialog modal-md modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title">Seleccionar Proveedor</h5>
@@ -547,17 +586,19 @@
                 <div class="mb-3">
                     <input type="text" id="txtFiltrarProveedor" class="form-control" placeholder="Filtrar proveedor por nombre o RUC">
                 </div>
-                <table class="table table-striped table-hover" id="tablaProveedores">
-                    <thead>
-                        <tr>
-                            <th>RUC</th>
-                            <th>Nombre</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- Se llena dinámicamente -->
-                    </tbody>
-                </table>
+                <div style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-striped table-hover" id="tablaProveedores">
+                        <thead style="position: sticky; top: 0; background: white;">
+                            <tr>
+                                <th>RUC</th>
+                                <th>Nombre</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Se llena dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
@@ -565,7 +606,7 @@
 
 <!-- ================= MODAL SUCURSAL ================= -->
 <div class="modal fade" id="modalsucursal" tabindex="-1" data-bs-backdrop="static">
-    <div class="modal-dialog modal-md">
+    <div class="modal-dialog modal-md modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title">Seleccionar Sucursal</h5>
@@ -576,17 +617,19 @@
                 <div class="mb-3">
                     <input type="text" id="txtFiltrarsucusal" class="form-control" placeholder="Filtrar sucursal por nombre o codigo ">
                 </div>
-                <table class="table table-striped table-hover" id="tablasucursal">
-                    <thead>
-                        <tr>
-                            <th>Codigo</th>
-                            <th>Nombre</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- Se llena dinámicamente -->
-                    </tbody>
-                </table>
+                <div style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-striped table-hover" id="tablasucursal">
+                        <thead style="position: sticky; top: 0; background: white;">
+                            <tr>
+                                <th>Codigo</th>
+                                <th>Nombre</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Se llena dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
@@ -596,27 +639,36 @@
 
     <script>
 
-        $(document).ready(function(){
+        $(document).ready(function () {
 
             $('#tablaIncentivos').DataTable({
-                searching:false,
+                searching: false,
                 ordering: false,
-                lengthChange:false
+                lengthChange: false
             });
 
             cargarTipoCanje();
             cargarTipoIncentivo();
-           cargarTipoDocumentoPago();
+            cargarTipoDocumentoPago();
 
 
-            $('#btnNuevo').click(()=>abrirModal());
+            $('#btnNuevo').click(() => abrirModal());
 
             // BOTON VER
-            $(document).on('click', '.btn-ver', function(){
+            $(document).on('click', '.btn-ver', function () {
 
                 let data = $(this).data('json');
 
                 abrirModal(data, true);
+
+            });
+
+            // BOTON EDITAR
+            $(document).on('click', '.btn-editar', function () {
+
+                let data = $(this).data('json');
+
+                abrirModal(data, false);
 
             });
 
@@ -626,30 +678,30 @@
 
         // ================= FILTRO =================
 
-        function filtrarColumna(){
+        function filtrarColumna() {
 
             let campo = $('#filtroCampo').val();
             let valor = $('#filtroValor').val().toLowerCase();
 
-            $('#tablaIncentivos tbody tr').each(function(){
+            $('#tablaIncentivos tbody tr').each(function () {
 
-                if(!campo){
+                if (!campo) {
                     $(this).show();
                     return;
                 }
 
                 let texto = $(this).find('td')
-                                  .eq(campo)
-                                  .text()
-                                  .toLowerCase();
+                    .eq(campo)
+                    .text()
+                    .toLowerCase();
 
                 $(this).toggle(texto.includes(valor));
             });
         }
 
 
-        //funcion de los modales 
-        function mostrarExito(mensaje, titulo="Operación exitosa"){
+        //funcion de los modales
+        function mostrarExito(mensaje, titulo = "Operación exitosa") {
 
             $('#tituloExitoIncentivo').text(titulo);
 
@@ -661,7 +713,7 @@
         }
 
 
-        function mostrarError(mensaje){
+        function mostrarError(mensaje) {
 
             $('#lblErrorPagoIncentivo').html(mensaje);
 
@@ -675,20 +727,20 @@
 
         // ================= MODAL =================
 
-         function abrirModal(c=null, modoVer=false){
+        function abrirModal(c = null, modoVer = false) {
 
             $('#formIncentivo')[0].reset();
 
             $('#mensajeError').addClass('d-none');
 
-            $('#archivoExistente').data('nombre','');
+            $('#archivoExistente').data('nombre', '');
 
-             $('#contenedorPreview').hide();
+            $('#contenedorPreview').hide();
 
 
-            $('#txtId').val(c?c.IdIncentivo:0);
+            $('#txtId').val(c ? c.IdIncentivo : 0);
 
-            if(c){
+            if (c) {
 
                 $('#txtNombre').val(c.Nombre);
 
@@ -703,20 +755,20 @@
 
                 $('#txtComentario').val(c.Comentario);
 
-                if(c.DocumentoAdjunto){
+                if (c.DocumentoAdjunto) {
 
                     let url = `/archivo/incentivo/${c.DocumentoAdjunto}`;
 
-                    $('#linkPreview').attr('href',url);
+                    $('#linkPreview').attr('href', url);
 
                     $('#contenedorPreview').show();
 
                     $('#archivoExistente')
-                        .data('nombre',c.DocumentoAdjunto);
+                        .data('nombre', c.DocumentoAdjunto);
                 }
             }
 
-            $('#archivo').off('change').on('change',previewArchivo);
+            $('#archivo').off('change').on('change', previewArchivo);
 
             // HABILITAR TODO PRIMERO
             $('#modalIncentivo input').prop('disabled', false);
@@ -726,7 +778,7 @@
             $('#modalIncentivo .btn-primary').show();
 
             // SI ES MODO VER
-            if(modoVer){
+            if (modoVer) {
 
                 $('#modalIncentivo input').prop('disabled', true);
                 $('#modalIncentivo select').prop('disabled', true);
@@ -740,64 +792,69 @@
             ).show();
         }
 
-        function verIncentivo(data){
+        function verIncentivo(data) {
 
             abrirModal(data, true);
 
         }
 
 
-        function verDetallePago(idIncentivo){
+        function verDetallePago(idIncentivo) {
 
-            $.get('/Incentivo/ObtenerDetallePago?id=' + idIncentivo, function(data){
+            $.get('/Incentivo/ObtenerDetallePago?id=' + idIncentivo, function (data) {
 
-                listaPagos = [];
+                let tbody = $('#tbodyDetallePago');
 
-                data.forEach(p=>{
+                tbody.empty();
 
-                    listaPagos.push({
-                        tipoDocumento: p.tipoDocumento,
-                        monto: p.monto,
-                        confirmacion: p.confirmacion,
-                        file: { name: p.comprobante }
-                    });
+                data.forEach(p => {
+
+                    let archivo = '';
+
+                    if (p.comprobante) {
+                        archivo = `
+                    <a target="_blank"
+                       href="/ComprobantesIncentivo/${p.comprobante}"
+                       class="btn btn-sm btn-secondary">
+                       <i class="fas fa-eye"></i>
+                    </a>`;
+                    }
+
+                    tbody.append(`
+                    <tr>
+                        <td>${p.tipoDocumento}</td>
+                        <td>${p.monto.toFixed(2)}</td>
+                        <td>${p.confirmacion}</td>
+                        <td>${archivo}</td>
+                        <td>${p.usuario}</td>
+                        <td>${p.fecha}</td>
+                    </tr>
+                `);
 
                 });
 
-                renderTablaPagos();
-
-                new bootstrap.Modal('#modalPago').show();
-
-                // deshabilitar edición
-                $('#modalPago input').prop('disabled', true);
-                $('#modalPago select').prop('disabled', true);
-
-                // ocultar botones
-                $('#modalPago .btn-success').hide();
-                $('#modalPago .btn-primary').hide();
+                new bootstrap.Modal(
+                    document.getElementById('modalDetallePago')
+                ).show();
 
             });
-
         }
-
 
         // ================= PREVIEW =================
 
-       function previewArchivo(){
+        function previewArchivo() {
 
-    if(this.files.length === 0){
-        $('#contenedorPreview').hide();
-        return;
-    }
+            if (this.files.length === 0) {
+                $('#contenedorPreview').hide();
+                return;
+            }
 
-    let url = URL.createObjectURL(this.files[0]);
+            let url = URL.createObjectURL(this.files[0]);
 
-    $('#linkPreview').attr('href', url);
+            $('#linkPreview').attr('href', url);
 
-    $('#contenedorPreview').show();
-}
-
-
+            $('#contenedorPreview').show();
+        }
 
         // ================= PROVEEDOR =================
 
@@ -813,11 +870,11 @@
                 tbody.empty();
                 data.forEach(p => {
                     tbody.append(`
-                        <tr data-id="${p.idProveedor}" data-nombre="${p.nombre}">
-                            <td>${p.ruc}</td>
-                            <td>${p.nombre}</td>
-                        </tr>
-                    `);
+                                <tr data-id="${p.idProveedor}" data-nombre="${p.nombre}">
+                                    <td>${p.ruc}</td>
+                                    <td>${p.nombre}</td>
+                                </tr>
+                            `);
                 });
 
                 // Click en la fila selecciona proveedor automáticamente
@@ -849,7 +906,7 @@
         // ================= SUCURSAL =================
 
         function abrirModalSucursal() {
-            cargarSucursalModal(); 
+            cargarSucursalModal();
             $('#txtFiltrarsucusal').val('');
             new bootstrap.Modal('#modalsucursal').show();
         }
@@ -861,11 +918,11 @@
                 tbody.empty();
                 data.forEach(p => {
                     tbody.append(`
-                        <tr data-id="${p.idsucursal}" data-nombre="${p.nombre}">
-                            <td>${p.codigo}</td>
-                            <td>${p.nombre}</td>
-                        </tr>
-                    `);
+                                <tr data-id="${p.idsucursal}" data-nombre="${p.nombre}">
+                                    <td>${p.codigo}</td>
+                                    <td>${p.nombre}</td>
+                                </tr>
+                            `);
                 });
 
                 // Click en la fila selecciona proveedor automáticamente
@@ -879,7 +936,7 @@
             });
         }
 
-        function seleccionarSucursal(id, nombre) { 
+        function seleccionarSucursal(id, nombre) {
             $('#cbosucursal').val(id);
             $('#txtSucursalNombre').val(nombre);
             bootstrap.Modal.getInstance(document.getElementById('modalsucursal')).hide();
@@ -896,70 +953,68 @@
 
         // ================= COMBOS =================
 
-        function cargarTipoCanje(){
+        function cargarTipoCanje() {
 
-            $.get('/TipoCanje/Listar',d=>{
+            $.get('/TipoCanje/Listar', d => {
 
                 $('#cboTipoCanje').empty();
 
-                d.forEach(t=>{
+                d.forEach(t => {
 
                     $('#cboTipoCanje').append(`
-                      <option value="${t.id}">
-                        ${t.nombre}
-                      </option>
-                    `);
+                              <option value="${t.id}">
+                                ${t.nombre}
+                              </option>
+                            `);
                 });
             });
         }
 
-        function cargarTipoDocumentoPago(){
-            $.get('/TipoDocumentoPago/ListarTipos', function(data){
+        function cargarTipoDocumentoPago() {
+            $.get('/TipoDocumentoPago/ListarTipos', function (data) {
                 $('#cboTipoDocumentoPago').empty();
-                data.forEach(t=>{
+                data.forEach(t => {
                     $('#cboTipoDocumentoPago').append(`
-                        <option value="${t.id}">
-                            ${t.nombre}
-                        </option>
-                    `);
+                                <option value="${t.id}">
+                                    ${t.nombre}
+                                </option>
+                            `);
                 });
             });
         }
 
-        function cargarTipoIncentivo(){
+        function cargarTipoIncentivo() {
 
-            $.get('/TipoIncentivo/Listar',d=>{
+            $.get('/Incentivo/Listar', d => {
 
                 $('#cboTipoIncentivo').empty();
 
-                d.forEach(t=>{
+                d.forEach(t => {
 
                     $('#cboTipoIncentivo').append(`
-                      <option value="${t.id}">
-                        ${t.nombre}
-                      </option>
-                    `);
+                              <option value="${t.id}">
+                                ${t.nombre}
+                              </option>
+                            `);
                 });
             });
         }
 
-
         // ================= GUARDAR =================
+        function guardarIncentivo() {
 
-        function guardarIncentivo(){
+            let errores = [];
 
-            let errores=[];
-
-            if(!$('#txtNombre').val())
+            if (!$('#txtNombre').val())
                 errores.push("Nombre requerido");
 
-            if(!$('#cboproveedor').val())
+            if (!$('#cboproveedor').val())
                 errores.push("Proveedor requerido");
 
-            if(!$('#cbosucursal').val())
+            if (!$('#cbosucursal').val())
                 errores.push("Sucursal requerida");
 
-            if(errores.length){
+            if (errores.length) {
 
                 mostrarError(
                     errores.join('<br>')
@@ -969,63 +1024,63 @@
             }
 
 
-            let fd=new FormData();
+            let fd = new FormData();
 
-            fd.append("IdIncentivo",$('#txtId').val());
-            fd.append("Nombre",$('#txtNombre').val());
-            fd.append("IdProveedor",$('#cboproveedor').val());
-            fd.append("IdSucursal",$('#cbosucursal').val());
-            fd.append("IdTipoCanje",$('#cboTipoCanje').val());
-            fd.append("IdTipoIncentivo",$('#cboTipoIncentivo').val());
-            fd.append("Comentario",$('#txtComentario').val());
+            fd.append("IdIncentivo", $('#txtId').val());
+            fd.append("Nombre", $('#txtNombre').val());
+            fd.append("IdProveedor", $('#cboproveedor').val());
+            fd.append("IdSucursal", $('#cbosucursal').val());
+            fd.append("IdTipoCanje", $('#cboTipoCanje').val());
+            fd.append("IdTipoIncentivo", $('#cboTipoIncentivo').val());
+            fd.append("Comentario", $('#txtComentario').val());
 
-            let file=$('#archivo')[0].files[0];
-            let exist=$('#archivoExistente').data('nombre');
+            let file = $('#archivo')[0].files[0];
+            let exist = $('#archivoExistente').data('nombre');
 
-            if(file) fd.append("archivo",file);
-            else if(exist) fd.append("DOCUMENTO_EXISTENTE",exist);
+            if (file) fd.append("archivo", file);
+            else if (exist) fd.append("DOCUMENTO_EXISTENTE", exist);
 
             $.ajax({
 
-                type:'POST',
+                type: 'POST',
 
-                url:$('#txtId').val()==0
-                    ?'/Incentivo/Crear'
-                    :'/Incentivo/Editar',
+                url: $('#txtId').val() == 0
+                    ? '/Incentivo/Crear'
+                    : '/Incentivo/Editar',
 
-                data:fd,
-                processData:false,
-                contentType:false,
+                data: fd,
+                processData: false,
+                contentType: false,
 
-                success:r=>{
+                success: r => {
 
-                     if(r.success){
+                    if (r.success) {
 
                         bootstrap.Modal
-                          .getInstance(document.getElementById('modalIncentivo'))
-                          .hide();
+                            .getInstance(document.getElementById('modalIncentivo'))
+                            .hide();
 
                         mostrarExito(
-                            $('#txtId').val()==0
-                            ? "Incentivo creado correctamente"
-                            : "Incentivo actualizado correctamente",
+                            $('#txtId').val() == 0
+                                ? "Incentivo creado correctamente"
+                                : "Incentivo actualizado correctamente",
                             "Incentivo"
                         );
 
-                        setTimeout(()=>location.reload(),2000);
+                        setTimeout(() => location.reload(), 2000);
                     }
-                    else{
+                    else {
 
                         $('#mensajeError')
-                          .removeClass('d-none')
-                          .html(r.mensajes.join('<br>'));
+                            .removeClass('d-none')
+                            .html(r.mensajes.join('<br>'));
                     }
                 }
             });
         }
 
         // ================= ABRIR MODAL PAGO =================
-        function agregarDetallePago(){
+        function agregarDetallePago() {
 
             let idTipo = $('#cboTipoDocumentoPago').val();
             let textoTipo = $('#cboTipoDocumentoPago option:selected').text();
@@ -1036,23 +1091,23 @@
 
             let errores = [];
 
-            if(!idTipo){
+            if (!idTipo) {
                 errores.push("• Debe seleccionar el tipo de documento");
             }
 
-            if(!montoTexto || isNaN(monto) || monto <= 0){
+            if (!montoTexto || isNaN(monto) || monto <= 0) {
                 errores.push("• Debe ingresar un monto válido");
             }
 
-            if(!confirmacion){
+            if (!confirmacion) {
                 errores.push("• Debe ingresar el número de confirmación");
             }
 
-            if(!fileInput.files || fileInput.files.length === 0){
+            if (!fileInput.files || fileInput.files.length === 0) {
                 errores.push("• Debe adjuntar el comprobante");
             }
 
-            if(errores.length > 0){
+            if (errores.length > 0) {
                 mostrarError(
                     errores.join("<br>")
                 );
@@ -1074,46 +1129,42 @@
             $('#txtComprobanteDetalle').val('');
         }
 
-
-
-        function renderTablaPagos(){
+        function renderTablaPagos() {
 
             let tbody = $('#tablaDetallePago tbody');
             tbody.empty();
 
             let total = 0;
 
-            listaPagos.forEach((p, index)=>{
+            listaPagos.forEach((p, index) => {
 
                 total += p.monto;
 
                 tbody.append(`
-                    <tr>
-                        <td>${p.tipoDocumento}</td>
-                        <td>${p.monto.toFixed(2)}</td>
-                        <td>${p.confirmacion}</td>
-                         <td>${p.file ? p.file.name : ''}</td>
-                        <td>
-                            <button class="btn btn-danger btn-sm"
-                                onclick="eliminarPago(${index})">
-                                X
-                            </button>
-                        </td>
-                    </tr>
-                `);
+                            <tr>
+                                <td>${p.tipoDocumento}</td>
+                                <td>${p.monto.toFixed(2)}</td>
+                                <td>${p.confirmacion}</td>
+                                 <td>${p.file ? p.file.name : ''}</td>
+                                <td>
+                                    <button class="btn btn-danger btn-sm"
+                                        onclick="eliminarPago(${index})">
+                                        X
+                                    </button>
+                                </td>
+                            </tr>
+                        `);
             });
 
             $('#lblTotalPago').text(total.toFixed(2));
         }
 
-                function eliminarPago(index){
-            listaPagos.splice(index,1);
+        function eliminarPago(index) {
+            listaPagos.splice(index, 1);
             renderTablaPagos();
         }
 
-
-
-        function abrirModalPago(idIncentivo, numeroDocumento){
+        function abrirModalPago(idIncentivo, numeroDocumento) {
 
             $('#txtIdIncentivoPago').val(idIncentivo);
             $('#txtDocumentoPago').val(numeroDocumento);
@@ -1134,9 +1185,9 @@
 
         // ================= GUARDAR PAGO =================
 
-        function guardarPagoMultiple(){
+        function guardarPagoMultiple() {
 
-            if(listaPagos.length === 0){
+            if (listaPagos.length === 0) {
                 mostrarError("Debe agregar al menos un pago");
                 return;
             }
@@ -1150,30 +1201,30 @@
                 $('#txtFechaPago').val());
 
             formData.append("Detalles",
-                JSON.stringify(listaPagos.map(p=>({
-                    IdTipoDocumento:p.idTipoDocumento,
-                    MontoPagado:p.monto,
-                    NumeroConfirmacion:p.confirmacion
+                JSON.stringify(listaPagos.map(p => ({
+                    IdTipoDocumento: p.idTipoDocumento,
+                    MontoPagado: p.monto,
+                    NumeroConfirmacion: p.confirmacion
                 })))
             );
 
-            listaPagos.forEach((p,i)=>{
-                if(p.file)
+            listaPagos.forEach((p, i) => {
+                if (p.file)
                     formData.append(
                         `Pagos[${i}].Comprobante`, p.file);
             });
 
             $.ajax({
 
-                url:'/Incentivo/RegistrarPagoMultiple',
-                type:'POST',
+                url: '/Incentivo/RegistrarPagoMultiple',
+                type: 'POST',
                 data: formData,
-                processData:false,
-                contentType:false,
+                processData: false,
+                contentType: false,
 
-                success:function(r){
+                success: function (r) {
 
-                    if(r.success){
+                    if (r.success) {
 
                         mostrarExito(
                             "Pago registrado correctamente<br>Documento: <b>"
@@ -1183,11 +1234,11 @@
                         );
 
 
-                        setTimeout(()=>{
+                        setTimeout(() => {
                             location.reload();
-                        },3000);
+                        }, 3000);
 
-                    }else{
+                    } else {
 
                         mostrarError(
                             r.mensaje || "Error al registrar pago"
@@ -1196,7 +1247,7 @@
                     }
                 },
 
-                error:function(){
+                error: function () {
                     mostrarError(
                         "Error interno del servidor"
                     );

@@ -128,5 +128,37 @@ namespace Capa_Dato
             }
         }
 
+
+        public List<ItemDepartamento> LISTAR_ITEM(int? ID_DEPARTAMENTO)
+        {
+            List<ItemDepartamento> lista = new List<ItemDepartamento>();
+
+            using (SqlConnection conn = new SqlConnection(cadenaConexion))
+            {
+                SqlCommand cmd = new SqlCommand("SP_LISTAR_ITEM_POR_DEPARTAMENTO", conn);
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                cmd.Parameters.AddWithValue("@ID_DEPARTAMENTO", (object)ID_DEPARTAMENTO ?? DBNull.Value);
+
+                conn.Open();
+                SqlDataReader dr = cmd.ExecuteReader();
+
+                while (dr.Read())
+                {
+                    lista.Add(new ItemDepartamento
+                    {
+                        ID_DEPARTAMENTO = Convert.ToInt32(dr["ID_DEPARTAMENTO"]),
+                        NOMBRE_DEPARTAMENTO = dr["NOMBRE_DEPARTAMENTO"].ToString(),
+
+                        ID_ITEM = Convert.ToInt32(dr["ID_ITEM"]),
+                        DESCRIPTION = dr["Description"].ToString(),
+                        ITEMLOOKUPCODE = dr["ItemLookupCode"].ToString()
+                    });
+                }
+            }
+
+            return lista;
+        }
+
     }
 }

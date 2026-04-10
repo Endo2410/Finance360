@@ -1,0 +1,247 @@
+﻿@using System.Text.Json
+@model List<Capa_Entidad.CE_Incentivo.PorcentajeComisiones>
+
+@{
+    ViewData["Title"] = "Gestión de Comisiones por Cargo";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<br />
+<br />
+
+
+<div class="row">
+    <!-- Incentivo -->
+    <div class="col-md-3 mb-2">
+        <a asp-controller="Incentivo" asp-action="Tipo_Incentivo" class="text-decoration-none">
+            <div class="card shadow h-100 border-0">
+                <div class="card-body text-center">
+                    <i class="fas fa-gift fa-2x text-primary"></i>
+                    <h6 class="mt-2">Tipo Incentivo</h6>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <!-- Uso incentivo -->
+    <div class="col-md-3 mb-2">
+        <a asp-controller="Incentivo" asp-action="Tipouso" class="text-decoration-none">
+            <div class="card shadow h-100 border-0">
+                <div class="card-body text-center">
+                    <i class="fas fa-tags fa-2x text-success"></i>
+                    <h6 class="mt-2">Tipo Uso Incentivo</h6>
+                </div>
+            </div>
+        </a>
+    </div>
+
+
+    <div class="col-md-3 mb-2">
+        <a asp-controller="Incentivo" asp-action="ComisionesProcentaje" class="text-decoration-none">
+            <div class="card shadow h-100 border-0">
+                <div class="card-body text-center">
+                    <i class="fas fa-percent fa-2x text-success"></i>
+                    <h6 class="mt-2">Comisiones %</h6>
+                </div>
+            </div>
+        </a>
+    </div>
+</div>
+
+<!-- Breadcrumb -->
+<ol class="breadcrumb mb-4 mt-4">
+    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Bienvenido">Inicio</a></li>
+    <li class="breadcrumb-item active">Comisiones por Cargo</li>
+</ol>
+
+<!-- Card principal -->
+<div class="card shadow border-0">
+    <div class="card-header text-white d-flex justify-content-between align-items-center" style="background-color:#274DF5;">
+        <span><i class="fas fa-percentage me-2"></i>Lista de Comisiones</span>
+        <button id="btnNuevo" class="btn btn-light btn-sm">
+            <i class="fas fa-plus"></i> Nuevo Rango
+        </button>
+    </div>
+
+    <div class="card-body">
+        <table class="table table-striped align-middle" id="tablaComisiones">
+            <thead class="text-white" style="background-color:#274DF5;">
+                <tr>
+                    <th>ID</th>
+                    <th>Cargo</th>
+                    <th>Monto Min</th>
+                    <th>Monto Max</th>
+                    <th>Porcentaje (%)</th>
+                    <th class="text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var c in Model)
+                {
+                    var json = JsonSerializer.Serialize(new
+                    {
+                        c.Id,
+                        c.Cargo,
+                        c.MontoMin,
+                        c.MontoMax,
+                        c.Porcentaje
+                    });
+
+                    <tr>
+                        <td>@c.Id</td>
+                        <td>@c.Cargo</td>
+                        <td>@c.MontoMin.ToString("C")</td>
+                        <td>@c.MontoMax.ToString("C")</td>
+                        <td>@c.Porcentaje %</td>
+                        <td class="text-center">
+                            <button class="btn btn-warning btn-sm" onclick='abrirModal(@Html.Raw(json))'>
+                                <i class="fas fa-edit"></i>
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal Crear/Editar -->
+<div class="modal fade" id="modalComisiones" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog">
+        <div class="modal-content">
+
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Rango de Comisión</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <form id="formComisiones" autocomplete="off">
+
+                    <input type="hidden" id="txtid" value="0" />
+
+                    <div class="mb-3">
+                        <label class="form-label">Cargo</label>
+                        <input id="txtCargo" class="form-control" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Monto Min</label>
+                        <input id="txtMontoMin" type="number" step="0.01" class="form-control" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Monto Max</label>
+                        <input id="txtMontoMax" type="number" step="0.01" class="form-control" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Porcentaje (%)</label>
+                        <input id="txtPorcentaje" type="number" step="0.01" class="form-control" />
+                    </div>
+
+                    <div class="mt-3">
+                        <div class="alert alert-danger d-none" id="mensajeError"></div>
+                    </div>
+
+                </form>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button class="btn btn-primary" onclick="guardarComisiones()">Guardar</button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Modal éxito -->
+<div class="modal fade" id="modalExito" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">Éxito</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="cuerpoExito"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal error -->
+<div class="modal fade" id="modalMensaje" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Error</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="cuerpoMensaje"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $('#btnNuevo').click(() => abrirModal());
+        });
+
+        function abrirModal(m = null) {
+            $('#mensajeError').addClass('d-none').html('');
+            $('#formComisiones')[0].reset();
+
+            $('#txtid').val(m ? m.Id : 0);
+
+            if (m) {
+                $('#txtCargo').val(m.Cargo);
+                $('#txtMontoMin').val(m.MontoMin);
+                $('#txtMontoMax').val(m.MontoMax);
+                $('#txtPorcentaje').val(m.Porcentaje);
+            }
+
+            new bootstrap.Modal('#modalComisiones').show();
+        }
+
+        function guardarComisiones() {
+
+            let obj = {
+                Id: $('#txtid').val(),
+                Cargo: $('#txtCargo').val(),
+                MontoMin: parseFloat($('#txtMontoMin').val()),
+                MontoMax: parseFloat($('#txtMontoMax').val()),
+                Porcentaje: parseFloat($('#txtPorcentaje').val())
+            };
+
+            let url = obj.Id == 0
+                ? '/Incentivo/CrearComisionesProcentaje'
+                : '/Incentivo/EditarComisionesProcentaje';
+
+            $.post(url, obj, function (res) {
+
+                $('#mensajeError').addClass('d-none').html('');
+
+                if (res.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('modalComisiones')).hide();
+                    $('#cuerpoExito').html(res.mensajes.join('<br/>'));
+                    new bootstrap.Modal('#modalExito').show();
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    let htmlErrores = res.mensajes.map(m => `<p>${m}</p>`).join('');
+                    $('#mensajeError').removeClass('d-none').html(htmlErrores);
+                }
+
+            }).fail(function () {
+                $('#cuerpoMensaje').html('Error inesperado.');
+                new bootstrap.Modal('#modalMensaje').show();
+            });
+        }
+    </script>
+}

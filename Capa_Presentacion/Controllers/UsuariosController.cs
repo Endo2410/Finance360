@@ -81,5 +81,13 @@ namespace Capa_Presentacion.Controllers
 
             return Json(new { success = true, estados = jsonEstados });
         }
+
+
+        [HttpGet]
+        public JsonResult UsuariosPorRol(int idRol)
+        {
+            var lista = objcn.UsuariosPorRol(idRol);
+            return Json(lista);
+        }
     }
 }

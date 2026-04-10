@@ -1,0 +1,96 @@
+﻿@{
+    Layout = null;
+}
+
+<div class="table-responsive">
+
+    @*<div class="row mb-3">
+            <div class="col-md-3">
+                <select id="filtroCampoMov" class="form-control">
+                    <option value="">-- Filtrar por --</option>
+                    <option value="0">Fecha</option>
+                    <option value="1">Tipo Uso</option>
+                    <option value="2">Monto</option>
+                    <option value="3">Comprobante</option>
+                    <option value="4">Usuario</option>
+                    <option value="5">Observación</option>
+                </select>
+            </div>
+
+            <div class="col-md-4">
+                <input id="filtroValorMov"
+                       class="form-control"
+                       placeholder="Buscar..."
+                       autocomplete="off"
+                       onkeyup="filtrarMovimientos()" />
+            </div>
+        </div>*@
+
+    <table id="tablaMovimientos" class="table table-bordered table-striped">
+
+        <thead class="table-dark">
+            <tr>
+                <th>Fecha</th>
+                <th>Tipo Uso</th>
+                <th>Monto</th>
+                <th>Comprobante</th>
+                <th>Usuario</th>
+                <th>Observación</th>
+                <th>Detalle</th>
+            </tr>
+        </thead>
+
+        <tbody id="tbodyMovimientos"></tbody>
+
+    </table>
+
+</div>
+
+
+<script>
+
+    function iniciarTablaMovimientos() {
+
+        if ($.fn.DataTable.isDataTable('#tablaMovimientos')) {
+            $('#tablaMovimientos').DataTable().destroy();
+        }
+
+        $('#tablaMovimientos').DataTable({
+            pageLength: 6,
+            lengthChange: false,
+            searching: false,
+            ordering: false,
+            responsive: true,
+            language: {
+                paginate: {
+                    previous: "Anterior",
+                    next: "Siguiente"
+                },
+                info: "Mostrando _START_ a _END_ de _TOTAL_ registros",
+                emptyTable: "No hay movimientos registrados"
+            }
+        });
+
+    }
+
+    //function filtrarMovimientos() {
+
+    //    let idx = $('#filtroCampoMov').val();
+    //    let val = $('#filtroValorMov').val().toLowerCase();
+
+    //    $('#tablaMovimientos tbody tr').each(function () {
+
+    //        if (idx === "") {
+    //            $(this).show();
+    //            return;
+    //        }
+
+    //        let texto = $(this).find('td').eq(idx).text().toLowerCase();
+
+    //        $(this).toggle(texto.includes(val));
+
+    //    });
+
+    //}
+
+</script>

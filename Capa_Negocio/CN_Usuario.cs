@@ -175,5 +175,10 @@ namespace Capa_Negocio
         }
 
 
+        public List<Usuario> UsuariosPorRol(int idRol)
+        {
+            return objcd.UsuariosPorRol(idRol);
+        }
+
     }
 }

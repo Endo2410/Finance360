@@ -58,12 +58,16 @@ namespace Capa_Presentacion.Controllers
                 detalleCanjes[i].UsuarioPago = HttpContext.Session.GetString("NombreCompleto") ?? "UsuarioDesconocido";
             }
 
+                 var retenciones = Newtonsoft.Json.JsonConvert
+                .DeserializeObject<List<RetencionVM>>(form["Retenciones"]) ?? new List<RetencionVM>();
+
             PagoCanje pago = new()
             {
                 IdCanje = int.Parse(form["IdCanje"]),
                 MontoTotal = totalAPagar,
                 Observacion = form["Observacion"],
-                DetalleCanjes = detalleCanjes
+                DetalleCanjes = detalleCanjes,
+                Retenciones = retenciones
             };
 
             bool exito = objPago.RegistrarPago(pago, out List<string> mensajes, out string numeroDocumento);

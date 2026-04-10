@@ -23,8 +23,18 @@ namespace Capa_Entidad
         public decimal Monto { get; set; }
 
         public string UsuarioRegistro { get; set; }
+
+
+        public string UsuarioModificacion { get; set; }
+        public DateTime? FechaModificacion { get; set; }
+
         public string DocumentoAdjunto { get; set; }
+        public string ArchivoActa { get; set; }
         public string Comentario { get; set; }
+
+        public decimal TotalRetenciones { get; set; }
+
+        public decimal TotalNeto { get; set; }
 
         public Estado oEstado { get; set; }
         public int IdEstado { get; set; }

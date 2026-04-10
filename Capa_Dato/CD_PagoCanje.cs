@@ -48,6 +48,18 @@ namespace Capa_Dato
                 cmd.Parameters.Add("@ID_PAGO_CANJE_OUT", SqlDbType.Int).Direction = ParameterDirection.Output;
                 cmd.Parameters.Add("@NUMERO_DOCUMENTO_OUT", SqlDbType.VarChar, 20).Direction = ParameterDirection.Output;
 
+                DataTable dtRet = new();
+                dtRet.Columns.Add("ID_TIPO_RETENCION", typeof(int));
+                dtRet.Columns.Add("PORCENTAJE", typeof(decimal));
+                dtRet.Columns.Add("MONTO_RETENIDO", typeof(decimal));
+
+                foreach (var r in pago.Retenciones)
+                    dtRet.Rows.Add(r.IdTipoRetencion, r.Porcentaje, r.MontoRetenido);
+
+                var paramRet = cmd.Parameters.AddWithValue("@RETENCIONES", dtRet);
+                paramRet.SqlDbType = SqlDbType.Structured;
+                paramRet.TypeName = "T_RETENCIONES_CANJE";
+
                 conn.Open();
                 cmd.ExecuteNonQuery();
 

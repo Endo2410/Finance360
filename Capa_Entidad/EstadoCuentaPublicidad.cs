@@ -10,6 +10,8 @@ namespace Capa_Entidad
     {
         public int IdEstadoCuenta { get; set; }
         public int IdCampania { get; set; }
+
+        public int IdProveedor { get; set; }
         public string NombreCampania { get; set; }
         public string NumeroCampania { get; set; }
         public string NombreProveedor { get; set; }

@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Capa_Presentacion.Controllers
 {
-    [FiltroSesion]
+    //[FiltroSesion]
     public class PagoPublicidadController : Controller
     {
         private readonly CN_EstadoCuentaPublicidad objEstado = new();
@@ -35,7 +35,6 @@ namespace Capa_Presentacion.Controllers
             if (detalleCuotas.Any(d => d.MontoPagado <= 0))
                 return Json(new { success = false, mensajes = new[] { "Los montos deben ser mayores a cero" } });
 
-
             // Guardar comprobantes
             string carpeta = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "Comprobantes");
             if (!Directory.Exists(carpeta)) Directory.CreateDirectory(carpeta);
@@ -52,17 +51,25 @@ namespace Capa_Presentacion.Controllers
 
                     detalleCuotas[i].RutaComprobante = nombreArchivo;
                 }
-                // ✅ Asignar el usuario que registra el pago
                 detalleCuotas[i].usuarioPago = HttpContext.Session.GetString("NombreCompleto") ?? "UsuarioDesconocido";
             }
 
+            // 🔥 Deserializar retenciones
+            var retenciones = Newtonsoft.Json.JsonConvert
+                .DeserializeObject<List<RetencionVM>>(form["Retenciones"]) ?? new List<RetencionVM>();
+
+            // Preparar objeto PagoPublicidad completo
             PagoPublicidad pago = new PagoPublicidad
             {
                 IdCampania = int.Parse(form["IdCampania"]),
                 FechaDocumento = DateTime.Now,
                 Observacion = form["Observacion"],
-                MontoTotal = totalAPagar,
-                DetalleCuotas = detalleCuotas
+
+                // 🔥 CAMBIO AQUÍ
+                MontoNeto = totalAPagar,
+
+                DetalleCuotas = detalleCuotas,
+                Retenciones = retenciones
             };
 
             bool exito = objPago.RegistrarPago(pago, out List<string> mensajes, out string numeroDocumento);
@@ -70,7 +77,6 @@ namespace Capa_Presentacion.Controllers
         }
 
 
-        
         // Clase auxiliar
         public class PagoTipoVM
         {

@@ -7,7 +7,8 @@ using System.Diagnostics;
 
 namespace CapaPresentacion.Controllers
 {
-    [FiltroSesion]
+
+    //[FiltroSesion]
     public class HomeController : Controller
     {
         private readonly ILogger<HomeController> _logger;
@@ -32,13 +33,13 @@ namespace CapaPresentacion.Controllers
         }
 
 
-        public IActionResult JefeArea()
+        public IActionResult Bienvenido()
         {
             // Cargar datos filtrados por departamento del jefe
             return View();
         }
 
-        public IActionResult Administrador()
+        public IActionResult LostInSpace()
         {
             // Cargar datos filtrados por departamento del jefe
             return View();

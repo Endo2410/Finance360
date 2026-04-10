@@ -13,6 +13,11 @@ namespace Capa_Entidad
         public string NumeroCampania { get; set; }
         public string DocumentoAdjunto { get; set; }
         public string UsuarioRegistro { get; set; }
+
+
+        public string UsuarioModificacion { get; set; }
+        public DateTime? FechaModificacion { get; set; }
+
         public int IdProveedor { get; set; }
         public int? IdDepartamento { get; set; }
         public int IdTipoPublicidad { get; set; }
@@ -25,6 +30,9 @@ namespace Capa_Entidad
         public int IdMoneda { get; set; }
         public int IdEstado { get; set; }
         public DateTime FechaRegistro { get; set; }
+
+        public decimal TotalRetenciones { get; set; }
+        public decimal TotalNeto { get; set; }
 
         public Proveedor oProveedor { get; set; }
         public Departamento ODepartamento { get; set; }

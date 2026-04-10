@@ -16,7 +16,7 @@
 }
 
 <ol class="breadcrumb mb-4 mt-4">
-    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Inicio</a></li>
+    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Bienvenido">Inicio</a></li>
     <li class="breadcrumb-item active">Lista de Canjes con Pagos</li>
 </ol>
 
@@ -35,7 +35,7 @@
                     <option value="0">Nº Canje</option>
                     <option value="1">Proveedor</option>
                     <option value="2">Periodo</option>
-                    <option value="8">Estado</option>
+                    <option value="10">Estado</option>
                 </select>
             </div>
             <div class="col-md-4">
@@ -53,6 +53,8 @@
                     <th>Saldo Vencido</th>
                     <th>Monto</th>
                     <th>Monto Pagado</th>
+                    <th>Retenciones</th>
+                    <th>Neto Pagado</th>
                     <th>Saldo</th>
                     <th>Estado</th>
                     <th>Acciones</th>
@@ -60,9 +62,10 @@
             </thead>
             <tbody>
                 @foreach (var c in Model
-                                .OrderBy(x => x.IdEstado == 5 ? 1 :
-                                x.IdEstado == 7 ? 2 :
-                                x.IdEstado == 6 ? 3 : 4))
+                    .OrderBy(x => x.oEstado.IdEstado == 5 ? 1 :
+                                  x.oEstado.IdEstado == 7 ? 2 :
+                                  x.oEstado.IdEstado == 6 ? 3 : 4)
+                    .ThenByDescending(x => x.IdCanje))
                 {
                     <tr>
                         <td>@c.NumeroCanje</td>
@@ -71,24 +74,35 @@
                         <td>@c.Volumen.ToString("N2")</td>
                         <td>@c.Saldovencido.ToString("C")</td>
                         <td>@c.Monto.ToString("C")</td>
-                        <td>@c.MontoPagado.ToString("C")</td>
                         <td>
-                            @if (c.MontoPagado > c.Monto)
+                            <span class="fw-bold text-primary">
+                                @c.MontoPagado.ToString("C")
+                            </span>
+                        </td>
+
+                        <td>
+                            <span class="text-danger">
+                                @c.TotalRetenciones.ToString("C")
+                            </span>
+                        </td>
+
+                        <td>
+                            <span class="text-success">
+                                @c.TotalNeto.ToString("C")
+                            </span>
+                        </td>
+
+                        <td>
+                            @if (c.MontoPagado >= c.Monto)
                             {
                                 <span class="badge bg-success">
-                                    @c.SaldoPendiente.ToString("C")
-                                </span>
-                            }
-                            else if (c.MontoPagado < c.Monto)
-                            {
-                                <span class="badge bg-danger">
-                                    @c.SaldoPendiente.ToString("C")
+                                    @((c.MontoPagado - c.Monto).ToString("C"))
                                 </span>
                             }
                             else
                             {
-                                <span class="badge bg-secondary">
-                                    @c.SaldoPendiente.ToString("C")
+                                <span class="badge bg-danger">
+                                    @((c.Monto - c.MontoPagado).ToString("C"))
                                 </span>
                             }
                         </td>
@@ -159,7 +173,7 @@
     </div>
 </div>
 
-<!-- ================= MODALES REUTILIZADOS DE PUBLICIDAD ================= -->
+
 <!-- Confirmación -->
 <div class="modal fade" id="modalConfirmacion" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
@@ -258,28 +272,31 @@
                     return;
                 }
 
-                detalles.forEach(d => {
+                let pagosMostrados = new Set();
+
+               detalles.forEach(d => {
+
                     var fecha = d.fechaRegistro
-                            ? new Date(d.fechaRegistro).toLocaleDateString('es-NI')
-                            : 'No disponible';
+                        ? new Date(d.fechaRegistro).toLocaleDateString('es-NI')
+                        : 'No disponible';
 
                     let accion = '';
                     if (d.idEstado === 10)
                         accion = '<span class="badge bg-secondary">ANULADO</span>';
                     else if (d.notaCreditoAplicada)
                         accion = '<span class="badge bg-info">NC APLICADA</span>';
-                           else {
+                    else {
 
-                                if (@puedeAnularCanje.ToString().ToLower()) {
+                        if (@puedeAnularCanje.ToString().ToLower()) {
 
-                                    accion = `<button class="btn btn-danger btn-sm" onclick="anularPago(${d.idDetallePago})">
-                                                <i class="fas fa-ban"></i> Anular
-                                              </button>`;
-                                }
-                                else {
-                                    accion = '';
-                                }
-                            }
+                            accion = `<button class="btn btn-danger btn-sm" onclick="anularPago(${d.idDetallePago})">
+                                        <i class="fas fa-ban"></i> Anular
+                                      </button>`;
+                        }
+                        else {
+                            accion = '';
+                        }
+                    }
 
                     $('#detallePagosBody').append(`
                         <tr>
@@ -293,6 +310,21 @@
                             <td>${accion}</td>
                         </tr>
                     `);
+
+                    if (!pagosMostrados.has(d.documentoPago) && d.observacion) {
+
+                        pagosMostrados.add(d.documentoPago);
+
+                        $('#detallePagosBody').append(`
+                            <tr style="background:#f8f9fa;">
+                                <td colspan="8" style="padding:10px 20px;">
+                                    <i class="fas fa-comment-alt text-primary me-2"></i>
+                                    <strong>Observación:</strong> ${d.observacion}
+                                </td>
+                            </tr>
+                        `);
+                    }
+
                 });
             });
         }

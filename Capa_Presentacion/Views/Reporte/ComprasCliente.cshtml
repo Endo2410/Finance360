@@ -1,0 +1,262 @@
+﻿@model List<Capa_Entidad.ComprasCliente>
+
+@{
+    ViewData["Title"] = "Compras del Cliente";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    DateTime fechaHoy = DateTime.Today;
+    DateTime fechaLimite = fechaHoy.AddMonths(-3);
+}
+
+<style>
+    #tablaCompras th,
+    #tablaCompras td {
+        white-space: nowrap;
+        vertical-align: middle;
+    }
+</style>
+
+<ol class="breadcrumb mb-4 mt-4">
+    <li class="breadcrumb-item">
+        <a asp-controller="Home" asp-action="Bienvenido">Inicio</a>
+    </li>
+    <li class="breadcrumb-item active">Compras Cliente</li>
+</ol>
+
+<div class="card shadow border-0">
+
+    <!-- HEADER -->
+    <div class="card-header text-white d-flex justify-content-between align-items-center"
+         style="background-color:#274DF5;">
+
+        <div>
+            <i class="fas fa-user me-2"></i> Compras del Cliente
+        </div>
+
+        <div class="d-flex align-items-center">
+
+            <input type="text"
+                   id="accountNumber"
+                   class="form-control form-control-sm me-2"
+                   placeholder="Identidad"
+                   style="height:32px;"
+                   autocomplete="off"
+                   value="@ViewBag.AccountNumber" />
+
+            <input type="date"
+                   id="fechaInicio"
+                   class="form-control form-control-sm me-2"
+                   style="height:32px;"
+                   value="@ViewBag.FechaInicio"
+                   min="@fechaLimite.ToString("yyyy-MM-dd")"
+                   max="@fechaHoy.ToString("yyyy-MM-dd")" />
+
+            <input type="date"
+                   id="fechaFin"
+                   class="form-control form-control-sm me-2"
+                   style="height:32px;"
+                   value="@ViewBag.FechaFin"
+                   min="@fechaLimite.ToString("yyyy-MM-dd")"
+                   max="@fechaHoy.ToString("yyyy-MM-dd")" />
+
+            <button class="btn btn-light btn-sm px-3"
+                    style="height:32px;"
+                    onclick="buscar()">
+                <i class="fas fa-search"></i>
+            </button>
+        </div>
+    </div>
+
+
+    <div id="mensajeFecha" class="text-danger px-3 mt-1" style="display:none;font-size:13px;"></div>
+
+    <div class="card-body">
+
+        <!-- FILTRO POR COLUMNA -->
+        <div class="row mb-3">
+
+            <div class="col-md-3">
+                <select id="filtroCampo" class="form-control">
+                    <option value="">-- Filtrar por --</option>
+                    <option value="0">Farmacia</option>
+                    <option value="2">Transacción</option>
+                </select>
+            </div>
+
+            <div class="col-md-4">
+                <div class="col-md-4">
+                    <input id="filtroValor"
+                           class="form-control"
+                           placeholder="Buscar..."
+                           autocomplete="off"
+                           onkeyup="filtrarColumna()" />
+                </div>
+            </div>
+        </div>
+
+        <!--BOTÓN EXCEL -->
+        <button id="btnExcel" class="btn btn-success">
+            <i class="fas fa-file-excel me-2"></i> Exportar a Excel
+        </button>
+
+        <button class="btn btn-danger btn-sm px-3"
+                style="height:32px;"
+                onclick="descargarPdf()">
+            <i class="fas fa-file-pdf"></i> PDF
+        </button>
+
+        <!-- TABLA -->
+        <table class="table table-striped align-middle" id="tablaCompras">
+
+            <thead class="text-white" style="background-color:#274DF5;">
+                <tr>
+                    <th>Farmacia</th>
+                    <th>Fecha</th>
+                    <th>Transacción</th>
+                    <th>Cliente</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td>@item.Farmacia</td>
+                        <td>@item.Time.ToString("dd/MM/yyyy HH:mm")</td>
+                        <td>@item.TransactionNumber</td>
+                        <td>@item.Nombre</td>
+                        <td>@item.Total.ToString("C")</td>
+                    </tr>
+                }
+
+            </tbody>
+
+            <tfoot>
+                <tr>
+                    <td colspan="4"><strong>Total Comprado</strong></td>
+                    <td>
+                        <strong id="totalTabla"></strong>
+                    </td>
+                </tr>
+            </tfoot>
+
+        </table>
+
+    </div>
+</div>
+
+@section scripts{
+
+    <script>
+
+        let tablaCompras;
+
+        $(document).ready(function () {
+
+            tablaCompras = $('#tablaCompras').DataTable({
+
+                pageLength: 15,
+                lengthChange: false,
+                searching: true,
+                ordering: false,
+                responsive: true,
+
+                language: {
+                    paginate: { previous: "Anterior", next: "Siguiente" },
+                    info: "Mostrando _START_ a _END_ de _TOTAL_ registros",
+                    emptyTable: "No hay datos para mostrar"
+                },
+
+                drawCallback: function () {
+
+                    let api = this.api();
+
+                    let total = api
+                        .column(4, { search: 'applied' })
+                        .data()
+                        .reduce(function (a, b) {
+
+                            let x = typeof a === 'string'
+                                ? a.replace(/[C$,]/g, '') * 1
+                                : a;
+
+                            let y = typeof b === 'string'
+                                ? b.replace(/[C$,]/g, '') * 1
+                                : b;
+
+                            return x + y;
+
+                        }, 0);
+
+                    $('#totalTabla').html(
+                        total.toLocaleString('es-NI', {
+                            style: 'currency',
+                            currency: 'NIO'
+                        })
+                    );
+
+                }
+
+            });
+
+            // 🔥 OCULTAR BUSCADOR GLOBAL
+            $('#tablaCompras_filter').hide();
+
+        });
+
+        function filtrarColumna() {
+
+            let col = $("#filtroCampo").val();
+            let val = $("#filtroValor").val();
+
+            tablaCompras.columns().search('');
+
+            if (col !== "") {
+                tablaCompras.column(col).search(val).draw();
+            } else {
+                tablaCompras.search(val).draw();
+            }
+        }
+
+        function descargarPdf() {
+
+            let acc = $("#accountNumber").val();
+            let inicio = $("#fechaInicio").val();
+            let fin = $("#fechaFin").val();
+
+            let filtroCol = $("#filtroCampo").val(); // columna seleccionada
+            let filtroVal = $("#filtroValor").val(); // valor del filtro
+
+            // Abrimos PDF con filtros aplicados
+            window.open(
+                `/Reporte/DescargarPdf?accountNumber=${acc}&fechaInicio=${inicio}&fechaFin=${fin}&filtroCol=${filtroCol}&filtroVal=${encodeURIComponent(filtroVal)}`,
+                '_blank'
+            );
+        }
+
+        $("#btnExcel").click(function () {
+            let acc = $("#accountNumber").val();
+            let inicio = $("#fechaInicio").val();
+            let fin = $("#fechaFin").val();
+            let filtroCol = $("#filtroCampo").val();
+            let filtroVal = $("#filtroValor").val();
+
+            let url = `/Reporte/ExportarExcelComprasCliente?accountNumber=${acc}&fechaInicio=${inicio}&fechaFin=${fin}&filtroCol=${filtroCol}&filtroVal=${encodeURIComponent(filtroVal)}`;
+
+            window.location.href = url;
+        });
+
+
+        function buscar() {
+
+            let acc = $("#accountNumber").val();
+            let inicio = $("#fechaInicio").val();
+            let fin = $("#fechaFin").val();
+
+            window.location.href =
+                `/Reporte/ComprasCliente?accountNumber=${acc}&fechaInicio=${inicio}&fechaFin=${fin}`;
+        }
+    </script>
+}

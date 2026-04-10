@@ -1,0 +1,49 @@
+﻿@{
+    ViewData["Title"] = "Catálogos";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<ol class="breadcrumb mb-4 mt-4">
+    <li class="breadcrumb-item">
+        <a asp-controller="Home" asp-action="Bienevenido">Inicio</a>
+    </li>
+    <li class="breadcrumb-item active">Catálogos</li>
+</ol>
+
+<div class="row">
+    <!-- Incentivo -->
+    <div class="col-md-3 mb-2">
+        <a asp-controller="Incentivo" asp-action="Tipo_Incentivo" class="text-decoration-none">
+            <div class="card shadow h-100 border-0">
+                <div class="card-body text-center">
+                    <i class="fas fa-gift fa-2x text-primary"></i>
+                    <h6 class="mt-2">Tipo Incentivo</h6>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <!-- Uso incentivo -->
+    <div class="col-md-3 mb-2">
+        <a asp-controller="Incentivo" asp-action="Tipouso" class="text-decoration-none">
+            <div class="card shadow h-100 border-0">
+                <div class="card-body text-center">
+                    <i class="fas fa-tags fa-2x text-success"></i>
+                    <h6 class="mt-2">Tipo Uso Incentivo</h6>
+                </div>
+            </div>
+        </a>
+    </div>
+
+
+    <div class="col-md-3 mb-2">
+        <a asp-controller="Incentivo" asp-action="ComisionesProcentaje" class="text-decoration-none">
+            <div class="card shadow h-100 border-0">
+                <div class="card-body text-center">
+                    <i class="fas fa-percent fa-2x text-success"></i>
+                    <h6 class="mt-2">Comisiones %</h6>
+                </div>
+            </div>
+        </a>
+    </div>
+</div>

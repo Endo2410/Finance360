@@ -1,0 +1,228 @@
+﻿@using Capa_Entidad
+
+@{
+    var rolUsuario = Context.Session.GetString("RolUsuario")?.ToUpper();
+    ViewData["Title"] = "Permisos por Usuario";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h3 class="mb-4">Permisos por Usuario</h3>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+
+        <div class="row">
+
+            <div class="col-md-4">
+                <label class="form-label fw-bold">Seleccione Rol</label>
+
+                <select id="cbRol" class="form-select">
+                    <option value="">--Seleccione--</option>
+
+                    @foreach (var rol in ViewBag.Roles as List<Rol>)
+                    {
+                        <option value="@rol.IdRol">@rol.Nombre</option>
+                    }
+
+                </select>
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label fw-bold">Seleccione Usuario</label>
+
+                <select id="cbUsuario" class="form-select">
+                    <option value="">--Seleccione--</option>
+                </select>
+
+            </div>
+
+        </div>
+
+    </div>
+</div>
+
+
+<div class="card shadow-sm">
+    <div class="card-header bg-light">
+        <strong>Permisos adicionales del Usuario</strong>
+    </div>
+
+    <div class="card-body">
+        <div id="permisosContainer"></div>
+    </div>
+
+</div>
+
+@section Scripts{
+
+    <script>
+
+        $(document).ready(function () {
+
+            $('#cbRol').change(function () {
+
+                let idRol = $(this).val();
+
+                $.get('/Permiso/UsuariosPorRol', { idRol: idRol }, function (res) {
+
+                    $('#cbUsuario').empty();
+                    $('#cbUsuario').append(`<option value="">--Seleccione--</option>`);
+
+                    res.forEach(u => {
+
+                        $('#cbUsuario').append(`
+                    <option value="${u.idUsuario}">
+                    ${u.nombres} ${u.apellidos}
+                    </option>`);
+
+                    });
+
+                });
+
+            });
+
+            // cargar usuarios cuando se selecciona rol
+            $('#cbRol').change(function () {
+
+                let idRol = $(this).val();
+
+                $('#permisosContainer').html('');
+
+                if (!idRol) return;
+
+                $.get('/Permiso/UsuariosPorRol', { idRol: idRol }, function (res) {
+
+                    $('#cbUsuario').empty();
+                    $('#cbUsuario').append(`<option value="">--Seleccione--</option>`);
+
+                    res.forEach(u => {
+
+                        $('#cbUsuario').append(`
+                    <option value="${u.idUsuario}">
+                        ${u.nombres} ${u.apellidos}
+                    </option>`);
+
+                    });
+
+                });
+
+            });
+
+
+            // cuando seleccionas usuario
+            $('#cbUsuario').change(function () {
+
+                const idRol = $('#cbRol').val();
+                const idUsuario = $(this).val();
+
+                if (!idUsuario || !idRol) return;
+
+                cargarPermisosUsuario(idRol, idUsuario);
+
+            });
+
+
+            function cargarPermisosUsuario(idRol, idUsuario) {
+
+                $.get('/Permiso/ObtenerPermisosUsuario', { idRol: idRol, idUsuario: idUsuario }, function (res) {
+
+                    console.log(res);
+
+                    let modulos = {};
+
+                    // agrupar por modulo
+                    res.forEach(item => {
+
+                        let idModulo = item.oModulo?.idModulo;
+
+                        if (!modulos[idModulo]) modulos[idModulo] = [];
+
+                        modulos[idModulo].push(item);
+
+                    });
+
+                    let html = '';
+
+                    for (let mod in modulos) {
+
+                        let modulo = modulos[mod][0].oModulo;
+
+                        html += `
+                <div class="mb-2 mt-3">
+                    <strong>${modulo?.nombreModulo ?? ''}</strong>
+                </div>`;
+
+                        let submenus = {};
+
+                        // agrupar por submenu
+                        modulos[mod].forEach(item => {
+
+                            let idSub = item.oSubMenu?.idSubMenu;
+
+                            if (!submenus[idSub]) submenus[idSub] = [];
+
+                            submenus[idSub].push(item);
+
+                        });
+
+                        html += `<div class="ms-4">`;
+
+                        for (let sub in submenus) {
+
+                            let submenu = submenus[sub][0].oSubMenu;
+
+                            html += `
+                    <div class="mt-2">
+                        <strong>${submenu?.nombreSubMenu ?? ''}</strong>
+                    </div>`;
+
+                            html += `<div class="ms-4">`;
+
+                            submenus[sub].forEach(item => {
+
+                                let accion = item.oAccion;
+
+                                // si no hay accion no dibujar checkbox
+                                if (!accion || !accion.nombreAccion) return;
+
+                                let checked = '';
+                                let disabled = '';
+
+                                if (item.tienePermisoRol == 1) {
+
+                                    checked = 'checked';
+                                    disabled = 'disabled';
+
+                                }
+
+                                html += `
+                        <div>
+                            <label>
+                                <input type="checkbox"
+                                       class="chkAccion"
+                                       value="${accion.idAccion}"
+                                       ${checked}
+                                       ${disabled}>
+                                ${accion.nombreAccion}
+                            </label>
+                        </div>`;
+
+                            });
+
+                            html += `</div>`;
+                        }
+
+                        html += `</div>`;
+                    }
+
+                    $('#permisosContainer').html(html);
+
+                });
+
+            }
+
+        }); // cierre document.ready
+
+    </script>
+
+}

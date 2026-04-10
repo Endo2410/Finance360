@@ -39,9 +39,18 @@ namespace Capa_Dato
                         : Convert.ToDateTime(dr["FECHA_VENCIMIENTO"]),
 
                         UsuarioRegistro = dr["USUARIO_REGISTRO"].ToString(),
-                        DocumentoAdjunto = dr["DOCUMENTO_ADJUNTO"].ToString(),
-                        Comentario = dr["COMENTARIO"].ToString(),
                         FechaRegistro = Convert.ToDateTime(dr["FECHA_REGISTRO"]),
+                        UsuarioModificacion = dr["USUARIO_MODIFICACION"] == DBNull.Value
+                        ? null
+                        : dr["USUARIO_MODIFICACION"].ToString(),
+
+                        FechaModificacion = dr["FECHA_MODIFICACION"] == DBNull.Value
+                        ? null
+                        : Convert.ToDateTime(dr["FECHA_MODIFICACION"]),
+                        DocumentoAdjunto = dr["DOCUMENTO_ADJUNTO"].ToString(),
+                        ArchivoActa = dr["ARCHIVO_ACTA"].ToString(),
+                        Comentario = dr["COMENTARIO"].ToString(),
+
                         oProveedor = new Proveedor
                         {
                             IdProveedor = Convert.ToInt32(dr["ID_PROVEEDOR"]),
@@ -90,6 +99,7 @@ namespace Capa_Dato
 
                     cmd.Parameters.AddWithValue("@USUARIO_REGISTRO", obj.UsuarioRegistro);
                     cmd.Parameters.AddWithValue("@DOCUMENTO_ADJUNTO", obj.DocumentoAdjunto ?? "");
+                    cmd.Parameters.AddWithValue("@ARCHIVO_ACTA", obj.ArchivoActa ?? "");
                     cmd.Parameters.AddWithValue("@COMENTARIO", obj.Comentario ?? "");
 
                     con.Open();
@@ -126,7 +136,10 @@ namespace Capa_Dato
                     (object)obj.FechaVencimiento ?? DBNull.Value);
 
                     cmd.Parameters.AddWithValue("@DOCUMENTO_ADJUNTO", obj.DocumentoAdjunto ?? "");
+                    cmd.Parameters.AddWithValue("@ARCHIVO_ACTA", obj.ArchivoActa ?? "");
                     cmd.Parameters.AddWithValue("@COMENTARIO", obj.Comentario ?? "");
+
+                    cmd.Parameters.AddWithValue("@USUARIO_MODIFICACION", obj.UsuarioModificacion);
 
                     con.Open();
                     cmd.ExecuteNonQuery();
@@ -160,6 +173,8 @@ namespace Capa_Dato
                         Saldovencido = Convert.ToDecimal(dr["SALDO_VENCIDO"]),
                         Monto = Convert.ToDecimal(dr["MONTO"]),
                         MontoPagado = Convert.ToDecimal(dr["MONTO_PAGADO"]),
+                        TotalRetenciones = Convert.ToDecimal(dr["TOTAL_RETENCIONES"]),
+                        TotalNeto = Convert.ToDecimal(dr["TOTAL_NETO"]),
                         SaldoPendiente = Convert.ToDecimal(dr["SALDO_PENDIENTE"]),
                         FechaVencimiento = dr["FECHA_VENCIMIENTO"] == DBNull.Value
                             ? null
@@ -214,6 +229,7 @@ namespace Capa_Dato
                         Comprobante = dr["COMPROBANTE"] == DBNull.Value ? null : dr["COMPROBANTE"].ToString(),
                         FechaRegistro = Convert.ToDateTime(dr["FechaRegistro"]),
                         IdEstado = dr["IdEstado"] == DBNull.Value ? (int?)null : Convert.ToInt32(dr["IdEstado"]),
+                        Observacion = dr["Observacion"] == DBNull.Value ? null : dr["Observacion"].ToString(),
                         NotaCreditoAplicada = Convert.ToBoolean(dr["NotaCreditoAplicada"])
                     });
                 }
@@ -247,7 +263,6 @@ namespace Capa_Dato
             {
                 resultado = false;
             }
-
             return resultado;
         }
     }

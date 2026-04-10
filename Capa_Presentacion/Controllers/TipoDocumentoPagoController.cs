@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Capa_Presentacion.Controllers
 {
-    //[FiltroSesion]
+    [FiltroSesion]
     public class TipoDocumentoPagoController : Controller
     {
         private readonly CN_TipoDocumentoPago objcn = new CN_TipoDocumentoPago();

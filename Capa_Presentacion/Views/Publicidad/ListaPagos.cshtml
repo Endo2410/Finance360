@@ -17,7 +17,7 @@
 
 
 <ol class="breadcrumb mb-4 mt-4">
-    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Inicio</a></li>
+    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Bienvenido">Inicio</a></li>
     <li class="breadcrumb-item active">Lista de Campañas con Pagos</li>
 </ol>
 
@@ -36,7 +36,7 @@
                     <option value="1">Nombre</option>
                     <option value="2">Proveedor</option>
                     <option value="3">Tipo Publicidad</option>
-                    <option value="10">Estado Pago</option>
+                    <option value="11">Estado Pago</option>
 
                 </select>
             </div>
@@ -53,11 +53,13 @@
                     <th>Proveedor</th>
                     <th>Tipo Publicidad</th>
                     <th>Modalidad</th>
-                    <th>País</th>
-                    <th>Moneda</th>
+                    @*<th>País</th>
+                    <th>Moneda</th>*@
                     <th>Saldo Vencido</th>
                     <th>Monto Inversión</th>
                     <th>Monto Pagado</th>
+                    <th>Retenciones</th>
+                    <th>Neto Pagado</th>
                     <th>Saldo</th>
                     <th>Estado Pago</th>
                     <th>Acciones</th>
@@ -76,23 +78,39 @@
                         <td>@c.oProveedor?.NombreProveedor</td>
                         <td>@c.oTipoPublicidad?.Nombre</td>
                         <td>@c.oModalidad?.Nombre</td>
-                        <td>@c.oPais?.Nombre</td>
-                        <td>@c.oMoneda?.Nombre</td>
+                        @*<td>@c.oPais?.Nombre</td>
+                        <td>@c.oMoneda?.Nombre</td>*@
                         <td>@c.Saldovencido.ToString("C")</td>
                         <td>@c.MontoInversion.ToString("C")</td>
-                        <td>@c.MontoPagado.ToString("C")</td>
                         <td>
-                            @if (c.MontoPagado > c.MontoInversion)
+                            <span class="fw-bold text-primary">
+                                @c.MontoPagado.ToString("C")
+                            </span>
+                        </td>
+
+                        <td>
+                            <span class="text-danger">
+                                @c.TotalRetenciones.ToString("C")
+                            </span>
+                        </td>
+
+                        <td>
+                            <span class="text-success">
+                                @c.TotalNeto.ToString("C")
+                            </span>
+                        </td>
+                        <td>
+                            @if (c.MontoPagado >= c.MontoInversion)
                             {
-                                <span class="badge bg-success">@c.SaldoPendiente.ToString("C")</span>
-                            }
-                            else if (c.MontoPagado < c.MontoInversion)
-                            {
-                                <span class="badge bg-danger">@c.SaldoPendiente.ToString("C")</span>
+                                <span class="badge bg-success">
+                                    @((c.MontoPagado - c.MontoInversion).ToString("C"))
+                                </span>
                             }
                             else
                             {
-                                <span class="badge bg-secondary">@c.SaldoPendiente.ToString("C")</span>
+                                <span class="badge bg-danger">
+                                    @((c.MontoInversion - c.MontoPagado).ToString("C"))
+                                </span>
                             }
                         </td>
                         <td>
@@ -295,6 +313,8 @@
                     return;
                 }
 
+              let pagosMostrados = new Set();
+
                 detalles.forEach(function (d) {
 
                     var monto = d.montoPagado ? parseFloat(d.montoPagado) : 0;
@@ -310,33 +330,25 @@
                         ? '<a href="/Comprobantes/' + d.comprobante + '" target="_blank">Ver</a>'
                         : 'No disponible';
 
-                    // ===== BOTÓN ANULAR =====
-                          var accion = '';
+                    var accion = '';
 
                     if (d.idEstado === 10) {
-                        // 🔒 Pago ya anulado
                         accion = '<span class="badge bg-secondary">ANULADO</span>';
                     }
                     else if (d.notaCreditoAplicada) {
-                        // 🔐 Tiene Nota de Crédito aplicada
                         accion = '<span class="badge bg-info">NC APLICADA</span>';
                     }
                     else {
-
                         if (@puedeanular.ToString().ToLower()) {
-
                             accion =
                                 '<button class="btn btn-danger btn-sm" ' +
                                 'onclick="anularPago(' + d.idDetallePago + ')">' +
                                 '<i class="fas fa-ban me-1"></i> Anular' +
                                 '</button>';
                         }
-                        else {
-                            accion = '';
-                        }
                     }
 
-
+                    // 🔹 FILA NORMAL
                     $('#detallePagosBody').append(
                         '<tr>' +
                             '<td>' + fechaPago + '</td>' +
@@ -349,6 +361,22 @@
                             '<td>' + accion + '</td>' +
                         '</tr>'
                     );
+
+                    // 🔥 OBSERVACIÓN (UNA SOLA VEZ POR DOCUMENTO)
+                    if (!pagosMostrados.has(numDoc) && d.observacion) {
+
+                        pagosMostrados.add(numDoc);
+
+                        $('#detallePagosBody').append(
+                            '<tr style="background:#f8f9fa;">' +
+                                '<td colspan="8" style="padding:10px 20px;">' +
+                                    '<i class="fas fa-comment-alt text-primary me-2"></i>' +
+                                    '<strong>Observación:</strong> ' + d.observacion +
+                                '</td>' +
+                            '</tr>'
+                        );
+                    }
+
                 });
             },
             error: function () {

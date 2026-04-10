@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static Capa_Dato.CD_OrdenCompra;
 
 namespace Capa_Negocio
 {
@@ -12,10 +13,6 @@ namespace Capa_Negocio
     {
         private CD_OrdenCompra objcd = new CD_OrdenCompra();
 
-        public List<OrdenCompra> ObtenerReporteOrdenes(DateTime inicio, DateTime fin)
-        {
-            return objcd.ObtenerReporteOrdenes(inicio, fin);
-        }
         public List<OrdenCompra> ObtenerOrdenes(DateTime inicio, DateTime fin)
         {
             return objcd.ObtenerOrdenes(inicio, fin);

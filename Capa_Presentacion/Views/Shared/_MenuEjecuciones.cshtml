@@ -1,0 +1,45 @@
+﻿<br />
+<br />
+
+<div class="row">
+
+    <!-- Ejecución General -->
+    <div class="col-md-4 mb-3">
+        <a asp-controller="Rebate" asp-action="Ejecucion_Rebate" class="text-decoration-none">
+            <div class="card shadow h-100 border-0">
+                <div class="card-body text-center">
+                    <i class="fas fa-file-invoice-dollar fa-2x text-primary"></i>
+                    <h6 class="mt-2">Ejecución General de Rebates</h6>
+                    <small class="text-muted">Cálculo global por acuerdo</small>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <!-- Ejecución por Ítems -->
+    <div class="col-md-4 mb-3">
+        <a asp-controller="Rebate" asp-action="Ejecucion_Item" class="text-decoration-none">
+            <div class="card shadow h-100 border-0">
+                <div class="card-body text-center">
+                    <i class="fas fa-boxes fa-2x text-success"></i>
+                    <h6 class="mt-2">Ejecución por Ítems</h6>
+                    <small class="text-muted">Cálculo por productos</small>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <!-- Ejecución por Descuento -->
+    <div class="col-md-4 mb-3">
+        <a asp-controller="Rebate" asp-action="Ejecucion_Descuento" class="text-decoration-none">
+            <div class="card shadow h-100 border-0">
+                <div class="card-body text-center">
+                    <i class="fas fa-percentage fa-2x text-warning"></i>
+                    <h6 class="mt-2">Ejecución por Descuento</h6>
+                    <small class="text-muted">Aplicación de porcentajes</small>
+                </div>
+            </div>
+        </a>
+    </div>
+
+</div>

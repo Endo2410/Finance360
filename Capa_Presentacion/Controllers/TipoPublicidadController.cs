@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Capa_Presentacion.Controllers
 {
-    //[FiltroSesion]
+    [FiltroSesion]
     public class TipoPublicidadController : Controller
     {
         private readonly CN_TipoPublicidad cn = new();

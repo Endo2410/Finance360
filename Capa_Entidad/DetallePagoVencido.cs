@@ -13,6 +13,7 @@ namespace Capa_Entidad
         public string Comprobante { get; set; }
         public string usuarioPago { get; set; }
 
+        public string Observacion { get; set; }
         public string TipoDocumento { get; set; }
         public DateTime? FechaDocumento { get; set; }
         public DateTime? FechaRegistro { get; set; }

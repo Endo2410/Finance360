@@ -15,7 +15,7 @@ namespace Capa_Presentacion.Controllers
         {
             // Si ya está logueado, redirigir a Home
             if (HttpContext.Session.GetInt32("IdUsuario") != null)
-                return RedirectToAction("Index", "Home");
+                return RedirectToAction("Bienvenido", "Home");
 
             return View();
         }
@@ -62,11 +62,16 @@ namespace Capa_Presentacion.Controllers
             // Guardar rol en sesión
             HttpContext.Session.SetString("RolUsuario", usuario.oRol.Nombre);
 
-
             // LOGIN NORMAL
             HttpContext.Session.SetInt32("IdUsuario", usuario.IdUsuario);
 
-            // Guardar nombre y apellido en sesión
+            // 👇 NUEVO
+            if (usuario.IdSucursal != null)
+            {
+                HttpContext.Session.SetInt32("IdSucursal", usuario.IdSucursal.Value);
+            }
+
+            // Guardar nombre completo
             HttpContext.Session.SetString("NombreCompleto", $"{usuario.Nombres} {usuario.Apellidos}");
 
             // Guardar permisos
@@ -85,7 +90,7 @@ namespace Capa_Presentacion.Controllers
                 System.Text.Json.JsonSerializer.Serialize(acciones)
             );
 
-            return RedirectToAction("Index", "Home");
+            return RedirectToAction("Bienvenido", "Home");
         }
 
 

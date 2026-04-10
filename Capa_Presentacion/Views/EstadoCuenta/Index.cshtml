@@ -6,7 +6,7 @@
 }
 
 <ol class="breadcrumb mb-4 mt-4">
-    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Inicio</a></li>
+    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Bienvenido">Inicio</a></li>
     <li class="breadcrumb-item active">Estado de Cuenta Publicidad</li>
 </ol>
 
@@ -16,12 +16,13 @@
     </div>
 
     <div class="card-body">
-        <!-- FILTRO POR COLUMNA -->
+
+        <!-- FILTRO -->
         <div class="row mb-3">
             <div class="col-md-3">
                 <select id="filtroCampo" class="form-control">
                     <option value="">-- Filtrar por --</option>
-                    <option value="0">Nº Documento </option>
+                    <option value="0">Nº Documento</option>
                     <option value="1">Campaña</option>
                     <option value="2">Proveedor</option>
                     <option value="4">Fecha Programada</option>
@@ -32,6 +33,7 @@
             </div>
         </div>
 
+        <!-- TABLA -->
         <table class="table table-striped align-middle table-nowrap" id="tablaEstadoCuenta">
             <thead class="text-white" style="background-color:#274DF5;">
                 <tr>
@@ -44,15 +46,34 @@
                     <th>Estado</th>
                 </tr>
             </thead>
-            <tbody>
+
+            <tbody id="tbodyPrincipal">
+                @{
+                    var detallesJson = new List<object>();
+                }
+
                 @foreach (var grupo in Model
-                                .OrderBy(x => x.FechaPagoProgramada)
-                                .GroupBy(x => x.NumeroCampania))
+                         .OrderBy(x => x.FechaPagoProgramada)
+                         .GroupBy(x => x.NumeroCampania))
                 {
                     var cuotaPrincipal = grupo.OrderBy(x => x.NumeroCuota).First();
-                    var cuotasOcultas = grupo.OrderBy(x => x.NumeroCuota).Skip(1);
+                    var cuotasOcultas = grupo.OrderBy(x => x.NumeroCuota).Skip(1).ToList();
 
-                    <!-- FILA PRINCIPAL (cuota menor) -->
+                    // Guardar detalles para JS
+                    detallesJson.Add(new
+                    {
+                        campania = cuotaPrincipal.NumeroCampania,
+                        cuotas = cuotasOcultas.Select(c => new
+                        {
+                            nombreCampania = c.NombreCampania,
+                            proveedor = c.NombreProveedor,
+                            cuota = c.NumeroCuota,
+                            fecha = c.FechaPagoProgramada.ToString("dd/MM/yyyy"),
+                            monto = c.MontoCuota.ToString("C"),
+                            estado = c.Estado
+                        })
+                    });
+
                     <tr class="fila-principal" data-campania="@cuotaPrincipal.NumeroCampania" style="cursor:pointer;">
                         <td>
                             <i class="fas fa-chevron-right me-1 toggle-icon"></i>
@@ -63,81 +84,124 @@
                         <td>@cuotaPrincipal.NumeroCuota</td>
                         <td>@cuotaPrincipal.FechaPagoProgramada.ToString("dd/MM/yyyy")</td>
                         <td>@cuotaPrincipal.MontoCuota.ToString("C")</td>
-                        <td><span class="badge-pendiente">@cuotaPrincipal.Estado</span></td>
+                        <td>
+                            <span class="badge @(cuotaPrincipal.Estado == "VENCIDO" ? "bg-danger" : "bg-warning text-dark")">
+                                @cuotaPrincipal.Estado
+                            </span>
+                        </td>
                     </tr>
-
-                    <!-- CUOTAS OCULTAS -->
-                    @foreach (var c in cuotasOcultas)
-                    {
-                        <tr class="fila-detalle d-none" data-campania="@cuotaPrincipal.NumeroCampania">
-                            <td></td>
-                            <td>@c.NombreCampania</td>
-                            <td>@c.NombreProveedor</td>
-                            <td>@c.NumeroCuota</td>
-                            <td>@c.FechaPagoProgramada.ToString("dd/MM/yyyy")</td>
-                            <td>@c.MontoCuota.ToString("C")</td>
-                            <td><span class="badge-pendiente">@c.Estado</span></td>
-                        </tr>
-                    }
                 }
             </tbody>
-
         </table>
     </div>
 </div>
 
+<!-- 🔥 PASAR DATOS A JS -->
+<script>
+    var detallesData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(detallesJson));
+</script>
+
 @section scripts {
     <script>
+
+        var tabla;
+
         $(document).ready(function () {
-            // Inicializa DataTable solo para paginación, sin buscar global
-            $('#tablaEstadoCuenta').DataTable({
+
+            tabla = $('#tablaEstadoCuenta').DataTable({
                 pageLength: 15,
                 lengthChange: false,
                 searching: false,
                 ordering: false,
                 responsive: true,
+
                 language: {
                     paginate: { previous: "Anterior", next: "Siguiente" },
                     info: "Mostrando _START_ a _END_ de _TOTAL_ registros",
                     emptyTable: "No hay cuotas pendientes"
+                },
+
+                // 🔥 SOLO CONTAR PRINCIPALES
+                infoCallback: function (settings, start, end, max, total, pre) {
+
+                    var totalPrincipales = $('#tablaEstadoCuenta tbody tr.fila-principal:visible').length;
+
+                    var inicio = totalPrincipales === 0 ? 0 : start;
+                    var fin = Math.min(end, totalPrincipales);
+
+                    return "Mostrando " + inicio + " a " + fin + " de " + totalPrincipales + " registros";
                 }
             });
+
         });
 
+        // 🔥 EXPANDIR / CONTRAER
         $(document).on('click', '.fila-principal', function () {
-            var campania = $(this).data('campania');
-            var icono = $(this).find('.toggle-icon');
 
-            var filas = $('.fila-detalle[data-campania="' + campania + '"]');
+            var fila = $(this);
+            var campania = fila.data('campania');
+            var icono = fila.find('.toggle-icon');
 
-            if (filas.hasClass('d-none')) {
-                filas.removeClass('d-none');
-                icono.removeClass('fa-chevron-right').addClass('fa-chevron-down');
-            } else {
-                filas.addClass('d-none');
+            // Si ya está abierto → cerrar
+            if (fila.next().hasClass('fila-detalle')) {
+                fila.nextUntil('.fila-principal').remove();
                 icono.removeClass('fa-chevron-down').addClass('fa-chevron-right');
+                return;
             }
+
+            var data = detallesData.find(x => x.campania == campania);
+
+            if (!data || data.cuotas.length === 0) return;
+
+            var html = '';
+
+            data.cuotas.forEach(c => {
+                html += `
+                    <tr class="fila-detalle">
+                        <td></td>
+                        <td>${c.nombreCampania}</td>
+                        <td>${c.proveedor}</td>
+                        <td>${c.cuota}</td>
+                        <td>${c.fecha}</td>
+                        <td>${c.monto}</td>
+                        <td>
+                            <span class="badge ${c.estado === 'VENCIDO' ? 'bg-danger' : 'bg-warning text-dark'}">
+                                ${c.estado}
+                            </span>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            fila.after(html);
+            icono.removeClass('fa-chevron-right').addClass('fa-chevron-down');
         });
 
-        // Función de filtro manual por columna
+        // 🔥 FILTRO SOLO PRINCIPALES
         function filtrarColumna() {
-            var campoIndex = $('#filtroCampo').val(); // índice de columna
-            var valor = $('#filtroValor').val().toLowerCase(); // valor a buscar
 
-            $('#tablaEstadoCuenta tbody tr').each(function () {
+            var campoIndex = $('#filtroCampo').val();
+            var valor = $('#filtroValor').val().toLowerCase();
+
+            $('#tablaEstadoCuenta tbody tr.fila-principal').each(function () {
+
                 var celda = $(this).find('td').eq(campoIndex).text().toLowerCase();
-                if (valor === "" || celda.indexOf(valor) !== -1) {
+
+                if (valor === "" || celda.includes(valor)) {
                     $(this).show();
                 } else {
                     $(this).hide();
+                    $(this).nextUntil('.fila-principal').remove();
                 }
             });
+
+            tabla.draw(false);
         }
 
-        // Limpiar filtro al cambiar de columna
         $('#filtroCampo').change(function () {
             $('#filtroValor').val('');
             filtrarColumna();
         });
+
     </script>
 }

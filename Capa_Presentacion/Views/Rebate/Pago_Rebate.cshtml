@@ -1,0 +1,735 @@
+﻿@model List<Capa_Entidad.CE_Rebate.EjecucionRebate>
+
+@{
+    ViewData["Title"] = "Pago de Rebate";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    // Filtrar únicamente ejecuciones con Estado = 1
+    var ejecucionesActivas = Model
+    .Where(x => x.IdEstado == 1 || x.IdEstado == 9)
+    .ToList();
+
+}
+
+<ol class="breadcrumb mb-4 mt-4">
+    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Bienevenido">Inicio</a></li>
+    <li class="breadcrumb-item active">Pago de Rebate</li>
+</ol>
+
+<div class="card shadow border-0">
+    <div class="card-header text-white" style="background-color:#274DF5;">
+        <i class="fas fa-credit-card me-2"></i> Registrar Pago de Rebate
+    </div>
+
+    <div class="card-body">
+        <!-- PROVEEDOR -->
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <label>Proveedor</label>
+                <div class="input-group">
+                    <input type="text" id="txtProveedorSeleccionado" class="form-control" placeholder="-- Seleccione --" readonly>
+                    <button class="btn btn-primary" type="button" id="btnAbrirModalProveedor">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+                <input type="hidden" id="cmbProveedor">
+            </div>
+        </div>
+
+        <!-- TABLA DE EJECUCIONES -->
+        <table class="table table-striped" id="tablaEjecuciones">
+            <thead class="text-white" style="background-color:#274DF5;">
+                <tr>
+                    <th><input type="checkbox" id="chkTodos" /></th>
+                    <th>N° Acuerdo</th>
+                    <th>Acuerdo</th>
+                    <th>Proveedor</th>
+                    <th class="text-center">Monto Rebate</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+
+        <button id="btnPagar" class="btn btn-success mt-2">
+            <i class="fas fa-check"></i> Registrar Pago
+        </button>
+    </div>
+</div>
+
+<!-- MODAL PROVEEDORES -->
+<div class="modal fade" id="modalProveedores" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Seleccionar Proveedor</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-2">
+                    <input type="text" id="txtBuscarProveedor" class="form-control" placeholder="Buscar proveedor..." autocomplete="off">
+                </div>
+                <table class="table table-hover" id="tablaModalProveedores">
+                    <thead>
+                        <tr>
+                            <th>Proveedor</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var p in ejecucionesActivas.Select(x => x.NombreProveedor).Distinct())
+                        {
+                            <tr>
+                                <td>@p</td>
+                                <td>
+                                    <button class="btn btn-sm btn-success btnSeleccionarProveedor" data-nombre="@p">Seleccionar</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DE PAGO -->
+<div class="modal fade" id="modalPago" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Datos del Pago</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <h6 class="fw-bold text-primary">Ejecuciones Seleccionadas</h6>
+
+                <div class="table-responsive mb-3">
+                    <table class="table table-sm table-bordered" id="tablaEjecucionesSeleccionadas">
+                        <thead class="table-primary text-center">
+                            <tr>
+                                <th>N° Acuerdo</th>
+                                <th>Acuerdo</th>
+                                <th>Proveedor</th>
+                                <th class="text-end">Monto Rebate</th>
+                            </tr>
+                        </thead>
+                        <tbody class="align-middle"></tbody>
+                    </table>
+                </div>
+
+                <div class="alert alert-success d-flex justify-content-between align-items-center">
+                    <strong>Total a Pagar</strong>
+                    <span id="lblTotal" class="fs-4 fw-bold" data-total="0"></span>
+                </div>
+
+                <hr>
+
+                <!-- =========================================
+                🔹 RETENCIONES
+                ========================================= -->
+                <h6 class="fw-bold text-danger">
+                    <i class="fas fa-percentage me-1"></i> Retenciones
+                </h6>
+
+
+                <div class="row mb-2">
+                    <div class="col-md-6">
+                        <select id="cmbRetenciones" class="form-control">
+                            <option value="">-- Seleccionar retención --</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="contenedorRetenciones" class="mb-2"></div>
+
+                <div class="alert alert-warning d-flex justify-content-between">
+                    <strong>Total Retenciones</strong>
+                    <span id="lblTotalRetenciones" data-total="0">C$0.00</span>
+                </div>
+
+                <div class="alert alert-primary d-flex justify-content-between">
+                    <strong>Total Neto a Pagar</strong>
+                    <span id="lblTotalNeto" data-total="0">C$0.00</span>
+                </div>
+
+                <hr class="my-4">
+                <h6 class="fw-bold text-secondary">
+                    <i class="fas fa-file-invoice-dollar me-1"></i> Forma de Pago
+                </h6>
+                <table class="table" id="tablaPagosTipos">
+                    <thead>
+                        <tr>
+                            <th>Tipo Documento</th>
+                            <th>Monto</th>
+                            <th>N° Confirmación</th>
+                            <th>Comprobante</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <select id="cmbTipoDocAgregar" class="form-control">
+                            <option value="">-- Seleccione Tipo --</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <input type="number" id="txtMontoAgregar" class="form-control" placeholder="Monto">
+                    </div>
+                    <div class="col-md-3">
+                        <input type="text" id="txtNumeroConfirmacionAgregar" class="form-control" placeholder="N° Confirmación">
+                    </div>
+                    <div class="col-md-3">
+                        <input type="file" id="fileComprobanteAgregar" class="form-control" accept=".jpg,.jpeg,.png,.pdf">
+                    </div>
+                    <div class="col-md-12 mt-2">
+                        <button id="btnAgregarPago" class="btn btn-primary">Agregar Pago</button>
+                    </div>
+                </div>
+
+
+                <label class="mt-2">Observación</label>
+                <textarea id="txtObs" class="form-control"></textarea>
+
+            </div>
+
+            <div class="modal-footer">
+                <button id="btnConfirmarPago" class="btn btn-success">
+                    Confirmar Pago
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DE ÉXITO -->
+<div class="modal fade" id="modalExito" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">Pago Registrado</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>El pago se registró correctamente.</p>
+                <p><strong>Número de Documento:</strong> <span id="lblNumeroDoc"></span></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DE ERROR -->
+<div class="modal fade" id="modalError" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Error</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p id="lblMensajeError"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts{
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+
+ <script>
+        const todasEjecuciones = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+            ejecucionesActivas.Select(x => new {
+                x.IdEjecucion,
+                x.IdAcuerdo,
+                x.NumeroAcuerdo,
+                x.NombreAcuerdo,
+                x.NombreProveedor,
+                x.MontoRebate
+            })
+        ));
+
+        let pagosTipos = [];
+
+        function fMonto(m){ return m.toLocaleString('es-NI',{style:'currency',currency:'NIO'}); }
+
+        function mostrarError(msg){
+            $('#lblMensajeError').text(msg);
+            new bootstrap.Modal(document.getElementById('modalError')).show();
+        }
+        // Abrir modal proveedores
+        $('#btnAbrirModalProveedor').click(function(){
+            new bootstrap.Modal(document.getElementById('modalProveedores')).show();
+        });
+
+        // Seleccionar proveedor desde modal
+        $(document).on('click','.btnSeleccionarProveedor', function(){
+            let prov = $(this).data('nombre');
+            $('#txtProveedorSeleccionado').val(prov);
+            $('#cmbProveedor').val(prov).trigger('change');
+            bootstrap.Modal.getInstance(document.getElementById('modalProveedores')).hide();
+
+            // Cargar tabla ejecuciones
+            $('#tablaEjecuciones tbody').empty();
+            let lista = todasEjecuciones.filter(x=>x.NombreProveedor===prov);
+            lista.forEach(e=>{
+                $('#tablaEjecuciones tbody').append(`
+                    <tr>
+                        <td><input type="checkbox" class="chkEjecucion" value="${e.IdEjecucion}" data-acuerdo="${e.IdAcuerdo}" data-monto="${e.MontoRebate}"></td>
+                        <td>${e.NumeroAcuerdo}</td>
+                        <td>${e.NombreAcuerdo}</td>
+                        <td>${e.NombreProveedor}</td>
+                     <td class="text-center">${fMonto(e.MontoRebate)}</td>
+
+                    </tr>
+                `);
+            });
+        });
+
+         function editarPago(index) {
+
+             let pago = pagosTipos[index];
+
+             // Cargar datos en inputs
+             $('#cmbTipoDocAgregar').val(pago.id);
+             $('#txtMontoAgregar').val(pago.monto);
+             $('#txtNumeroConfirmacionAgregar').val(pago.numeroConfirmacion);
+
+             // Guardamos índice en edición
+             $('#btnAgregarPago').data('editando', index);
+
+             // Opcional: cambiar texto botón
+             $('#btnAgregarPago').text('Actualizar Pago');
+         }
+
+
+         // ============================================
+         // RETENCIONES
+         // ============================================
+
+         // Cargar retenciones
+        $.get('/TipoRetencion/Listar', function (res) {
+
+            listaRetenciones = res;
+
+            let cmb = $('#cmbRetenciones');
+            cmb.empty().append('<option value="">-- Seleccionar retención --</option>');
+
+            res.forEach(r => {
+                cmb.append(`<option value="${r.id}" data-porcentaje="${r.porcentaje}">
+              ${r.nombre} (${r.porcentaje}%)
+             </option>`);
+            });
+
+        });
+
+        $('#cmbRetenciones').change(function () {
+
+            let id = $(this).val();
+            if (!id) return;
+
+            let option = $(this).find('option:selected');
+            let nombre = option.text();
+            let porcentaje = option.data('porcentaje');
+
+            $('#contenedorRetenciones').append(`
+                <div class="form-check retencion-item" data-id="${id}">
+                    <input class="form-check-input chkRetencion"
+                           type="checkbox"
+                           checked
+                           data-id="${id}"
+                           data-porcentaje="${porcentaje}">
+
+                    <label class="form-check-label">
+                        ${nombre}
+                    </label>
+                </div>
+            `);
+
+            // eliminar del combo
+            option.remove();
+
+            $('#cmbRetenciones').val('');
+
+            calcularRetenciones();
+
+        });
+
+
+        $(document).on('change', '.chkRetencion', function () {
+
+            if (!$(this).is(':checked')) {
+
+                let cont = $(this).closest('.retencion-item');
+
+                let id = $(this).data('id');
+                let porcentaje = $(this).data('porcentaje');
+                let nombre = cont.find('label').text();
+
+                $('#cmbRetenciones').append(`
+                    <option value="${id}" data-porcentaje="${porcentaje}">
+                        ${nombre}
+                    </option>
+                `);
+
+                cont.remove();
+            }
+
+            calcularRetenciones();
+
+        });
+
+         // Evento cambio de retenciones
+         $(document).on('change', '.chkRetencion', function () {
+             calcularRetenciones();
+         });
+
+         // Cálculo de retenciones
+         function calcularRetenciones() {
+
+             let total = parseFloat($('#lblTotal').data('total')) || 0;
+             let totalRetenciones = 0;
+
+             $('.chkRetencion:checked').each(function () {
+                 let porcentaje = parseFloat($(this).data('porcentaje'));
+                 totalRetenciones += total * (porcentaje / 100);
+             });
+
+             let totalNeto = total - totalRetenciones;
+
+             $('#lblTotalRetenciones')
+                 .data('total', totalRetenciones)
+                 .text(fMonto(totalRetenciones));
+
+             $('#lblTotalNeto')
+                 .data('total', totalNeto)
+                 .text(fMonto(totalNeto));
+         }
+
+
+         function verArchivo(index) {
+
+             let file = pagosTipos[index].file;
+
+             if (!file) {
+                 mostrarError('No hay archivo disponible');
+                 return;
+             }
+
+             let url = URL.createObjectURL(file);
+
+             window.open(url, '_blank');
+         }
+
+
+        // Agregar pagos por tipo
+        $('#btnAgregarPago').click(function(){
+            let idTipo = $('#cmbTipoDocAgregar').val();
+            let nombre = $('#cmbTipoDocAgregar option:selected').text();
+            let monto = parseFloat($('#txtMontoAgregar').val());
+            let numeroConfirmacion = $('#txtNumeroConfirmacionAgregar').val();
+            let fileInput = document.getElementById('fileComprobanteAgregar');
+
+            // Validar tipo, monto y archivo
+            if(!idTipo || !monto || monto <= 0){
+                mostrarError('Seleccione tipo y monto válido');
+                return;
+            }
+
+            if(!numeroConfirmacion){
+                mostrarError('Debe ingresar número de confirmación');
+                return;
+            }
+
+            let editIndex = $('#btnAgregarPago').data('editando');
+
+            // SOLO exigir archivo si es nuevo
+            if (editIndex === undefined) {
+                if (!fileInput.files || fileInput.files.length === 0) {
+                    mostrarError('Debe seleccionar un comprobante');
+                    return;
+                }
+            }
+
+            if (editIndex !== undefined) {
+
+                pagosTipos[editIndex] = {
+                    id: idTipo,
+                    nombre: nombre,
+                    monto: monto,
+                    numeroConfirmacion: numeroConfirmacion,
+                    file: fileInput.files.length > 0 ? fileInput.files[0] : pagosTipos[editIndex].file
+                };
+
+                $('#btnAgregarPago').removeData('editando');
+                $('#btnAgregarPago').text('Agregar Pago');
+
+            } else {
+
+                pagosTipos.push({
+                    id: idTipo,
+                    nombre: nombre,
+                    monto: monto,
+                    numeroConfirmacion: numeroConfirmacion,
+                    file: fileInput.files[0]
+                });
+
+            }
+
+            actualizarTablaPagos();
+
+            $('#txtMontoAgregar').val('');
+            $('#txtNumeroConfirmacionAgregar').val('');
+            $('#fileComprobanteAgregar').val('');
+        });
+
+
+       function actualizarTablaPagos(){
+            let tbody = $('#tablaPagosTipos tbody');
+            tbody.empty();
+           pagosTipos.forEach((p, i) => {
+
+               let tieneArchivo = p.file != null;
+
+                tbody.append(`<tr>
+                    <td>${p.nombre}</td>
+                    <td class="text-end">${fMonto(p.monto)}</td>
+                    <td>${p.numeroConfirmacion}</td>
+                    <td>
+                         ${tieneArchivo
+                        ?
+                            `<button class="btn btn-sm btn-info" onclick="verArchivo(${i})">
+                                        <i class="fas fa-eye"></i> Ver
+                            </button>`
+                        : `<span class="text-muted">Sin archivo</span>`
+                         }
+                    </td>
+                    <td>
+
+                        <button class="btn btn-warning btn-sm" onclick="editarPago(${i})">
+                            <i class="fas fa-edit"></i>
+                        </button>
+
+                        <button class="btn btn-danger btn-sm" onclick="eliminarPago(${i})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+
+                    </td>
+                </tr>`);
+            });
+        }
+
+
+
+        function eliminarPago(i){ pagosTipos.splice(i,1); actualizarTablaPagos(); }
+
+            // Pagar
+           $('#btnPagar').click(function(){
+
+            // RESET OBLIGATORIO DEL MODAL
+            pagosTipos = [];
+            $('#tablaPagosTipos tbody').empty();
+            $('#txtObs').val('');
+            $('#txtMontoAgregar').val('');
+            $('#fileComprobanteAgregar').val('');
+
+            let seleccionadas = $('.chkEjecucion:checked');
+            if(seleccionadas.length === 0){
+                mostrarError('Seleccione al menos una ejecución');
+                return;
+            }
+
+            // Calcular total a pagar
+            let total = 0;
+            seleccionadas.each(function(){
+                total += parseFloat($(this).data('monto'));
+            });
+
+            $('#lblTotal').data('total', total);
+               $('#lblTotal').text(fMonto(total));
+
+             calcularRetenciones();
+
+            // Cargar ejecuciones seleccionadas en el modal
+            let tbody = $('#tablaEjecucionesSeleccionadas tbody');
+            tbody.empty();
+
+            seleccionadas.each(function(){
+                let fila = $(this).closest('tr');
+                tbody.append(`
+                    <tr>
+                        <td>${fila.find('td:eq(1)').text()}</td>
+                        <td>${fila.find('td:eq(2)').text()}</td>
+                        <td>${fila.find('td:eq(3)').text()}</td>
+                        <td class="text-end">${fila.find('td:eq(4)').text()}</td>
+                    </tr>
+                `);
+            });
+
+            // Cargar tipos de documento
+            $.get('/TipoDocumentoPago/ListarTipos', function(res){
+                $('#cmbTipoDocAgregar')
+                    .empty()
+                    .append('<option value="">-- Seleccione Tipo --</option>');
+
+                res.forEach(t => {
+                    $('#cmbTipoDocAgregar').append(
+                        `<option value="${t.id}">${t.nombre}</option>`
+                    );
+                });
+            });
+
+            // Mostrar modal de pago
+            new bootstrap.Modal(document.getElementById('modalPago')).show();
+        });
+
+        // Confirmar pago
+    $('#btnConfirmarPago').click(async function () {
+
+        let seleccionadas = $('.chkEjecucion:checked');
+
+        if (seleccionadas.length === 0) {
+            mostrarError('Seleccione al menos una ejecución');
+            return;
+        }
+
+        // ================================
+        // TOTALES
+        // ================================
+
+        let totalRebate = parseFloat($('#lblTotal').data('total')) || 0;
+        let totalRetenciones = parseFloat($('#lblTotalRetenciones').data('total')) || 0;
+
+        //  DINERO REAL PAGADO
+        let totalPagos = pagosTipos.reduce((s, x) => s + x.monto, 0);
+
+        //  TOTAL APLICADO (NETO + RETENCIONES)
+        let totalAplicado = totalPagos + totalRetenciones;
+
+        // ================================
+        // VALIDACIÓN
+        // ================================
+
+        if (totalAplicado < totalRebate) {
+            mostrarError('El total aplicado no puede ser menor al monto del rebate');
+            return;
+        }
+
+        // ================================
+        // GENERAR DETALLE
+        // ================================
+
+        let detalleEnvio = [];
+        let suma = 0;
+
+        seleccionadas.each(function () {
+            suma += parseFloat($(this).data('monto'));
+        });
+
+        let usuarioActual = '@ViewBag.UsuarioActual';
+
+        seleccionadas.each(function () {
+
+            let fila = $(this);
+            let proporcion = parseFloat(fila.data('monto')) / suma;
+
+            pagosTipos.forEach(function (pago) {
+
+                detalleEnvio.push({
+                    IdEjecucionRebate: parseInt(fila.val()),
+                    MontoPagado: +(pago.monto * proporcion).toFixed(2),
+                    IdTipoDocumento: pago.id,
+                    NumeroConfirmacion: pago.numeroConfirmacion,
+                    RutaComprobante: pago.file ? pago.file.name : null,
+                    UsuarioPago: usuarioActual
+                });
+            });
+        });
+
+        // ================================
+        // RETENCIONES
+        // ================================
+
+        let retenciones = [];
+
+        $('.chkRetencion:checked').each(function () {
+
+            let porcentaje = parseFloat($(this).data('porcentaje'));
+            let id = parseInt($(this).data('id'));
+
+            let monto = +(totalRebate * (porcentaje / 100)).toFixed(2);
+
+            retenciones.push({
+                IdTipoRetencion: id,
+                Porcentaje: porcentaje,
+                MontoRetenido: monto
+            });
+        });
+
+        // ================================
+        // FORM DATA
+        // ================================
+
+        let formData = new FormData();
+
+        formData.append('IdAcuerdo', seleccionadas.first().data('acuerdo'));
+        formData.append('Observacion', $('#txtObs').val());
+        formData.append('DetalleEjecuciones', JSON.stringify(detalleEnvio));
+
+        // 🔥 MONTO TOTAL = TOTAL APLICADO
+        formData.append('TotalAPagar', totalAplicado);
+
+        formData.append('Retenciones', JSON.stringify(retenciones));
+
+        pagosTipos.forEach((p, i) => {
+            if (p.file) {
+                formData.append(`PagosTipos[${i}].Comprobante`, p.file);
+            }
+        });
+
+        // ================================
+        // AJAX
+        // ================================
+
+        $.ajax({
+            url: '/Rebate/RegistrarPagoMultiples',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+
+            success: function (r) {
+
+                if (r.success) {
+
+                    $('#lblNumeroDoc').text(r.numeroDocumento);
+
+                    new bootstrap.Modal(
+                        document.getElementById('modalExito')
+                    ).show();
+
+                    setTimeout(() => location.reload(), 3000);
+
+                } else {
+
+                    mostrarError(r.mensajes.join('\n'));
+                }
+            },
+
+            error: function () {
+                mostrarError('Error al registrar pago');
+            }
+        });
+    });
+    </script>
+}
