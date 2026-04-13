@@ -1,0 +1,763 @@
+﻿@{
+    ViewData["Title"] = "Gestión de Caja Chica";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<style>
+    .card-resumen {
+        border: none;
+        border-radius: 15px;
+        transition: transform 0.2s;
+    }
+
+        .card-resumen:hover {
+            transform: translateY(-5px);
+        }
+
+    .bg-saldo {
+        background: #28a745;
+        color: white;
+    }
+
+    .bg-entradas {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+    }
+
+    .bg-salidas {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+    }
+
+    .table thead {
+        background-color: #f8f9fa;
+        color: #6c757d;
+        font-size: 0.85rem;
+    }
+
+    .badge-completado {
+        background-color: #d4edda;
+        color: #155724;
+        border-radius: 20px;
+        padding: 5px 12px;
+    }
+
+    .badge-anulado {
+        background-color: #f8d7da;
+        color: #721c24;
+        border-radius: 20px;
+        padding: 5px 12px;
+    }
+
+    .bg-saldo {
+        background: #003366;
+        color: white;
+    }
+    /* Azul elegante para Córdoba */
+    @@media print {
+    /* Ocultar todo el cuerpo de la página */
+    body * {
+        visibility: hidden;
+    }
+
+    /* Mostrar solo el área del vale y sus hijos */
+    #areaImpresion, #areaImpresion * {
+        visibility: visible;
+    }
+
+    /* Posicionar el vale al principio de la página impresa */
+    #areaImpresion {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    /* Ocultar modales de fondo y botones */
+    .modal-header, .modal-footer, .btn, .btn-close {
+        display: none !important;
+    }
+}
+</style>
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h5 class="text-muted mb-0">GESTIÓN DE CAJA CHICA</h5>
+            <h2 class="fw-bold">Libro de Caja: Registro Detallado</h2>
+        </div>
+        <button class="btn btn-primary btn-lg shadow-sm" onclick="abrirModal()">
+            <i class="fas fa-plus-circle me-2"></i> Nuevo Movimiento
+        </button>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card card-resumen bg-saldo shadow-sm p-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <p class="mb-0 opacity-75">SALDO ACTUAL</p>
+                        <h2 class="fw-bold mb-0" id="lblSaldoActual">C$ 0.00</h2>
+                    </div>
+                    <i class="fas fa-wallet fa-2x opacity-50"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card card-resumen bg-entradas shadow-sm p-3 border-start border-success border-4">
+                <p class="text-muted mb-0">TOTAL ENTRADAS</p>
+                <h3 class="fw-bold mb-0 text-success" id="lblTotalEntradas">C$ 0.00</h3>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card card-resumen bg-salidas shadow-sm p-3 border-start border-danger border-4">
+                <p class="text-muted mb-0">TOTAL SALIDAS</p>
+                <h3 class="fw-bold mb-0 text-danger" id="lblTotalSalidas">C$ 0.00</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0" style="border-radius: 15px;">
+        <div class="card-body">
+            <div class="row g-3 mb-4 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label text-muted small fw-bold">Rango de Visualización</label>
+                    <select class="form-select border-light bg-light" id="cboRango" onchange="aplicarFiltro()">
+                        <option value="hoy">Hoy</option>
+                        <option value="mes">Este Mes</option>
+                        <option value="todo">Todo el historial</option>
+                    </select>
+                </div>
+                @*<div class="col-md-9 text-end">
+                    <button class="btn btn-outline-danger" onclick="window.print()"><i class="fas fa-file-pdf me-1"></i> PDF</button>
+                </div>*@
+            </div>
+
+            <div class="table-responsive">
+                <table id="tabla" class="table table-hover align-middle" style="width:100%">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Vale</th>
+                            <th>Descripción/Concepto</th>
+                            <th>Entregado a:</th>
+                            @*<th>Movimiento Creado por:</th>
+                            <th>Movimiento Autorizado por:</th>
+                            <th>Motivo de anulacion:</th>
+
+                            <th>Motivo del Retorno</th>*@
+                            <th>Retorno de Efectivo</th>
+                            <th>Entrada (+)</th>
+                            <th>Salida (-)</th>
+                            <th>Saldo</th>
+
+                            <th>Estado</th>
+
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="modalForm" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title">Registrar Movimiento</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formMovimiento">
+                    <div class="mb-3">
+                        <label class="form-label">Entregado a / Recibido de:</label>
+                        <input type="text" id="txtNombre" class="form-control" placeholder="Nombre de la persona" autocomplete="off">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descripción / Concepto:</label>
+                        <textarea id="txtConcepto" class="form-control" rows="2"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Autorizado por:</label>
+                        <select id="cboAutorizador" class="form-select">
+                            <option value="">-- Seleccione Autorizador --</option>
+                            @if (ViewBag.UsuariosAutorizadores != null)
+                            {
+                                foreach (var user in (List<Capa_Entidad.Usuario>)ViewBag.UsuariosAutorizadores)
+                                {
+                                    // Mostramos Nombre y Apellido para que sea claro quién autoriza
+                                    <option value="@user.IdUsuario">@(user.Nombres + " " + user.Apellidos)</option>
+                                }
+                            }
+                        </select>
+                    </div>
+        
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-success fw-bold">Entrada (+)</label>
+                            <input type="text" id="txtEntrada" class="form-control monto-input" value="0.00">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-danger fw-bold">Salida (-)</label>
+                            <input type="text" id="txtSalida" class="form-control monto-input" value="0.00">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="guardar()">Guardar Movimiento</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="modalImpresion" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title"><i class="fas fa-search me-2"></i>Previsualización de Vale</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body bg-light">
+                <div id="areaImpresion" class="card shadow-sm p-4 text-dark" style="background: white; border: 1px solid #ddd;">
+                    <div class="row mb-4 border-bottom pb-3">
+                        <div class="col-8">
+                            <h4 class="fw-bold mb-0">VALE DE CAJA CHICA</h4>
+                            <p class="text-muted mb-0">Registro de Movimiento</p>
+                        </div>
+                        <div class="col-4 text-end">
+                            <h4 class="text-danger fw-bold mb-0" id="det-numVale">#0000</h4>
+                            <span class="badge bg-secondary" id="det-fecha">--/--/----</span>
+                        </div>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-6">
+                            <label class="text-muted small d-block">Entregado/Recibido Por:</label>
+                            <p class="fw-bold border-bottom" id="det-beneficiario">-</p>
+                        </div>
+                        <div class="col-6">
+                            <label class="text-muted small d-block">ESTADO:</label>
+                            <p class="fw-bold border-bottom" id="det-estado">-</p>
+                        </div>
+                        <div class="col-12 mt-2">
+                            <label class="text-muted small d-block">POR CONCEPTO DE:</label>
+                            <p class="fw-bold border-bottom" id="det-concepto">-</p>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive mb-4">
+                        <table class="table table-bordered text-center">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>ENTRADA</th>
+                                    <th>SALIDA</th>
+                                    <th>RETORNO APLICADO</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="fs-5 fw-bold">
+                                    <td class="text-success" id="det-entrada">C$ 0.00</td>
+                                    <td class="text-danger" id="det-salida">C$ 0.00</td>
+                                    <td class="text-primary" id="det-retorno">C$ 0.00</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="row mt-5 pt-4 text-center">
+                        <div class="col-4">
+                            <div class="border-top pt-2">
+                                <small class="d-block" id="det-creador">-</small>
+                                <strong>ELABORADO</strong>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="border-top pt-2">
+                                <small class="d-block" id="det-autorizador">-</small>
+                                <strong>AUTORIZADO</strong>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="border-top pt-2">
+                                <br>
+                                <strong>RECIBÍ CONFORME</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-primary" onclick="generarTicketDirecto()">
+                    <i class="fas fa-print me-2"></i>Imprimir Ahora
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+@section Scripts {
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.2.2/css/buttons.bootstrap5.min.css" />
+    <script src="https://cdn.datatables.net/buttons/2.2.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.bootstrap5.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.print.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        var tablaData;
+        var todosLosDatos = []; // Para filtrar en memoria sin ir a la DB cada vez
+        // --- FUNCIÓN CENTRAL DE FORMATEO ---
+        function formatearMoneda(valor) {
+            return new Intl.NumberFormat('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(valor || 0);
+        }
+        $(document).ready(function () {
+            // Función para formatear el input mientras se escribe
+            $(document).on("keyup", ".monto-input", function (event) {
+                // No ejecutar si son las flechas de dirección
+                if (event.which >= 37 && event.which <= 40) return;
+
+                $(this).val(function (index, value) {
+                    return value
+                        .replace(/\D/g, "") // Elimina todo lo que no sea número
+                        .replace(/([0-9])([0-9]{2})$/, '$1.$2') // Coloca el punto decimal
+                        .replace(/\B(?=(\d{3})+(?!\d))/g, ","); // Agrega las comas de miles
+                });
+            });
+
+            // Limpiar el campo al entrar si es 0
+            $(document).on("focus", ".monto-input", function () {
+                if ($(this).val() == "0.00" || $(this).val() == "0") {
+                    $(this).val("");
+                }
+            });
+
+            // Restaurar 0.00 si sale y está vacío
+            $(document).on("blur", ".monto-input", function () {
+                if ($(this).val() == "") {
+                    $(this).val("0.00");
+                }
+            });
+            cargarTabla();
+        });
+
+       function cargarTabla() {
+            tablaData = $('#tabla').DataTable({
+                responsive: true,
+                ordering: false,
+                dom: 'Bfrtip',
+                buttons: [
+                    // ... (tus botones de Excel y PDF se mantienen igual)
+                ],
+                "ajax": {
+                    "url": '@Url.Action("ListarMovimientos", "CajaChica")',
+                    "type": "GET",
+                    "datatype": "json",
+                    "dataSrc": function(json) {
+                        todosLosDatos = json.data;
+                        return filtrarPorFecha(todosLosDatos);
+                    }
+                },
+                // --- AQUÍ ESTÁ EL CAMBIO PRINCIPAL PARA EL CONCEPTO ---
+                "columnDefs": [
+                    {
+                        "targets": 2, // Índice de la columna 'concepto'
+                        "width": "800px", // Limita el ancho
+                        "className": "text-truncate", // Clase de Bootstrap para puntos suspensivos
+                        "render": function(data, type, row) {
+                            // Si el texto es muy largo, mostramos un tooltip con el texto completo
+                            return `<span title="${data}" style="display:inline-block; max-width:800px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${data}</span>`;
+                        }
+                    },
+                    { "targets": [4, 5, 6, 7], "className": "text-end" } // Alínea montos a la derecha
+                ],
+                "columns": [
+                    {
+                        "data": "fechaCreacion",
+                        "render": function (data) { return new Date(data).toLocaleDateString(); }
+                    },
+                    { "data": "numVale" },
+                    { "data": "concepto" },
+                    { "data": "nombresApellidos" },
+                    {
+                        "data": "retornoDinero",
+                        "render": function (data) {
+                            return data > 0 ? `<span class="fw-bold text-primary">C$ ${formatearMoneda(data)}</span>` : "---";
+                        }
+                    },
+                    {
+                        "data": "entradas",
+                        "render": function(data) {
+                            return data > 0 ? `<span class="text-success fw-bold">+ ${formatearMoneda(data)}</span>` : "---";
+                        }
+                    },
+                    {
+                        "data": "salidas",
+                        "render": function(data) {
+                            return data > 0 ? `<span class="text-danger fw-bold">- ${formatearMoneda(data)}</span>` : "---";
+                        }
+                    },
+                    {
+                        "data": "saldoActual",
+                        "render": function(data) {
+                            return `<strong>C$ ${formatearMoneda(data)}</strong>`;
+                        }
+                    },
+                    {
+                        "data": "esAnulado",
+                        "render": function (valor) {
+                            return valor ? '<span class="badge bg-danger">Anulado</span>' : '<span class="badge bg-success">Completado</span>';
+                        }
+                    },
+                    {
+                        "data": "idMovimiento",
+                        "render": function (data, type, row) {
+                            let btnImprimir = `<button type="button" class="btn btn-outline-dark btn-sm ms-1" title="Imprimir" onclick="prepararImpresion(${data})"><i class="fas fa-print"></i></button>`;
+                            if (row.esAnulado) return btnImprimir;
+
+                            let btnAnular = `<button type="button" class="btn btn-outline-danger btn-sm" title="Anular" onclick="anular(${data})"><i class="fas fa-ban"></i></button>`;
+                            let btnRetorno = (row.salidas > 0 && (row.retornoDinero == 0 || row.retornoDinero == null))
+                                ? `<button type="button" class="btn btn-outline-success btn-sm ms-1" title="Retorno" onclick="abrirModalRetorno(${data}, ${row.salidas})"><i class="fas fa-hand-holding-usd"></i></button>`
+                                : "";
+
+                            return `<div style="min-width:100px">${btnAnular + btnRetorno + btnImprimir}</div>`;
+                        }
+                    }
+                ],
+                "drawCallback": function (settings) {
+                    var api = this.api();
+                    var datosVisibles = api.rows({ search: 'applied' }).data().toArray();
+                    actualizarTarjetas(datosVisibles);
+                },
+                "language": { "url": "https://cdn.datatables.net/plug-ins/1.11.3/i18n/es_es.json" }
+            });
+        }
+
+        function filtrarPorFecha(datos) {
+            const filtro = $("#cboRango").val();
+            const hoy = new Date().toLocaleDateString();
+            const mesActual = new Date().getMonth();
+            const anioActual = new Date().getFullYear();
+
+            if (filtro === "hoy") {
+                return datos.filter(m => new Date(m.fechaCreacion).toLocaleDateString() === hoy);
+            } else if (filtro === "mes") {
+                return datos.filter(m => {
+                    const d = new Date(m.fechaCreacion);
+                    return d.getMonth() === mesActual && d.getFullYear() === anioActual;
+                });
+            }
+            return datos; // "todo"
+        }
+
+        function aplicarFiltro() {
+            const filtrados = filtrarPorFecha(todosLosDatos);
+            tablaData.clear().rows.add(filtrados).draw();
+
+        }
+        function actualizarTarjetas(datosFiltrados) {
+            let totalEntradas = 0;
+            let totalSalidas = 0;
+            let totalRetornos = 0;
+
+            const activos = datosFiltrados.filter(m => !m.esAnulado);
+            activos.forEach(m => {
+                totalEntradas += (m.entradas || 0);
+                totalSalidas += (m.salidas || 0);
+                totalRetornos += (m.retornoDinero || 0);
+            });
+
+            let saldoReal = (todosLosDatos.length > 0) ? todosLosDatos[0].saldoActual : 0;
+
+            // Uso de la función de formateo para las etiquetas
+            $("#lblTotalEntradas").text("C$ " + formatearMoneda(totalEntradas));
+            $("#lblTotalSalidas").text("C$ " + formatearMoneda(totalSalidas));
+            $("#lblTotalRetornos").text("C$ " + formatearMoneda(totalRetornos)); // Si agregaste esta card
+            $("#lblSaldoActual").text("C$ " + formatearMoneda(saldoReal));
+        }
+
+        function anular(id) {
+            Swal.fire({
+                title: '¿Anular movimiento?',
+                text: "Esta acción recalculará todos los saldos posteriores. Ingrese el motivo:",
+                input: 'text', // Crea un campo de texto automáticamente
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Sí, anular',
+                cancelButtonText: 'Cancelar',
+                inputValidator: (value) => {
+                    if (!value) {
+                        return '¡El motivo es obligatorio!'
+                    }
+                }
+            }).then((result) => {
+                // result.value contiene el texto ingresado en el input
+                if (result.isConfirmed) {
+
+                    // Loader de espera
+                    Swal.fire({
+                        title: 'Recalculando saldos...',
+                        didOpen: () => { Swal.showLoading(); }
+                    });
+
+                    fetch('@Url.Action("AnularMovimiento", "CajaChica")', {
+                        method: "POST",
+                        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                        body: `id=${id}&motivo=${encodeURIComponent(result.value)}`
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.resultado) {
+                            tablaData.ajax.reload();
+                            Swal.fire("Anulado", data.mensaje, "success");
+                        } else {
+                            Swal.fire("Error", data.mensaje, "error");
+                        }
+                    })
+                    .catch(err => {
+                        Swal.fire("Error", "Error al procesar la solicitud.", "error");
+                    });
+                }
+            });
+        }
+
+       function abrirModal() {
+            $("#txtNombre").val("");
+            $("#txtConcepto").val("");
+            $("#txtEntrada").val(0);
+            $("#txtSalida").val(0);
+            $("#cboAutorizador").val(""); // Resetear combo
+
+            var miModal = new bootstrap.Modal(document.getElementById('modalForm'));
+            miModal.show();
+        }
+
+
+
+          function guardar() {
+            // 1. Capturamos los valores numéricos primero para facilitar la validación
+            //var entrada = parseFloat($("#txtEntrada").val()) || 0;
+            //var salida = parseFloat($("#txtSalida").val()) || 0;
+              // Función auxiliar para limpiar comas y convertir a float
+              function parseMonto(selector) {
+                  let val = $(selector).val().replace(/,/g, ""); // Quitamos las comas
+                  return parseFloat(val) || 0;
+              }
+
+              // 1. Capturamos los valores usando la limpieza de comas
+              var entrada = parseMonto("#txtEntrada");
+              var salida = parseMonto("#txtSalida");
+              // --- NUEVA VALIDACIÓN DE SALDO ---
+              // Obtenemos el saldo actual del primer registro (el más reciente)
+              let saldoDisponible = (todosLosDatos.length > 0) ? todosLosDatos[0].saldoActual : 0;
+
+              if (salida > 0 && salida > saldoDisponible) {
+                  Swal.fire({
+                      title: "Saldo Insuficiente",
+                      text: `No puedes retirar C$ ${formatearMoneda(salida)} porque el saldo actual es de C$ ${formatearMoneda(saldoDisponible)}`,
+                      icon: "error"
+                  });
+                  return; // Detiene la ejecución
+              }
+            // 2. Validaciones iniciales de campos vacíos
+            if ($("#txtNombre").val().trim() == "") {
+                Swal.fire("Atención", "Por favor complete el beneficiario", "warning");
+                return;
+              }
+              // 2. Validaciones iniciales de campos vacíos
+              if ($("#txtConcepto").val().trim() == "") {
+                  Swal.fire("Atención", "Por favor complete el concepto.", "warning");
+                  return;
+              }
+              // 2. Validaciones iniciales de campos vacíos
+              if ($("#cboAutorizador").val().trim() == "") {
+                  Swal.fire("Atención", "Por favor  elija un autorizador.", "warning");
+                  return;
+              }
+            // 3. NUEVA VALIDACIÓN: Ni ambos con valor, ni ambos en cero
+            if (entrada > 0 && salida > 0) {
+                Swal.fire("Atención", "Un movimiento no puede ser entrada y salida a la vez, si desea realizar una entrada y una salida realizar una operacion a la vez. Por favor, deje uno de los campos en 0.", "warning");
+                return;
+            }
+
+            if (entrada <= 0 && salida <= 0) {
+                Swal.fire("Atención", "Debe ingresar un monto mayor a 0 en el campo de entrada o de salida segun corresponda.", "warning");
+                return;
+            }
+
+            var objeto = {
+                nombresApellidos: $("#txtNombre").val(),
+                concepto: $("#txtConcepto").val(),
+                entradas: entrada,
+                salidas: salida,
+                idUsuarioAutorizador: parseInt($("#cboAutorizador").val())
+            };
+
+            // Mostrar un loader mientras procesa
+            Swal.fire({
+                title: 'Procesando...',
+                text: 'Guardando el movimiento',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+
+        
+            fetch('@Url.Action("GuardarMovimiento", "CajaChica")', {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json; charset=utf-8" },
+                    body: JSON.stringify(objeto)
+            })
+            .then(res => res.json())
+            .then(data => {
+                    if (data.resultado > 0) {
+                        // 1. Cerrar el modal de registro
+                        var modalElement = document.getElementById('modalForm');
+                        var modalInstance = bootstrap.Modal.getInstance(modalElement);
+                        modalInstance.hide();
+
+                        // 2. Recargar la tabla principal
+                        tablaData.ajax.reload();
+
+                        // 3. Mostrar éxito y preguntar si desea imprimir (O imprimir directo)
+                        Swal.fire({
+                            title: "¡Éxito!",
+                            text: "El movimiento ha sido registrado. ¿Desea ver el vale para imprimir?",
+                            icon: "success",
+                            showCancelButton: true,
+                            confirmButtonText: '<i class="fas fa-print"></i> Ver Vale',
+                            cancelButtonText: 'Cerrar'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                // Llamamos a tu función existente usando el ID que devolvió el SP
+                                prepararImpresion(data.resultado);
+                            }
+                        });
+
+                    } else {
+                        Swal.fire("Error", data.mensaje, "error");
+                    }
+                })
+            .catch(err => {
+                    Swal.fire("Error", "No se pudo comunicar con el servidor.", "error");
+            });
+        }
+
+
+        function abrirModalRetorno(id, montoMaximo) {
+            Swal.fire({
+                title: 'Aplicar Retorno de Efectivo',
+                html:
+                    `<label class="form-label">Monto a devolver (Máx: C$ ${montoMaximo})</label>` +
+                    `<input id="swal-monto" class="swal2-input" type="number" step="0.01" placeholder="0.00">` +
+                    `<label class="form-label">Concepto/Motivo del retorno</label>` +
+                    `<input id="swal-motivo" class="swal2-input" placeholder="Ej: Sobrante de compra...">`,
+                focusConfirm: false,
+                showCancelButton: true,
+                confirmButtonText: 'Aplicar Retorno',
+                cancelButtonText: 'Cancelar',
+                preConfirm: () => {
+                    const monto = document.getElementById('swal-monto').value;
+                    const motivo = document.getElementById('swal-motivo').value;
+
+                    if (!monto || parseFloat(monto) <= 0) {
+                        Swal.showValidationMessage('Por favor ingrese un monto válido');
+                    } else if (parseFloat(monto) > montoMaximo) {
+                        Swal.showValidationMessage('El retorno no puede ser mayor a la salida original');
+                    } else if (!motivo) {
+                        Swal.showValidationMessage('El motivo es obligatorio');
+                    }
+
+                    return { id: id, monto: monto, motivo: motivo };
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    ejecutarRetorno(result.value);
+                }
+            });
+        }
+
+        function ejecutarRetorno(datos) {
+            Swal.fire({ title: 'Procesando...', didOpen: () => { Swal.showLoading(); } });
+
+            fetch('@Url.Action("AplicarRetorno", "CajaChica")', {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: `id=${datos.id}&monto=${datos.monto}&motivo=${encodeURIComponent(datos.motivo)}`
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.resultado) {
+                    tablaData.ajax.reload();
+                    Swal.fire("¡Listo!", data.mensaje, "success");
+                } else {
+                    Swal.fire("Error", data.mensaje, "error");
+                }
+            })
+            .catch(err => Swal.fire("Error", "No se pudo conectar con el servidor", "error"));
+        }
+
+
+        // 1. Cargar datos en el modal
+         function prepararImpresion(id) {
+           /* Swal.fire({ title: 'Cargando...', didOpen: () => { Swal.showLoading(); } });*/
+
+            fetch(`@Url.Action("ObtenerDetalleMovimiento", "CajaChica")?id=${id}`)
+                .then(res => res.json())
+                .then(response => {
+                    Swal.close();
+                    if (response.success) {
+
+
+                        const mov = response.data;
+
+
+                        // --- NUEVA LÓGICA PARA EL ESTADO ---
+                        const estadoHtml = mov.esAnulado
+                            ? '<span class="badge bg-danger">ANULADO</span>'
+                            : '<span class="badge bg-success">COMPLETADO</span>';
+                        $("#det-estado").html(estadoHtml); // Usamos .html() para procesar el badge
+                        $("#det-numVale").text(mov.numVale);
+                        /*  $("#det-fecha").text(new Date(mov.fechaCreacion).toLocaleDateString());*/
+                        // Dentro de prepararImpresion:
+                        $("#det-fecha").text(new Date(mov.fechaCreacion).toLocaleString());
+                        $("#det-beneficiario").text(mov.nombresApellidos);
+                        $("#det-concepto").text(mov.concepto);
+
+                        // Formateo en el modal de impresión
+                        $("#det-entrada").text("C$ " + formatearMoneda(mov.entradas));
+                        $("#det-salida").text("C$ " + formatearMoneda(mov.salidas));
+                        $("#det-retorno").text("C$ " + formatearMoneda(mov.retornoDinero));
+
+                        $("#det-creador").text(mov.usuarioCreador || "Sistema");
+                        $("#det-autorizador").text(mov.usuarioAutorizador || "N/A");
+
+                        var myModal = new bootstrap.Modal(document.getElementById('modalImpresion'));
+                        myModal.show();
+                    }
+                });
+        }
+
+        // 2. Función de impresión real
+     function generarTicketDirecto() {
+        // Simplemente llamamos al comando de impresión del navegador.
+        // Gracias al CSS @@media print, solo se verá el vale.
+        window.print();
+    }
+
+    </script>
+}

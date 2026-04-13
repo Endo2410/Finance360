@@ -115,7 +115,7 @@ namespace Capa_Dato
             return lista;
         }
 
-        // OBTENER ALERTAS POR USUARIO
+        //// OBTENER ALERTAS POR USUARIO
         public List<Alerta> ObtenerAlertasUsuario(int idUsuario)
         {
             List<Alerta> lista = new List<Alerta>();

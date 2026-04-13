@@ -1,0 +1,326 @@
+﻿@{
+    ViewData["Title"] = "Reportes de Movimientos";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container-fluid py-4">
+    <h3 class="text-dark mb-4"><i class="fas fa-chart-line"></i> Reporte General de Caja Chica</h3>
+
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm bg-success text-white" style="border-radius: 15px;">
+                <div class="card-body">
+                    <h6><i class="fas fa-arrow-down"></i> Total Entradas</h6>
+                    <h3 id="txtTotalEntradas">C$ 0.00</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm bg-danger text-white" style="border-radius: 15px;">
+                <div class="card-body">
+                    <h6><i class="fas fa-arrow-up"></i> Total Salidas</h6>
+                    <h3 id="txtTotalSalidas">C$ 0.00</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm bg-primary text-white" style="border-radius: 15px;">
+                <div class="card-body">
+                    <h6><i class="fas fa-undo"></i> Total Retornos</h6>
+                    <h3 id="txtTotalRetornos">C$ 0.00</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm bg-dark text-white" style="border-radius: 15px;">
+                <div class="card-body">
+                    <h6><i class="fas fa-wallet"></i> Saldo en Caja</h6>
+                    <h3 id="txtSaldoCaja">C$ 0.00</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-4" style="border-radius: 15px;">
+        <div class="card-body">
+            <div class="row align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Fecha Inicio</label>
+                    <input type="date" id="txtFechaInicio" class="form-control">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Fecha Fin</label>
+                    <input type="date" id="txtFechaFin" class="form-control">
+                </div>
+                <div class="col-md-4">
+                    <button class="btn btn-primary" onclick="aplicarFiltros()"><i class="fas fa-search"></i> Filtrar</button>
+                    <button class="btn btn-secondary" onclick="limpiarFiltros()"><i class="fas fa-undo"></i> Reset</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0" style="border-radius: 15px;">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table id="tabla" class="table table-hover align-middle" style="width:100%">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Vale</th>
+                            <th>Concepto</th>
+                            <th>Entregado a:</th>
+                            <th>Movimiento Creado por:</th>
+                            <th>Movimiento Autorizado por:</th>
+                            <th>Movimiento Anulado por:</th>
+                            <th>Motivo de anulacion:</th>
+
+                            <th>Motivo del Retorno</th>
+                            <th>Retorno</th>
+                            <th>Entrada (+)</th>
+                            <th>Salida (-)</th>
+                            <th>Saldo</th>
+                            <th>Estado</th>
+                            @*<th>Acciones</th>*@
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.2.2/css/buttons.bootstrap5.min.css" />
+    <script src="https://cdn.datatables.net/buttons/2.2.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.bootstrap5.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.print.min.js"></script>
+
+    <script>
+        var tablaData;
+        var todosLosDatos = [];
+
+        // Función auxiliar para formatear miles y millones
+        function formatearMoneda(valor) {
+            return new Intl.NumberFormat('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(valor);
+        }
+
+        $(document).ready(function () {
+            const hoy = new Date();
+
+            // Obtener año, mes y día localmente
+            const anio = hoy.getFullYear();
+            const mes = String(hoy.getMonth() + 1).padStart(2, '0'); // Meses son 0-11
+            const dia = String(hoy.getDate()).padStart(2, '0');
+
+            // Fecha "Primero de mes" local
+            const primero = `${anio}-${mes}-01`;
+
+            // Fecha "Hoy" local
+            const ultimo = `${anio}-${mes}-${dia}`;
+
+            $("#txtFechaInicio").val(primero);
+            $("#txtFechaFin").val(ultimo);
+
+            cargarTabla();
+        });
+
+        function cargarTabla() {
+
+            // 1. CLONAMOS LA FILA: Agregamos una copia del header al mismo thead
+            $('#tabla thead tr').clone(true).addClass('filters').appendTo('#tabla thead');
+            tablaData = $('#tabla').DataTable({
+                responsive: true,
+                ordering: false,
+                dom: 'Bfrtip',
+                buttons: [
+                    {
+                        extend: 'excelHtml5',
+                        text: '<i class="fas fa-file-excel"></i> Excel',
+                        className: 'btn btn-success btn-sm',
+                        exportOptions: { columns: [0, 1, 2, 3, 8, 9, 10, 11] }
+                    },
+                    {
+                        extend: 'pdfHtml5',
+                        text: '<i class="fas fa-file-pdf"></i> PDF',
+                        className: 'btn btn-danger btn-sm',
+                        orientation: 'landscape',
+                        exportOptions: { columns: [0, 1, 2, 3, 8, 9, 10, 11] }
+                    }
+                ],
+                "ajax": {
+                    "url": '@Url.Action("ListarMovimientos", "CajaChica")',
+                    "type": "GET",
+                    "datatype": "json",
+                    "dataSrc": function(json) {
+                        todosLosDatos = json.data;
+                        return filtrarDatos();
+                    }
+                },
+                "columns": [
+                    //{
+                    //    "data": "fechaCreacion",
+                    //    "render": function (data) { return new Date(data).toLocaleDateString(); }
+                    //},
+                    {
+                        "data": "fechaCreacion",
+                        "render": function (data) {
+                            if (!data) return "---";
+
+                            let fecha = new Date(data);
+
+                            // Formato: 13/04/2024 14:30
+                            // Usamos 'es-ES' o 'en-GB' para formato 24h, o solo fecha.toLocaleString() para el local
+                            return fecha.toLocaleDateString() + " " + fecha.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        }
+                    },
+                    { "data": "numVale" },
+                    { "data": "concepto" },
+                    { "data": "nombresApellidos" },
+                    { "data": "usuarioCreador"},
+                    { "data": "usuarioAutorizador" },
+                    { "data": "usuarioAnulador" },
+                    { "data": "motivoAnulado" },
+                    { "data": "motivo" },
+                    {
+                        "data": "retornoDinero",
+                        "render": function (data) {
+                            return data > 0 ? `<span class="fw-bold text-primary">+ ${formatearMoneda(data)}</span>` : "---";
+                        }
+                    },
+                    {
+                        "data": "entradas",
+                        "render": function(data) {
+                            return data > 0 ? `<span class="text-success fw-bold">+ ${formatearMoneda(data)}</span>` : "---";
+                        }
+                    },
+                    {
+                        "data": "salidas",
+                        "render": function(data) {
+                            return data > 0 ? `<span class="text-danger fw-bold">- ${formatearMoneda(data)}</span>` : "---";
+                        }
+                    },
+                    {
+                        "data": "saldoActual",
+                        "render": function(data) {
+                            return `<strong>C$ ${formatearMoneda(data)}</strong>`;
+                        }
+                    },
+                    {
+                        "data": "esAnulado",
+                        "render": function (valor) {
+                            return valor ? '<span class="badge bg-danger">Anulado</span>' : '<span class="badge bg-success">Completado</span>';
+                        }
+                    },
+                    //{
+                    //    "defaultContent": '<button class="btn btn-info btn-sm btn-detalle"><i class="fas fa-eye"></i></button>',
+                    //    "orderable": false,
+                    //    "searchable": false,
+                    //    "width": "50px"
+                    //}
+                ],
+                initComplete: function () {
+                    var api = this.api();
+
+                    // 2. CONVERTIMOS LA FILA CLONADA EN INPUTS
+                    api.columns().eq(0).each(function (colIdx) {
+                        // Seleccionamos la celda de la fila .filters
+                        var cell = $('.filters th').eq(colIdx);
+                        var title = $(cell).text();
+
+                        // Si la columna tiene datos (no es saldo o montos que no quieres filtrar)
+                        if (title !== "" && colIdx < 9 || colIdx == 13) {
+                            $(cell).html('<input type="text" class="form-control form-control-sm" placeholder="🔍 ' + title + '" />');
+
+                            // 3. EVENTO DE BÚSQUEDA
+                            $('input', cell).on('keyup change', function () {
+                                if (api.column(colIdx).search() !== this.value) {
+                                    api.column(colIdx).search(this.value).draw();
+                                }
+                            });
+                        } else {
+                            $(cell).html(''); // Limpiar celdas de montos/totales
+                        }
+                    });
+                },
+                "language": { "url": "https://cdn.datatables.net/plug-ins/1.11.3/i18n/es_es.json" },
+                "drawCallback": function() {
+                    actualizarTotales();
+                }
+            });
+        }
+
+        function filtrarDatos() {
+            // Obtenemos los strings de los inputs (formato YYYY-MM-DD)
+            const sInicio = $("#txtFechaInicio").val();
+            const sFin = $("#txtFechaFin").val();
+
+            // IMPORTANTE: Agregamos "T00:00:00" para que Date() use la hora LOCAL del navegador
+            // Si no se pone el tiempo, JS asume UTC y te "resta" un día por la zona horaria.
+            const fInicio = new Date(sInicio + "T00:00:00");
+            const fFin = new Date(sFin + "T23:59:59");
+
+            return todosLosDatos.filter(item => {
+                // La fecha que viene del servidor suele ser ISO, la convertimos a objeto Date
+                const fMov = new Date(item.fechaCreacion);
+
+                // Comparamos los objetos fecha
+                return fMov >= fInicio && fMov <= fFin;
+            });
+        }
+
+        function aplicarFiltros() {
+            const datosFiltrados = filtrarDatos();
+            tablaData.clear().rows.add(datosFiltrados).draw();
+        }
+
+        function limpiarFiltros() {
+            location.reload();
+        }
+
+        function actualizarTotales() {
+            const dataVisible = tablaData.rows({ search: 'applied' }).data().toArray();
+            let entradas = 0, salidas = 0, saldo = 0, retornos = 0;
+
+            if (dataVisible.length > 0) {
+                dataVisible.forEach(item => {
+                    if (!item.esAnulado) {
+                        entradas += item.entradas;
+                        salidas += item.salidas;
+                        retornos += (item.retornoDinero || 0);
+                    }
+                });
+                saldo = dataVisible[0].saldoActual;
+            }
+
+            // Aplicamos el formato con comas a las tarjetas
+            $("#txtTotalEntradas").text("C$ " + formatearMoneda(entradas));
+            $("#txtTotalSalidas").text("C$ " + formatearMoneda(salidas));
+            $("#txtTotalRetornos").text("C$ " + formatearMoneda(retornos));
+            $("#txtSaldoCaja").text("C$ " + formatearMoneda(saldo));
+        }
+
+        $('#tabla tbody').on('click', '.btn-detalle', function () {
+            var data = tablaData.row($(this).parents('tr')).data();
+            Swal.fire({
+                title: 'Detalle del Movimiento',
+                html: `<div class="text-start">
+                        <b>Concepto:</b> ${data.concepto}<br>
+                        <b>Entregado a:</b> ${data.nombresApellidos}<br>
+                        <b>Autorizado por:</b> ${data.usuarioAutorizador || 'N/A'}<br>
+                        <b>Creado por:</b> ${data.usuarioCreador || 'N/A'}<br>
+                        ${data.esAnulado ? `<b class="text-danger">Motivo Anulación:</b> ${data.motivoAnulado}` : ''}
+                       </div>`,
+                icon: 'info'
+            });
+        });
+    </script>
+}
